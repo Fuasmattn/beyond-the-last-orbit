@@ -77,7 +77,7 @@ export class RunScene implements Scene {
           audio.sfx.laser(e.onBeat);
           break;
         case 'enemyKilled':
-        case 'turretDestroyed':
+        case 'partDestroyed':
           audio.sfx.explosion();
           break;
         case 'enemyShot':
@@ -95,12 +95,18 @@ export class RunScene implements Scene {
         case 'dive':
           audio.sfx.dive();
           break;
+        case 'bombBurst':
+          audio.sfx.bombBurst();
+          break;
         case 'bossHit':
           audio.sfx.bossHit();
           break;
         case 'bossPhase':
           audio.sfx.bossPhase();
           if (e.phase === 3) audio.queueArrangement('bossFinal');
+          break;
+        case 'bossPhased':
+          audio.sfx.phaseShift();
           break;
         case 'bossKilled':
           audio.sfx.bossKilled();
@@ -113,6 +119,10 @@ export class RunScene implements Scene {
           break;
         case 'stageIntro':
           audio.queueArrangement(e.boss ? 'boss' : 'main');
+          break;
+        case 'warpStart':
+          audio.sfx.warp();
+          audio.startSong(this.ctx.songForWorld(e.world));
           break;
         case 'gameOver':
           audio.stopSong();

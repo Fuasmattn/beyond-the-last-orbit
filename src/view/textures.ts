@@ -1,7 +1,7 @@
 import { Texture } from 'pixi.js';
 import { GLYPHS } from '../data/font';
 import { SPRITES } from '../data/sprites';
-import type { EnemyKind } from '../sim/types';
+import type { BossKind, EnemyKind } from '../sim/types';
 import { gridToRGBA, type PixelGrid } from './pixelArt';
 
 export type TexturePair = readonly [Texture, Texture];
@@ -10,8 +10,9 @@ export interface GameTextures {
   player: Texture;
   enemies: Record<EnemyKind, TexturePair>;
   shieldCracked: TexturePair;
-  wardenBody: Texture;
+  bosses: Record<BossKind, Texture>;
   turret: Texture;
+  plate: Texture;
   glyphs: Map<string, Texture>;
 }
 
@@ -44,10 +45,19 @@ export function loadTextures(): GameTextures {
       gunner: pair(SPRITES.gunner),
       diver: pair(SPRITES.diver),
       shield: pair(SPRITES.shield),
+      splitter: pair(SPRITES.splitter),
+      phaser: pair(SPRITES.phaser),
+      bomber: pair(SPRITES.bomber),
+      mini: pair(SPRITES.mini),
     },
     shieldCracked: pair(SPRITES.shieldCracked),
-    wardenBody: textureFromGrid(SPRITES.wardenBody),
+    bosses: {
+      warden: textureFromGrid(SPRITES.warden),
+      hive: textureFromGrid(SPRITES.hive),
+      dreadnought: textureFromGrid(SPRITES.dreadnought),
+    },
     turret: textureFromGrid(SPRITES.turret),
+    plate: textureFromGrid(SPRITES.plate),
     glyphs,
   };
 }

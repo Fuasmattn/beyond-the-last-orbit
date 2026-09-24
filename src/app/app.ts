@@ -1,8 +1,10 @@
 import { Application, Container, Graphics, TextureSource } from 'pixi.js';
 import { AudioEngine } from '../audio/engine';
 import { compileSong, type CompiledSong } from '../audio/song';
-import { MAX_STEPS_PER_FRAME, SIM_DT } from '../data/balance';
+import { FIELD_H, FIELD_W, MAX_STEPS_PER_FRAME, SIM_DT } from '../data/balance';
 import { EARTH_SONG } from '../data/songs/earth';
+import { MARS_SONG } from '../data/songs/mars';
+import { MOON_SONG } from '../data/songs/moon';
 import { worldAt, type WorldId } from '../data/worlds';
 import { mergeInputs } from '../input/inputFrame';
 import { KeyboardInput } from '../input/keyboard';
@@ -44,9 +46,12 @@ export async function startApp(host: HTMLElement): Promise<void> {
   window.addEventListener('pointerdown', unlockAudio);
   const judgeFire = () => audio?.judgeFire() ?? null;
 
-  const songs: Partial<Record<WorldId, CompiledSong>> = { earth: compileSong(EARTH_SONG) };
-  const fallbackSong = songs.earth!;
-  const songForWorld = (world: number) => songs[worldAt(world).id] ?? fallbackSong;
+  const songs: Record<WorldId, CompiledSong> = {
+    earth: compileSong(EARTH_SONG),
+    moon: compileSong(MOON_SONG),
+    mars: compileSong(MARS_SONG),
+  };
+  const songForWorld = (world: number) => songs[worldAt(world).id];
 
   const store = browserStore();
   const { data: save, reset } = loadSave(store);
@@ -54,7 +59,10 @@ export async function startApp(host: HTMLElement): Promise<void> {
   const textures = loadTextures();
   const game = new Container();
   const sceneLayer = new Container();
-  game.addChild(sceneLayer);
+  // Clip everything (planets, streaks, off-field bullets) to the 3:4 playfield.
+  const fieldMask = new Graphics().rect(0, 0, FIELD_W, FIELD_H).fill(0xffffff);
+  game.addChild(sceneLayer, fieldMask);
+  sceneLayer.mask = fieldMask;
 
   const isTouch = window.matchMedia('(pointer: coarse)').matches;
   if (isTouch) {

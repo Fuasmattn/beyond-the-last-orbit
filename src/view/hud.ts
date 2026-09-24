@@ -131,27 +131,31 @@ export class Hud extends Container {
       .rect(BOSS_BAR.x, BOSS_BAR.y, BOSS_BAR.w, BOSS_BAR.h)
       .fill(0x331018)
       .rect(BOSS_BAR.x, BOSS_BAR.y, BOSS_BAR.w * ratio, BOSS_BAR.h)
-      .fill(0xff3b5c);
+      .fill(b.phased ? 0x8a7fb5 : 0xff3b5c);
   }
 
   private updateBanner(state: SimState, paused: boolean): void {
     let banner = '';
     let sub = '';
     let y = 140;
+    const world = worldAt(state.world);
     if (paused) {
       banner = 'PAUSED';
       sub = 'PRESS P TO RESUME';
     } else if (state.phase === 'gameOver') {
       banner = 'GAME OVER';
       sub = 'PRESS FIRE';
+    } else if (state.phase === 'warp') {
+      banner = state.world === 0 && state.loop > 0 ? `LOOP ${state.loop + 1}` : `WORLD ${state.world + 1}`;
+      sub = world.name;
+      y = 130;
     } else if (state.phase === 'stageIntro') {
-      const world = worldAt(state.world);
       if (state.boss) {
         banner = Math.floor(state.time * 6) % 2 === 0 ? 'WARNING' : '';
         sub = world.bossName;
       } else {
         banner = `STAGE ${state.world + 1}-${state.stage}`;
-        if (state.stage === 1) sub = state.loop > 0 ? `${world.name} - LOOP ${state.loop + 1}` : world.name;
+        if (state.stage === 1) sub = world.name;
       }
     } else if (state.phase === 'stageClear') {
       banner = state.stage === STAGE.perWorld ? 'WORLD CLEAR' : 'STAGE CLEAR';

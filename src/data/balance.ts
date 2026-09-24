@@ -198,3 +198,13 @@ export const SOUR = {
   /** Max random per-note detune at full sourness. */
   maxDetuneCents: 35,
 } as const;
+
+export const CREDITS = { scoreDivisor: 100, perBoss: 50, perPerfect: 25 } as const;
+
+export const CALIBRATION = {
+  taps: 8,
+  bpm: 120,
+  /** Taps further than this from a click are ignored as mistakes. */
+  maxAbsMs: 250,
+  maxOffsetMs: 300,
+} as const;

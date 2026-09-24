@@ -1,6 +1,6 @@
 import { DIVE, FIELD_W } from '../data/balance';
 import { aimVelocity, spawnEnemyBullet } from './bullets';
-import { slotPosition } from './formation';
+import { inFormation, slotPosition } from './formation';
 import { clamp } from './math';
 import { nextRandom } from './rng';
 import type { Dive, SimEvent, SimState } from './types';
@@ -24,7 +24,7 @@ export function updateDives(state: SimState, dt: number, events: SimEvent[]): vo
   state.diveTimer -= dt;
   if (state.diveTimer <= 0) {
     state.diveTimer = state.diff.diveInterval * (0.75 + 0.5 * nextRandom(state.rng));
-    const candidates = state.enemies.filter((e) => e.kind === 'diver' && !e.dive);
+    const candidates = state.enemies.filter((e) => e.kind === 'diver' && inFormation(e));
     const e = candidates[Math.floor(nextRandom(state.rng) * candidates.length)];
     if (e) {
       const p = state.player;

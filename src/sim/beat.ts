@@ -8,11 +8,16 @@ export function currentBeat(state: SimState, external: number | null): number {
   return external ?? (state.time * worldAt(state.world).bpm) / 60;
 }
 
-/** Whole beats crossed since the previous call (0 on the first call, never negative). */
+/**
+ * Whole beats crossed since the previous call (0 on the first call / after a resync,
+ * never negative). Also advances `state.beat.count`.
+ */
 export function beatsCrossed(state: SimState, external: number | null): number {
   const b = Math.floor(currentBeat(state, external));
   const last = state.beat.last;
   state.beat.last = last === null ? b : Math.max(last, b);
   if (last === null) return 0;
-  return Math.min(MAX_BEATS_PER_STEP, Math.max(0, b - last));
+  const n = Math.min(MAX_BEATS_PER_STEP, Math.max(0, b - last));
+  state.beat.count += n;
+  return n;
 }

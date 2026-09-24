@@ -40,8 +40,21 @@ export const FORMATION = {
   edgeMargin: 4,
 } as const;
 
-export const POINTS = { grunt: 10, gunner: 20, diver: 30, shield: 40 } as const;
+export const POINTS = {
+  grunt: 10,
+  gunner: 20,
+  diver: 30,
+  shield: 40,
+  splitter: 50,
+  phaser: 50,
+  bomber: 50,
+  mini: 15,
+} as const;
 export const TURRET_POINTS = 250;
+
+export const MINI = { w: 7, h: 6, vx: 35, vy: 45 } as const;
+
+export const BOMB = { w: 4, h: 4, speed: 60, fuse: 1.1, ringCount: 8, ringSpeed: 70 } as const;
 
 export const DIVE = {
   duration: 2.4,
@@ -72,6 +85,8 @@ export const STAGE = {
   timeBonusPerSec: 50,
   perfectBeatPct: 0.7,
 } as const;
+
+export const WARP = { time: 3, skipAfter: 0.5 } as const;
 
 export const HITSTOP = {
   playerHit: 0.04,
@@ -105,6 +120,56 @@ export const WARDEN = {
   laserFire: 1.2,
   laserSweep: 60,
   laserW: 8,
+} as const;
+
+export const HIVE = {
+  w: 60,
+  h: 22,
+  y: 30,
+  hp: 110,
+  coreX: 20,
+  coreW: 20,
+  enterTime: 2,
+  swayAmp: 40,
+  swaySpeed: 0.5,
+  escortEvery: 8,
+  escortCount: 3,
+  escortVx: 25,
+  escortVy: 35,
+  phaseEvery: 4,
+  ringCount: 12,
+  ringSpin: 0.26,
+  swarmEvery: 4,
+  swarmSpeed: 90,
+  burstSpread: 0.15,
+} as const;
+
+export const DREAD = {
+  w: 96,
+  h: 24,
+  y: 28,
+  hp: 140,
+  coreX: 38,
+  coreW: 20,
+  enterTime: 2.4,
+  swayAmp: 30,
+  swaySpeed: 0.4,
+  cannons: [
+    [10, 23],
+    [85, 23],
+  ],
+  plateW: 10,
+  plateH: 6,
+  plateHp: 10,
+  plates: [
+    [38, 18],
+    [48, 18],
+  ],
+  spreadAngle: 0.25,
+  curtainStep: 14,
+  curtainSpeed: 70,
+  gapNarrow: 20,
+  gapWide: 34,
 } as const;
 
 export const RHYTHM = {

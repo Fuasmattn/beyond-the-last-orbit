@@ -36,8 +36,9 @@ function hitCore(s: SimState, b: Boss, times = 1): SimEvent[] {
 }
 
 describe('ORBITAL WARDEN', () => {
-  it('spawns above the field and flies in', () => {
+  it('is the Earth boss and flies in from above', () => {
     const s = bossStage();
+    expect(s.boss!.kind).toBe('warden');
     expect(s.boss!.y).toBeLessThan(0);
     for (let t = 0; t < WARDEN.enterTime + 0.1; t += SIM_DT) updateWarden(s, SIM_DT, 0, []);
     expect(s.boss!.entering).toBe(false);
@@ -67,11 +68,11 @@ describe('ORBITAL WARDEN', () => {
 
   it('loses turrets after enough hits and pays points', () => {
     const { s, b } = ready();
-    const t = b.turrets[0]!;
+    const t = b.parts[0]!;
     const events: SimEvent[] = [];
     for (let i = 0; i < WARDEN.turretHp; i++) hitWarden(s, bullet(t.x + 4, t.y + 2), events);
     expect(t.alive).toBe(false);
-    expect(events.some((e) => e.type === 'turretDestroyed')).toBe(true);
+    expect(events.some((e) => e.type === 'partDestroyed')).toBe(true);
     expect(s.score).toBeGreaterThan(0);
   });
 
@@ -80,7 +81,7 @@ describe('ORBITAL WARDEN', () => {
     b.hp = Math.floor((b.maxHp * 2) / 3) + 1;
     const events = hitCore(s, b);
     expect(b.phase).toBe(2);
-    expect(b.turrets.every((t) => !t.alive)).toBe(true);
+    expect(b.parts.every((t) => !t.alive)).toBe(true);
     expect(s.hitStop).toBeGreaterThan(0);
     expect(events.map((e) => e.type)).toContain('bossPhase');
   });
@@ -94,7 +95,7 @@ describe('ORBITAL WARDEN', () => {
   it('telegraphs its phase 2 laser, then burns the player', () => {
     const { s, b } = ready();
     b.phase = 2;
-    b.turrets.forEach((t) => (t.alive = false));
+    b.parts.forEach((t) => (t.alive = false));
     const events: SimEvent[] = [];
     updateWarden(s, SIM_DT, 8, events);
     expect(events.map((e) => e.type)).toContain('laserWarn');
@@ -113,7 +114,7 @@ describe('ORBITAL WARDEN', () => {
 
   it('dies at zero hp and pays out', () => {
     const { s, b } = ready();
-    b.turrets.forEach((t) => (t.alive = false));
+    b.parts.forEach((t) => (t.alive = false));
     b.hp = 1;
     const events = hitCore(s, b);
     expect(s.phase).toBe('bossDying');

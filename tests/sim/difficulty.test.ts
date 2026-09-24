@@ -28,11 +28,13 @@ describe('difficulty', () => {
   });
 
   it('introduces enemy types as difficulty rises', () => {
-    expect(kindForRow(0, 1)).toBe('gunner');
-    expect(kindForRow(2, 1)).toBe('grunt');
-    expect(kindForRow(2, 2)).toBe('diver');
-    expect(kindForRow(1, 3)).toBe('shield');
-    expect(kindForRow(4, 99)).toBe('grunt');
+    expect(kindForRow(0, 1, 'phaser')).toBe('gunner');
+    expect(kindForRow(2, 1, 'phaser')).toBe('grunt');
+    expect(kindForRow(2, 2, 'phaser')).toBe('diver');
+    expect(kindForRow(1, 3, 'phaser')).toBe('shield');
+    expect(kindForRow(3, 3, 'phaser')).toBe('grunt');
+    expect(kindForRow(3, 4, 'phaser')).toBe('phaser');
+    expect(kindForRow(4, 99, 'phaser')).toBe('grunt');
   });
 
   it('gives shields and later loops extra hp', () => {

@@ -1,4 +1,4 @@
-import { PLAYER, STAGE } from '../data/balance';
+import { PLAYER, STAGE, WARP } from '../data/balance';
 import { WORLDS } from '../data/worlds';
 import { spawnBoss } from './boss';
 import { difficultyFor } from './difficulty';
@@ -59,6 +59,17 @@ export function finishStage(state: SimState, events: SimEvent[]): void {
   events.push({ type: 'stageClear', stage: state.stage, result });
 }
 
+/** Warp to the (already selected) next world; the new song's clock takes over the beat. */
+export function startWarp(state: SimState, events: SimEvent[]): void {
+  state.phase = 'warp';
+  state.phaseTimer = WARP.time;
+  state.bullets = [];
+  state.enemies = [];
+  state.boss = null;
+  state.beat.last = null;
+  events.push({ type: 'warpStart', world: state.world, loop: state.loop });
+}
+
 export function advanceStage(state: SimState, events: SimEvent[]): void {
   state.stage++;
   if (state.stage > STAGE.perWorld) {
@@ -69,6 +80,8 @@ export function advanceStage(state: SimState, events: SimEvent[]): void {
       state.world = 0;
       state.loop++;
     }
+    startWarp(state, events);
+    return;
   }
   startStage(state, events);
 }

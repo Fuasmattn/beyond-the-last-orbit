@@ -1,4 +1,4 @@
-import { PLAYER_ZONE_TOP, SIM_DT } from '../data/balance';
+import { PLAYER_ZONE_TOP, SIM_DT, WARP } from '../data/balance';
 import { beatsCrossed } from './beat';
 import { updateBoss } from './boss';
 import { moveBullets } from './bullets';
@@ -8,7 +8,8 @@ import { updateEnemyFire } from './enemyFire';
 import { formationBottom, spawnFormation, updateFormation } from './formation';
 import { hitPlayer, updatePlayer } from './player';
 import { updateCombo } from './scoring';
-import { advanceStage, checkExtraLife, finishStage } from './stageFlow';
+import { updateSpecials } from './specials';
+import { advanceStage, checkExtraLife, finishStage, startStage } from './stageFlow';
 import type { InputFrame, SimEvent, SimState } from './types';
 
 export function step(state: SimState, input: InputFrame, dt: number = SIM_DT): SimEvent[] {
@@ -41,6 +42,14 @@ export function step(state: SimState, input: InputFrame, dt: number = SIM_DT): S
       if (state.phaseTimer <= 0) advanceStage(state, events);
       return events;
 
+    case 'warp': {
+      updatePlayer(state, noFire, dt, events);
+      state.phaseTimer -= dt;
+      const skipped = input.firePressed && state.phaseTimer < WARP.time - WARP.skipAfter;
+      if (state.phaseTimer <= 0 || skipped) startStage(state, events);
+      return events;
+    }
+
     case 'bossDying':
       updatePlayer(state, noFire, dt, events);
       updateBoss(state, dt, 0, events);
@@ -69,6 +78,7 @@ function playing(state: SimState, input: InputFrame, dt: number, beats: number, 
     updateDives(state, dt, events);
     updateEnemyFire(state, dt, events);
   }
+  updateSpecials(state, dt, events);
   moveBullets(state, dt);
   resolveCollisions(state, events);
   checkExtraLife(state, events);

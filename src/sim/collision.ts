@@ -3,6 +3,7 @@ import { hitBoss } from './boss';
 import { overlaps } from './geometry';
 import { hitPlayer } from './player';
 import { recordHit, registerKill } from './scoring';
+import { spawnMini } from './specials';
 import type { SimEvent, SimState } from './types';
 
 export { overlaps } from './geometry';
@@ -12,12 +13,12 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
 
   for (const b of state.bullets) {
     if (b.owner !== 'player') continue;
-    if (state.boss) {
-      if (hitBoss(state, b, events)) spent.add(b.id);
+    if (state.boss && hitBoss(state, b, events)) {
+      spent.add(b.id);
       continue;
     }
     for (const e of state.enemies) {
-      if (e.hp <= 0 || !overlaps(b, e)) continue;
+      if (e.hp <= 0 || e.phased || !overlaps(b, e)) continue;
       spent.add(b.id);
       e.hp--;
       e.flash = ENEMY.flashTime;
@@ -27,6 +28,11 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
       if (e.hp <= 0) {
         const points = registerKill(state, POINTS[e.kind], b.mult);
         events.push({ type: 'enemyKilled', id: e.id, kind: e.kind, x: cx, y: cy, points });
+        if (e.kind === 'splitter') {
+          spawnMini(state, cx, cy, -1);
+          spawnMini(state, cx, cy, 1);
+          events.push({ type: 'split', id: e.id, x: cx, y: cy });
+        }
       } else {
         events.push({ type: 'enemyHit', id: e.id, x: cx, y: cy });
       }
@@ -46,7 +52,7 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
 
   if (state.player.invuln <= 0) {
     for (const e of state.enemies) {
-      if (e.dive && e.hp > 0 && overlaps(e, state.player)) {
+      if ((e.dive || e.free) && e.hp > 0 && overlaps(e, state.player)) {
         e.hp = 0;
         events.push({ type: 'enemyKilled', id: e.id, kind: e.kind, x: e.x + e.w / 2, y: e.y + e.h / 2, points: 0 });
         hitPlayer(state, events);

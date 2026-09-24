@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PLAYER, STAGE } from '../../src/data/balance';
+import { PLAYER, SIM_DT, STAGE, WARP } from '../../src/data/balance';
 import { WORLDS } from '../../src/data/worlds';
 import {
   advanceStage,
@@ -8,7 +8,8 @@ import {
   finishStage,
 } from '../../src/sim/stageFlow';
 import { createInitialState } from '../../src/sim/state';
-import type { SimEvent } from '../../src/sim/types';
+import { step } from '../../src/sim/step';
+import { NO_INPUT, type SimEvent } from '../../src/sim/types';
 
 describe('computeStageResult', () => {
   it('scores accuracy, beat, no-hit and time', () => {
@@ -68,6 +69,41 @@ describe('stage progression', () => {
     expect(s.enemies).toHaveLength(0);
     expect(s.phase).toBe('stageIntro');
     expect(events).toContainEqual({ type: 'stageIntro', world: 0, stage: STAGE.perWorld, loop: 0, boss: true });
+  });
+});
+
+describe('warp', () => {
+  function afterBoss() {
+    const s = createInitialState(1);
+    s.stage = STAGE.perWorld;
+    const events: SimEvent[] = [];
+    advanceStage(s, events);
+    return { s, events };
+  }
+
+  it('warps to the next world after its boss stage', () => {
+    const { s, events } = afterBoss();
+    expect(s.phase).toBe('warp');
+    expect(s.world).toBe(1);
+    expect(s.stage).toBe(1);
+    expect(s.beat.last).toBeNull();
+    expect(events).toContainEqual({ type: 'warpStart', world: 1, loop: 0 });
+  });
+
+  it('starts the stage when the warp ends', () => {
+    const { s } = afterBoss();
+    for (let t = 0; t < WARP.time + 0.1; t += SIM_DT) step(s, NO_INPUT);
+    expect(s.phase).toBe('stageIntro');
+    expect(s.enemies.length).toBeGreaterThan(0);
+  });
+
+  it('can be skipped with fire, but not instantly', () => {
+    const { s } = afterBoss();
+    step(s, { ...NO_INPUT, firePressed: true });
+    expect(s.phase).toBe('warp');
+    for (let t = 0; t < WARP.skipAfter + 0.05; t += SIM_DT) step(s, NO_INPUT);
+    step(s, { ...NO_INPUT, firePressed: true });
+    expect(s.phase).toBe('stageIntro');
   });
 });
 

@@ -10,6 +10,7 @@ describe('beatsCrossed', () => {
     expect(beatsCrossed(s, 0.9)).toBe(0);
     expect(beatsCrossed(s, 1.1)).toBe(1);
     expect(beatsCrossed(s, 3.2)).toBe(2);
+    expect(s.beat.count).toBe(3);
   });
 
   it('caps large jumps', () => {
@@ -24,6 +25,14 @@ describe('beatsCrossed', () => {
     expect(beatsCrossed(s, 2)).toBe(0);
     expect(beatsCrossed(s, 5.5)).toBe(0);
     expect(beatsCrossed(s, 6)).toBe(1);
+  });
+
+  it('resyncs after a reset without counting', () => {
+    const s = createInitialState(1);
+    beatsCrossed(s, 50);
+    s.beat.last = null;
+    expect(beatsCrossed(s, -0.2)).toBe(0);
+    expect(beatsCrossed(s, 0.1)).toBe(1);
   });
 
   it('falls back to sim time and world BPM without audio', () => {

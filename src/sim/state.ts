@@ -35,7 +35,7 @@ export function createInitialState(seed: number): SimState {
     enemyFireTimer: 1.5,
     diveTimer: 0,
     hitStop: 0,
-    beat: { last: null },
+    beat: { last: null, count: 0 },
     rhythm: { streak: 0, mult: 1 },
     combo: { chain: 0, timer: 0 },
     stats: { shots: 0, hits: 0, onBeatShots: 0 },

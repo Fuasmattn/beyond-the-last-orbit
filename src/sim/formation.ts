@@ -1,7 +1,13 @@
 import { ENEMY, FIELD_W, FORMATION } from '../data/balance';
+import { worldAt } from '../data/worlds';
 import { enemyHp, kindForRow } from './difficulty';
 import { allocId } from './ids';
 import type { Enemy, SimState } from './types';
+
+/** Sitting in its formation slot (not diving, not free-moving). */
+export function inFormation(e: Enemy): boolean {
+  return e.dive === null && e.free === null;
+}
 
 export function formationWidth(cols: number): number {
   return (cols - 1) * ENEMY.spacingX + ENEMY.w;
@@ -9,12 +15,13 @@ export function formationWidth(cols: number): number {
 
 export function spawnFormation(state: SimState): void {
   const { cols, d } = state.diff;
+  const special = worldAt(state.world).special;
   const x = Math.round((FIELD_W - formationWidth(cols)) / 2);
   const y = ENEMY.startY;
   state.formation = { x, y, dir: 1, total: ENEMY.rows * cols };
   state.enemies = [];
   for (let row = 0; row < ENEMY.rows; row++) {
-    const kind = kindForRow(row, d);
+    const kind = kindForRow(row, d, special);
     const hp = enemyHp(kind, state.diff);
     for (let col = 0; col < cols; col++) {
       state.enemies.push({
@@ -26,6 +33,8 @@ export function spawnFormation(state: SimState): void {
         maxHp: hp,
         flash: 0,
         dive: null,
+        free: null,
+        phased: false,
         x: x + col * ENEMY.spacingX,
         y: y + row * ENEMY.spacingY,
         w: ENEMY.w,
@@ -51,17 +60,20 @@ export function slotPosition(state: SimState, e: Enemy): { x: number; y: number 
 
 export function updateFormation(state: SimState, dt: number): void {
   const f = state.formation;
-  const enemies = state.enemies;
-  if (enemies.length === 0) return;
-
-  f.x += f.dir * formationSpeed(enemies.length, f.total, state.diff.marchMin, state.diff.marchMax) * dt;
-
+  let members = 0;
   let minCol = Infinity;
   let maxCol = -Infinity;
-  for (const e of enemies) {
+  for (const e of state.enemies) {
+    if (e.free) continue;
+    members++;
     if (e.col < minCol) minCol = e.col;
     if (e.col > maxCol) maxCol = e.col;
   }
+  for (const e of state.enemies) if (e.flash > 0) e.flash = Math.max(0, e.flash - dt);
+  if (members === 0) return;
+
+  f.x += f.dir * formationSpeed(members, f.total, state.diff.marchMin, state.diff.marchMax) * dt;
+
   const left = f.x + minCol * ENEMY.spacingX;
   const right = f.x + maxCol * ENEMY.spacingX + ENEMY.w;
   const rightLimit = FIELD_W - FORMATION.edgeMargin;
@@ -76,18 +88,16 @@ export function updateFormation(state: SimState, dt: number): void {
     f.y += FORMATION.dropStep;
   }
 
-  for (const e of enemies) {
-    if (!e.dive) {
-      e.x = f.x + e.col * ENEMY.spacingX;
-      e.y = f.y + e.row * ENEMY.spacingY;
-    }
-    if (e.flash > 0) e.flash = Math.max(0, e.flash - dt);
+  for (const e of state.enemies) {
+    if (!inFormation(e)) continue;
+    e.x = f.x + e.col * ENEMY.spacingX;
+    e.y = f.y + e.row * ENEMY.spacingY;
   }
 }
 
-/** Lowest edge of enemies still in formation (divers excluded). */
+/** Lowest edge of enemies sitting in the formation. */
 export function formationBottom(state: SimState): number {
   let bottom = -Infinity;
-  for (const e of state.enemies) if (!e.dive) bottom = Math.max(bottom, e.y + e.h);
+  for (const e of state.enemies) if (inFormation(e)) bottom = Math.max(bottom, e.y + e.h);
   return bottom;
 }

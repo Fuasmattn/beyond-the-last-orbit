@@ -1,5 +1,5 @@
-export type EnemyKind = 'grunt' | 'gunner' | 'diver' | 'shield';
-export type BossKind = 'warden';
+export type EnemyKind = 'grunt' | 'gunner' | 'diver' | 'shield' | 'splitter' | 'phaser' | 'bomber' | 'mini';
+export type BossKind = 'warden' | 'hive' | 'dreadnought';
 
 export interface Box {
   x: number;
@@ -26,7 +26,12 @@ export interface Enemy extends Box {
   hp: number;
   maxHp: number;
   flash: number;
+  /** Scripted swoop out of the formation and back. */
   dive: Dive | null;
+  /** Self-moving outside the formation (bounces off walls, leaves at the bottom). */
+  free: { vx: number; vy: number } | null;
+  /** Bullets pass through while phased. */
+  phased: boolean;
 }
 
 export interface Bullet extends Box {
@@ -37,6 +42,8 @@ export interface Bullet extends Box {
   onBeat: boolean;
   /** Rhythm multiplier captured at fire time. */
   mult: number;
+  /** Bombs: seconds until the bullet bursts into a ring. */
+  fuse?: number;
 }
 
 export interface Player extends Box {
@@ -79,10 +86,13 @@ export interface Boss extends Box {
   t: number;
   entering: boolean;
   flash: number;
-  turrets: BossPart[];
+  /** Destroyable attachments: Warden turrets, Dreadnought armor plates. */
+  parts: BossPart[];
   laser: Laser | null;
   beatCount: number;
   spiralAngle: number;
+  /** Hive: intangible while phased. */
+  phased: boolean;
   /** Seconds of death animation left; 0 while alive. */
   dying: number;
 }
@@ -116,7 +126,7 @@ export interface StageResult {
   perfect: boolean;
 }
 
-export type Phase = 'stageIntro' | 'playing' | 'bossDying' | 'stageClear' | 'gameOver';
+export type Phase = 'stageIntro' | 'playing' | 'bossDying' | 'stageClear' | 'warp' | 'gameOver';
 
 export interface SimState {
   time: number;
@@ -138,7 +148,8 @@ export interface SimState {
   enemyFireTimer: number;
   diveTimer: number;
   hitStop: number;
-  beat: { last: number | null };
+  /** `last`: last whole beat seen (null = resync); `count`: beats crossed so far. */
+  beat: { last: number | null; count: number };
   rhythm: { streak: number; mult: number };
   combo: { chain: number; timer: number };
   stats: { shots: number; hits: number; onBeatShots: number };
@@ -154,15 +165,19 @@ export type SimEvent =
   | { type: 'enemyShot'; x: number; y: number }
   | { type: 'playerHit'; x: number; y: number; livesLeft: number }
   | { type: 'formationInvaded' }
+  | { type: 'split'; id: number; x: number; y: number }
+  | { type: 'bombBurst'; x: number; y: number }
   | { type: 'stageIntro'; world: number; stage: number; loop: number; boss: boolean }
   | { type: 'stageStart'; stage: number }
   | { type: 'stageClear'; stage: number; result: StageResult }
   | { type: 'worldClear'; world: number }
+  | { type: 'warpStart'; world: number; loop: number }
   | { type: 'extraLife'; lives: number }
   | { type: 'dive'; id: number }
   | { type: 'bossPhase'; phase: 2 | 3 }
+  | { type: 'bossPhased'; phased: boolean }
   | { type: 'bossHit'; x: number; y: number }
-  | { type: 'turretDestroyed'; x: number; y: number }
+  | { type: 'partDestroyed'; x: number; y: number }
   | { type: 'bossKilled'; x: number; y: number; points: number }
   | { type: 'laserWarn'; x: number }
   | { type: 'laserFire'; x: number }

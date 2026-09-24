@@ -105,7 +105,7 @@ describe('step', () => {
     const b = s.boss!;
     b.entering = false;
     b.y = WARDEN.y;
-    b.turrets.forEach((t) => (t.alive = false));
+    b.parts.forEach((t) => (t.alive = false));
     b.hp = 1;
     s.bullets.push({
       id: 5000, x: 0, y: WARDEN.y, w: FIELD_W, h: WARDEN.h, vx: 0, vy: 0, owner: 'player', onBeat: false, mult: 1,

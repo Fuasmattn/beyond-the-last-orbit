@@ -1,13 +1,13 @@
 import { FIELD_H, FIELD_W, TURRET_POINTS, WARDEN } from '../../data/balance';
-import { aimVelocity, spawnEnemyBullet } from '../bullets';
 import { overlaps } from '../geometry';
 import { allocId } from '../ids';
 import { clamp } from '../math';
+import { fireRing, fireSpread } from '../patterns';
 import { hitPlayer } from '../player';
 import { nextRandom } from '../rng';
 import { recordHit, registerKill } from '../scoring';
 import type { Boss, Box, Bullet, Laser, SimEvent, SimState } from '../types';
-import { applyPhase, fireRing, fireSpread, killBoss } from './common';
+import { aimedShot, applyPhase, coreBox, destroyParts, killBoss, tickBoss } from './common';
 
 /** ORBITAL WARDEN — satellite station with two turrets, a sweeping laser and spiral rings. */
 export function spawnWarden(state: SimState): void {
@@ -26,7 +26,7 @@ export function spawnWarden(state: SimState): void {
     t: 0,
     entering: true,
     flash: 0,
-    turrets: WARDEN.turretOffsets.map(([ox, oy]) => ({
+    parts: WARDEN.turretOffsets.map(([ox, oy]) => ({
       id: allocId(state),
       offsetX: ox,
       offsetY: oy,
@@ -42,12 +42,13 @@ export function spawnWarden(state: SimState): void {
     laser: null,
     beatCount: 0,
     spiralAngle: 0,
+    phased: false,
     dying: 0,
   };
 }
 
 export function wardenCore(b: Boss): Box {
-  return { x: b.x + WARDEN.coreX, y: b.y, w: WARDEN.coreW, h: b.h };
+  return coreBox(b, WARDEN.coreX, WARDEN.coreW);
 }
 
 export function laserBox(b: Boss, l: Laser): Box {
@@ -55,34 +56,9 @@ export function laserBox(b: Boss, l: Laser): Box {
   return { x: l.x - WARDEN.laserW / 2, y: top, w: WARDEN.laserW, h: FIELD_H - top };
 }
 
-function positionParts(b: Boss): void {
-  for (const t of b.turrets) {
-    t.x = b.x + t.offsetX;
-    t.y = b.y + t.offsetY;
-  }
-}
-
 export function updateWarden(state: SimState, dt: number, beats: number, events: SimEvent[]): void {
   const b = state.boss;
-  if (!b) return;
-  b.t += dt;
-  b.flash = Math.max(0, b.flash - dt);
-  for (const t of b.turrets) t.flash = Math.max(0, t.flash - dt);
-  if (b.dying > 0) {
-    b.dying = Math.max(0, b.dying - dt);
-    return;
-  }
-  if (b.entering) {
-    b.y += ((WARDEN.y + WARDEN.h) / WARDEN.enterTime) * dt;
-    if (b.y >= WARDEN.y) {
-      b.y = WARDEN.y;
-      b.entering = false;
-    }
-  }
-  b.x = FIELD_W / 2 + Math.sin(b.t * WARDEN.swaySpeed) * WARDEN.swayAmp - b.w / 2;
-  positionParts(b);
-  if (b.entering || state.phase !== 'playing') return;
-
+  if (!b || !tickBoss(state, b, dt, WARDEN)) return;
   for (let i = 0; i < beats; i++) onBeat(state, b, events);
   updateLaser(state, b, dt, events);
 }
@@ -97,15 +73,9 @@ function onBeat(state: SimState, b: Boss, events: SimEvent[]): void {
 
   if (b.phase === 1) {
     if (n % 2 === 0) {
-      const alive = b.turrets.filter((t) => t.alive);
+      const alive = b.parts.filter((t) => t.alive);
       const t = alive[(n / 2) % Math.max(1, alive.length)];
-      if (t) {
-        const tx = t.x + t.w / 2;
-        const ty = t.y + t.h;
-        const v = aimVelocity(state, tx, ty, speed);
-        spawnEnemyBullet(state, tx, ty, v.vx, v.vy);
-        events.push({ type: 'enemyShot', x: tx, y: ty });
-      }
+      if (t) aimedShot(state, t.x + t.w / 2, t.y + t.h, events);
     }
     if (n % 4 === 0) fireSpread(state, cx, cy, 3, WARDEN.spreadAngle, speed);
   } else if (b.phase === 2) {
@@ -142,20 +112,12 @@ function updateLaser(state: SimState, b: Boss, dt: number, events: SimEvent[]): 
   if (l.t >= WARDEN.laserFire) b.laser = null;
 }
 
-function destroyTurrets(b: Boss, events: SimEvent[]): void {
-  for (const t of b.turrets) {
-    if (!t.alive) continue;
-    t.alive = false;
-    events.push({ type: 'turretDestroyed', x: t.x + t.w / 2, y: t.y + t.h / 2 });
-  }
-}
-
 /** Resolves a player bullet against the Warden. Returns true if the bullet was consumed. */
 export function hitWarden(state: SimState, bullet: Bullet, events: SimEvent[]): boolean {
   const b = state.boss;
   if (!b || b.entering || b.dying > 0) return false;
 
-  for (const t of b.turrets) {
+  for (const t of b.parts) {
     if (!t.alive || !overlaps(bullet, t)) continue;
     recordHit(state);
     t.hp--;
@@ -163,7 +125,7 @@ export function hitWarden(state: SimState, bullet: Bullet, events: SimEvent[]): 
     if (t.hp <= 0) {
       t.alive = false;
       registerKill(state, TURRET_POINTS, bullet.mult);
-      events.push({ type: 'turretDestroyed', x: t.x + t.w / 2, y: t.y + t.h / 2 });
+      events.push({ type: 'partDestroyed', x: t.x + t.w / 2, y: t.y + t.h / 2 });
     }
     return true;
   }
@@ -180,7 +142,7 @@ export function hitWarden(state: SimState, bullet: Bullet, events: SimEvent[]): 
     }
     if (applyPhase(state, b, events)) {
       b.laser = null;
-      if (b.phase >= 2) destroyTurrets(b, events);
+      if (b.phase >= 2) destroyParts(b, events);
     }
     return true;
   }

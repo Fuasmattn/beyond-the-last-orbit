@@ -1,6 +1,6 @@
-import { ENEMY, FIELD_H, FIELD_W } from '../data/balance';
+import { BOMB, ENEMY, FIELD_H, FIELD_W } from '../data/balance';
 import { allocId } from './ids';
-import type { SimState } from './types';
+import type { Bullet, SimState } from './types';
 
 export function moveBullets(state: SimState, dt: number): void {
   for (const b of state.bullets) {
@@ -12,9 +12,9 @@ export function moveBullets(state: SimState, dt: number): void {
   );
 }
 
-/** Spawns an enemy bullet horizontally centered on `cx`. */
-export function spawnEnemyBullet(state: SimState, cx: number, y: number, vx: number, vy: number): void {
-  state.bullets.push({
+/** Spawns an enemy bullet horizontally centered on `cx`; returns it for tweaking. */
+export function spawnEnemyBullet(state: SimState, cx: number, y: number, vx: number, vy: number): Bullet {
+  const b: Bullet = {
     id: allocId(state),
     x: cx - ENEMY.bulletW / 2,
     y,
@@ -25,7 +25,19 @@ export function spawnEnemyBullet(state: SimState, cx: number, y: number, vx: num
     owner: 'enemy',
     onBeat: false,
     mult: 1,
-  });
+  };
+  state.bullets.push(b);
+  return b;
+}
+
+/** Slow bomb that bursts into a ring when its fuse runs out (see `updateSpecials`). */
+export function spawnBomb(state: SimState, cx: number, y: number): Bullet {
+  const b = spawnEnemyBullet(state, cx, y, 0, BOMB.speed);
+  b.x = cx - BOMB.w / 2;
+  b.w = BOMB.w;
+  b.h = BOMB.h;
+  b.fuse = BOMB.fuse;
+  return b;
 }
 
 /** Velocity from (cx, cy) toward the player's center; always heads downward. */

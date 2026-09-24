@@ -1,20 +1,57 @@
-import { BOSS_DYING_TIME, BOSS_POINTS, HITSTOP } from '../../data/balance';
-import { spawnEnemyBullet } from '../bullets';
-import type { Boss, SimEvent, SimState } from '../types';
+import { BOSS_DYING_TIME, BOSS_POINTS, FIELD_W, HITSTOP } from '../../data/balance';
+import { aimVelocity, spawnEnemyBullet } from '../bullets';
+import type { Boss, Box, SimEvent, SimState } from '../types';
 
-/** `count` bullets fanned around straight down, `step` radians apart. */
-export function fireSpread(state: SimState, cx: number, cy: number, count: number, step: number, speed: number): void {
-  for (let i = 0; i < count; i++) {
-    const a = step * (i - (count - 1) / 2);
-    spawnEnemyBullet(state, cx, cy, Math.sin(a) * speed, Math.cos(a) * speed);
-  }
+export interface Motion {
+  y: number;
+  h: number;
+  enterTime: number;
+  swayAmp: number;
+  swaySpeed: number;
 }
 
-/** `count` bullets evenly around a circle starting at `angle`. */
-export function fireRing(state: SimState, cx: number, cy: number, count: number, angle: number, speed: number): void {
-  for (let i = 0; i < count; i++) {
-    const a = angle + (i * 2 * Math.PI) / count;
-    spawnEnemyBullet(state, cx, cy, Math.cos(a) * speed, Math.sin(a) * speed);
+/**
+ * Shared per-step boss upkeep: timers, flashes, entrance, sway, part positions.
+ * Returns true when the boss may act (entered, alive, stage playing).
+ */
+export function tickBoss(state: SimState, b: Boss, dt: number, m: Motion): boolean {
+  b.t += dt;
+  b.flash = Math.max(0, b.flash - dt);
+  for (const p of b.parts) p.flash = Math.max(0, p.flash - dt);
+  if (b.dying > 0) {
+    b.dying = Math.max(0, b.dying - dt);
+    return false;
+  }
+  if (b.entering) {
+    b.y += ((m.y + m.h) / m.enterTime) * dt;
+    if (b.y >= m.y) {
+      b.y = m.y;
+      b.entering = false;
+    }
+  }
+  b.x = FIELD_W / 2 + Math.sin(b.t * m.swaySpeed) * m.swayAmp - b.w / 2;
+  for (const p of b.parts) {
+    p.x = b.x + p.offsetX;
+    p.y = b.y + p.offsetY;
+  }
+  return !b.entering && state.phase === 'playing';
+}
+
+export function coreBox(b: Boss, coreX: number, coreW: number): Box {
+  return { x: b.x + coreX, y: b.y, w: coreW, h: b.h };
+}
+
+export function aimedShot(state: SimState, x: number, y: number, events: SimEvent[]): void {
+  const v = aimVelocity(state, x, y, state.diff.bulletSpeed);
+  spawnEnemyBullet(state, x, y, v.vx, v.vy);
+  events.push({ type: 'enemyShot', x, y });
+}
+
+export function destroyParts(b: Boss, events: SimEvent[]): void {
+  for (const p of b.parts) {
+    if (!p.alive) continue;
+    p.alive = false;
+    events.push({ type: 'partDestroyed', x: p.x + p.w / 2, y: p.y + p.h / 2 });
   }
 }
 
@@ -41,9 +78,11 @@ export function killBoss(state: SimState, events: SimEvent[]): void {
   b.hp = 0;
   b.dying = BOSS_DYING_TIME;
   b.laser = null;
+  b.phased = false;
   state.phase = 'bossDying';
   state.phaseTimer = BOSS_DYING_TIME;
   state.run.bossesKilled++;
   state.bullets = state.bullets.filter((x) => x.owner === 'player');
+  state.enemies = [];
   events.push({ type: 'bossKilled', x: b.x + b.w / 2, y: b.y + b.h / 2, points });
 }

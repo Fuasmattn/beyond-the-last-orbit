@@ -26,10 +26,11 @@ export function difficultyFor(world: number, stage: number, loop: number): Diffi
 }
 
 /** Enemy type per formation row; new types appear as difficulty rises. */
-export function kindForRow(row: number, d: number): EnemyKind {
+export function kindForRow(row: number, d: number, special: EnemyKind): EnemyKind {
   if (row === 0) return 'gunner';
   if (row === 1) return d >= 3 ? 'shield' : 'grunt';
   if (row === 2) return d >= 2 ? 'diver' : 'grunt';
+  if (row === 3) return d >= 4 ? special : 'grunt';
   return 'grunt';
 }
 

@@ -1,0 +1,4 @@
+html, body { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; }
+#app { position: fixed; inset: 0; }
+canvas { display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
+.boot-error { color: #f55; font: 14px monospace; padding: 16px; }

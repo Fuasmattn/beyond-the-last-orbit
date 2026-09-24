@@ -10,6 +10,7 @@ import {
 import { createRig, type Rig } from './synth';
 
 const MIN_NOTE = 0.04;
+const TWIN_PAN = 0.4;
 
 interface Cursor {
   arr: CompiledArrangement;
@@ -56,7 +57,10 @@ export class Sequencer {
         this.rig.bass(time, g.midi - 12, dur, g.mute);
       }
       const l = s.lead[step];
-      if (l) this.rig.lead(time, l.midi, Math.max(MIN_NOTE, l.len * this.stepDur));
+      const l2 = s.lead2[step];
+      const twin = s.lead2.some((e) => e !== undefined);
+      if (l) this.rig.lead(time, l.midi, Math.max(MIN_NOTE, l.len * this.stepDur), twin ? -TWIN_PAN : 0);
+      if (l2) this.rig.lead(time, l2.midi, Math.max(MIN_NOTE, l2.len * this.stepDur), TWIN_PAN);
 
       const kick = s.kick[step] ?? 0;
       if (kick) this.rig.kick(time, kick);

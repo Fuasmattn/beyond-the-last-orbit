@@ -8,6 +8,8 @@ export interface SectionDef {
   bars: number;
   guitar: string;
   lead?: string;
+  /** Harmony lead (twin guitars), panned opposite to `lead`. */
+  lead2?: string;
   kick: string;
   snare: string;
   hat: string;
@@ -32,6 +34,7 @@ export interface CompiledSection {
   steps: number;
   guitar: (NoteEvent | undefined)[];
   lead: (NoteEvent | undefined)[];
+  lead2: (NoteEvent | undefined)[];
   kick: number[];
   snare: number[];
   hat: number[];
@@ -73,6 +76,7 @@ function compileSection(name: string, def: SectionDef): CompiledSection {
     steps,
     guitar: noteTrack(`${name}.guitar`, def.guitar, steps),
     lead: noteTrack(`${name}.lead`, def.lead, steps),
+    lead2: noteTrack(`${name}.lead2`, def.lead2, steps),
     kick: drumTrack(`${name}.kick`, def.kick, steps),
     snare: drumTrack(`${name}.snare`, def.snare, steps),
     hat: drumTrack(`${name}.hat`, def.hat, steps),

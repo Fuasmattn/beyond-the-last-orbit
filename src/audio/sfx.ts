@@ -110,4 +110,18 @@ export class Sfx {
     this.burst(1.2, 0.3, 6000, 1500);
     this.tone('sawtooth', 90, 80, 1.2, 0.15);
   }
+
+  bombBurst(): void {
+    this.burst(0.35, 0.35, 2500, 300);
+  }
+
+  phaseShift(): void {
+    this.tone('sine', 1400, 200, 0.3, 0.06);
+    this.tone('sine', 700, 1400, 0.3, 0.04);
+  }
+
+  warp(): void {
+    this.tone('sawtooth', 80, 1600, 2.2, 0.08);
+    this.burst(2.6, 0.25, 800, 8000);
+  }
 }

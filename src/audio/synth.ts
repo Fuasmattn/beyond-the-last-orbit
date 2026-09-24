@@ -68,7 +68,7 @@ export function createBuses(ctx: BaseAudioContext): Buses {
 export interface Rig {
   guitar(t: number, midi: number, dur: number, mute: boolean): void;
   bass(t: number, midi: number, dur: number, mute: boolean): void;
-  lead(t: number, midi: number, dur: number): void;
+  lead(t: number, midi: number, dur: number, pan?: number): void;
   kick(t: number, level: number): void;
   snare(t: number, level: number): void;
   hat(t: number, level: number): void;
@@ -190,9 +190,11 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode): Rig {
       }
     },
 
-    lead(t, midi, dur) {
+    lead(t, midi, dur, pan = 0) {
       const env = envelope(ctx, t, dur, 0.7);
-      env.connect(leadBus);
+      const panner = ctx.createStereoPanner();
+      panner.pan.value = pan;
+      env.connect(panner).connect(leadBus);
       const vibrato = ctx.createOscillator();
       vibrato.frequency.value = 5.5;
       const depth = ctx.createGain();

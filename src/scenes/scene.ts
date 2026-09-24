@@ -19,6 +19,8 @@ export interface RunSummary {
   world: number;
   stage: number;
   loop: number;
+  bossesKilled: number;
+  perfectStages: number;
 }
 
 export interface Scene {
@@ -35,6 +37,9 @@ export interface SceneFactory {
   title(): Scene;
   run(): Scene;
   gameOver(summary: RunSummary): Scene;
+  shop(): Scene;
+  settings(): Scene;
+  calibration(): Scene;
 }
 
 export interface SceneContext {
@@ -43,9 +48,14 @@ export interface SceneContext {
   readonly save: SaveData;
   readonly isTouch: boolean;
   readonly scenes: SceneFactory;
+  readonly metronome: CompiledSong;
   /** One-shot message for the title screen (e.g. save reset). */
   notice: string | null;
   songForWorld(world: number): CompiledSong;
+  /** Beat delta (s) captured at the most recent fire press, consumed on read. */
+  takePressDelta(): number | null;
+  /** Push settings (volumes) to the audio engine. */
+  applySettings(): void;
   persist(): void;
   goto(next: Scene): void;
 }

@@ -1,5 +1,6 @@
 import { Container } from 'pixi.js';
 import { Sourness } from '../audio/sourness';
+import { equippedLaser, equippedSkin } from '../data/cosmetics';
 import { createInitialState } from '../sim/state';
 import { step } from '../sim/step';
 import type { SimEvent, SimState } from '../sim/types';
@@ -24,7 +25,7 @@ export class RunScene implements Scene {
 
   constructor(private readonly ctx: SceneContext) {
     this.state = createInitialState(newSeed());
-    this.renderer = new GameRenderer(ctx.textures);
+    this.renderer = new GameRenderer(ctx.textures, { skin: equippedSkin(ctx.save), laser: equippedLaser(ctx.save) });
     this.hud = new Hud(ctx.textures.glyphs);
     this.root.addChild(this.renderer.root, this.hud);
     ctx.audio?.sfx.start();
@@ -45,7 +46,14 @@ export class RunScene implements Scene {
     if (s.phase === 'gameOver') {
       this.gameOverTime += dt;
       if (this.gameOverTime > GAME_OVER_DELAY && (input.menu.includes('confirm') || input.taps.length > 0)) {
-        this.ctx.goto(this.ctx.scenes.gameOver({ score: s.score, world: s.world, stage: s.stage, loop: s.loop }));
+        this.ctx.goto(this.ctx.scenes.gameOver({
+            score: s.score,
+            world: s.world,
+            stage: s.stage,
+            loop: s.loop,
+            bossesKilled: s.run.bossesKilled,
+            perfectStages: s.run.perfectStages,
+          }));
       }
       return;
     }

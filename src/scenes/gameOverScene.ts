@@ -1,13 +1,15 @@
-import { Container, Graphics, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { INITIALS_LENGTH, InitialsPicker } from '../app/initialsPicker';
-import { FIELD_H, FIELD_W } from '../data/balance';
+import { FIELD_W } from '../data/balance';
 import type { Tap } from '../input/inputFrame';
+import { computeCredits } from '../meta/credits';
 import { insertHighscore, qualifiesForHighscore } from '../persist/save';
 import type { HighscoreEntry } from '../persist/schema';
 import { blink } from '../view/anim';
 import { formatHighscoreLine } from '../view/highscoreTable';
 import { centerText, PixelText } from '../view/pixelText';
 import type { FrameInput, RunSummary, Scene, SceneContext } from './scene';
+import { sceneBackground } from './ui';
 
 const LETTER_SCALE = 3;
 const LETTER_Y = 130;
@@ -18,6 +20,8 @@ const TABLE_X = 82;
 const CONTINUE_DELAY = 0.5;
 /** Ignore input briefly so fire-mashing at death doesn't skip letters. */
 const INPUT_DELAY = 0.4;
+const COUNT_UP_TIME = 1.5;
+const COIN_TICK = 0.07;
 
 function letterLeft(i: number): number {
   return Math.round(FIELD_W / 2 + (i - 1) * LETTER_SPACING - 4.5);
@@ -34,27 +38,30 @@ export class GameOverScene implements Scene {
   private readonly help: PixelText;
   private readonly heading: PixelText;
   private readonly prompt: PixelText;
+  private readonly creditsLine: PixelText;
   private readonly tableLayer = new Container();
+  private readonly earned: number;
   private t = 0;
+  private coinTimer = 0;
 
   constructor(
     private readonly ctx: SceneContext,
     private readonly summary: RunSummary,
   ) {
     const g = (this.glyphs = ctx.textures.glyphs);
-    const bg = new Sprite(Texture.WHITE);
-    bg.width = FIELD_W;
-    bg.height = FIELD_H;
-    bg.tint = 0x05060d;
+    this.earned = computeCredits(summary.score, summary.bossesKilled, summary.perfectStages);
+    ctx.save.credits += this.earned;
+    ctx.persist();
 
     const title = new PixelText(g, 'GAME OVER', 0xff3b5c);
     title.scale.set(2);
-    centerText(title, 40);
+    centerText(title, 30);
     const score = new PixelText(g, `SCORE ${summary.score}`, 0xffe14a);
-    centerText(score, 70);
+    centerText(score, 58);
     const loop = summary.loop > 0 ? `LOOP ${summary.loop + 1} ` : '';
     const reached = new PixelText(g, `REACHED ${loop}${summary.world + 1}-${summary.stage}`, 0xcccccc);
-    centerText(reached, 82);
+    centerText(reached, 70);
+    this.creditsLine = new PixelText(g, '', 0x7dff6b);
 
     this.picker = qualifiesForHighscore(ctx.save.highscores, summary.score) ? new InitialsPicker() : null;
     this.heading = new PixelText(g, this.picker ? 'NEW HIGH SCORE! ENTER NAME' : 'HIGH SCORES', 0x7dff6b);
@@ -74,10 +81,11 @@ export class GameOverScene implements Scene {
     centerText(this.prompt, 290);
 
     this.root.addChild(
-      bg,
+      sceneBackground(),
       title,
       score,
       reached,
+      this.creditsLine,
       this.heading,
       ...this.letters,
       this.cursor,
@@ -93,6 +101,7 @@ export class GameOverScene implements Scene {
 
   update(input: FrameInput, dt: number): void {
     this.t += dt;
+    this.tickCoins(dt);
     if (this.t < INPUT_DELAY) return;
     const p = this.picker;
     if (p && !p.done) {
@@ -117,6 +126,19 @@ export class GameOverScene implements Scene {
 
   destroy(): void {
     this.root.destroy({ children: true });
+  }
+
+  /** Credits count up from 0 with a coin tick. */
+  private tickCoins(dt: number): void {
+    const shown = Math.floor(this.earned * Math.min(1, this.t / COUNT_UP_TIME));
+    this.creditsLine.setText(`CREDITS +${shown}  TOTAL ${this.ctx.save.credits - this.earned + shown}`);
+    centerText(this.creditsLine, 84);
+    if (shown >= this.earned) return;
+    this.coinTimer -= dt;
+    if (this.coinTimer <= 0) {
+      this.coinTimer = COIN_TICK;
+      this.ctx.audio?.sfx.coin();
+    }
   }
 
   private handleTap(p: InitialsPicker, tap: Tap): void {
@@ -144,14 +166,13 @@ export class GameOverScene implements Scene {
     };
     this.ctx.save.highscores = insertHighscore(this.ctx.save.highscores, entry);
     this.ctx.persist();
-    this.t = 0;
     this.heading.setText('HIGH SCORES');
     centerText(this.heading, 108);
     this.showTable(entry);
   }
 
   private showTable(highlight: HighscoreEntry | null): void {
-    this.tableLayer.removeChildren().forEach((c) => c.destroy());
+    this.tableLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.ctx.save.highscores.forEach((e, i) => {
       const color = e === highlight ? 0xffe14a : 0xcccccc;
       const t = new PixelText(this.glyphs, formatHighscoreLine(i + 1, e), color);

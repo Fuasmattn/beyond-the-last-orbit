@@ -4,15 +4,19 @@ import { compileSong, type CompiledSong } from '../audio/song';
 import { FIELD_H, FIELD_W, MAX_STEPS_PER_FRAME, SIM_DT } from '../data/balance';
 import { EARTH_SONG } from '../data/songs/earth';
 import { MARS_SONG } from '../data/songs/mars';
+import { METRONOME_SONG } from '../data/songs/metronome';
 import { MOON_SONG } from '../data/songs/moon';
 import { worldAt, type WorldId } from '../data/worlds';
 import { mergeInputs } from '../input/inputFrame';
 import { KeyboardInput } from '../input/keyboard';
 import { FIRE_BUTTON, TouchInput } from '../input/touch';
 import { loadSave, memoryStore, writeSave, type KeyValueStore } from '../persist/save';
+import { CalibrationScene } from '../scenes/calibrationScene';
 import { GameOverScene } from '../scenes/gameOverScene';
 import { RunScene } from '../scenes/runScene';
 import type { FrameInput, Scene, SceneContext } from '../scenes/scene';
+import { SettingsScene } from '../scenes/settingsScene';
+import { ShopScene } from '../scenes/shopScene';
 import { TitleScene } from '../scenes/titleScene';
 import { loadTextures } from '../view/textures';
 import { FixedLoop } from './fixedLoop';
@@ -44,7 +48,15 @@ export async function startApp(host: HTMLElement): Promise<void> {
   const unlockAudio = () => audio?.unlock();
   window.addEventListener('keydown', unlockAudio);
   window.addEventListener('pointerdown', unlockAudio);
-  const judgeFire = () => audio?.judgeFire() ?? null;
+
+  const store = browserStore();
+  const { data: save, reset } = loadSave(store);
+
+  let pressDelta: number | null = null;
+  const judgeFire = () => {
+    pressDelta = audio?.beatDelta() ?? null;
+    return audio?.judgeFire(save.settings.latencyOffsetMs) ?? null;
+  };
 
   const songs: Record<WorldId, CompiledSong> = {
     earth: compileSong(EARTH_SONG),
@@ -53,8 +65,6 @@ export async function startApp(host: HTMLElement): Promise<void> {
   };
   const songForWorld = (world: number) => songs[worldAt(world).id];
 
-  const store = browserStore();
-  const { data: save, reset } = loadSave(store);
 
   const textures = loadTextures();
   const game = new Container();
@@ -94,6 +104,13 @@ export async function startApp(host: HTMLElement): Promise<void> {
     isTouch,
     notice: reset ? 'SAVE DATA WAS RESET' : null,
     songForWorld,
+    metronome: compileSong(METRONOME_SONG),
+    takePressDelta: () => {
+      const d = pressDelta;
+      pressDelta = null;
+      return d;
+    },
+    applySettings: () => audio?.setVolumes(save.settings.musicVolume, save.settings.sfxVolume),
     persist: () => {
       writeSave(store, save);
     },
@@ -106,8 +123,12 @@ export async function startApp(host: HTMLElement): Promise<void> {
       title: () => new TitleScene(ctx),
       run: () => new RunScene(ctx),
       gameOver: (summary) => new GameOverScene(ctx, summary),
+      shop: () => new ShopScene(ctx),
+      settings: () => new SettingsScene(ctx),
+      calibration: () => new CalibrationScene(ctx),
     },
   };
+  ctx.applySettings();
   scene = ctx.scenes.title();
   sceneLayer.addChild(scene.root);
 

@@ -1,4 +1,5 @@
 import { Container, Sprite, Texture } from 'pixi.js';
+import type { LaserDef, SkinDef } from '../data/cosmetics';
 import { FIELD_H, FIELD_W, STAGE, WARP } from '../data/balance';
 import { worldAt, type WorldId } from '../data/worlds';
 import { laserBox } from '../sim/boss/warden';
@@ -6,19 +7,25 @@ import type { Boss, BossKind, Bullet, Enemy, SimState } from '../sim/types';
 import { blink, popInScale } from './anim';
 import { createBackdrop, type Backdrop } from './backdrops';
 import { beatPulse, lerpColor } from './beatPulse';
+import { hueToRgb } from './color';
+import { createLaserView, type LaserView } from './laserView';
 import { Starfield } from './starfield';
 import type { GameTextures } from './textures';
 
-const PLAYER_BULLET_COLOR = 0x9ff6ff;
 const ENEMY_BULLET_COLOR = 0xffa040;
 const BOMB_COLOR = 0xff5a2a;
-const ON_BEAT_BULLET_COLOR = 0xffe14a;
 const BACKDROP_BASE = 0x05060d;
 const BACKDROP_PULSE = 0x1a2244;
 const LASER_COLOR = 0xff3b5c;
 const WORLD_TINT: Record<WorldId, number> = { earth: 0xffffff, moon: 0xdce4ff, mars: 0xffd4b8 };
 const LOOP_DARKEN = 0.12;
 const WARP_SPEED = 40;
+const HUE_SPEED = 0.25;
+
+export interface Cosmetics {
+  skin: SkinDef;
+  laser: LaserDef;
+}
 
 function syncSprites<T extends { id: number }>(
   sprites: Map<number, Sprite>,
@@ -67,6 +74,7 @@ export class GameRenderer {
   private readonly player: Sprite;
   private readonly enemySprites = new Map<number, Sprite>();
   private readonly bulletSprites = new Map<number, Sprite>();
+  private readonly laserViews = new Map<number, LaserView>();
   private readonly bossLayer = new Container();
   private readonly laserWarn = whiteSprite(LASER_COLOR);
   private readonly laserBeam = whiteSprite(LASER_COLOR);
@@ -75,10 +83,13 @@ export class GameRenderer {
   private world: WorldId | null = null;
   private planet: Backdrop | null = null;
 
-  constructor(private readonly tex: GameTextures) {
+  constructor(
+    private readonly tex: GameTextures,
+    private readonly cosmetics: Cosmetics,
+  ) {
     this.backdrop.width = FIELD_W;
     this.backdrop.height = FIELD_H;
-    this.player = new Sprite(tex.player);
+    this.player = new Sprite(tex.skins.get(cosmetics.skin.id) ?? Texture.WHITE);
     this.laserBeam.alpha = 0.85;
     this.bossLayer.addChild(this.laserWarn, this.laserBeam, this.laserCore);
     this.entities.addChild(this.player);
@@ -103,6 +114,7 @@ export class GameRenderer {
     this.player.position.set(Math.round(p.x), Math.round(p.y));
     const blinkOff = p.invuln > 0 && Math.floor(state.time * 20) % 2 === 1;
     this.player.visible = state.phase !== 'gameOver' && !blinkOff;
+    if (this.cosmetics.skin.hueCycle) this.player.tint = hueToRgb(state.time * HUE_SPEED);
 
     const tick = beat !== null && beat >= 0 ? Math.floor(beat) : Math.floor(state.time * 2);
     const frame = tick % 2 === 0 ? 0 : 1;
@@ -127,20 +139,18 @@ export class GameRenderer {
       },
     );
 
+    this.renderEnemyBullets(state);
+    this.renderPlayerBullets(state, pulse);
+    this.renderBoss(state.boss, state.time, pulse, worldTint);
+  }
+
+  private renderEnemyBullets(state: SimState): void {
     syncSprites<Bullet>(
       this.bulletSprites,
-      state.bullets,
+      state.bullets.filter((b) => b.owner === 'enemy'),
       this.entities,
       (b) => {
-        const color =
-          b.fuse !== undefined
-            ? BOMB_COLOR
-            : b.owner === 'enemy'
-              ? ENEMY_BULLET_COLOR
-              : b.onBeat
-                ? ON_BEAT_BULLET_COLOR
-                : PLAYER_BULLET_COLOR;
-        const s = whiteSprite(color);
+        const s = whiteSprite(b.fuse !== undefined ? BOMB_COLOR : ENEMY_BULLET_COLOR);
         s.width = b.w;
         s.height = b.h;
         return s;
@@ -150,8 +160,27 @@ export class GameRenderer {
         if (b.fuse !== undefined) s.alpha = b.fuse < 0.4 && !blink(state.time, 8) ? 0.4 : 1;
       },
     );
+  }
 
-    this.renderBoss(state.boss, state.time, pulse, worldTint);
+  private renderPlayerBullets(state: SimState, pulse: number): void {
+    const seen = new Set<number>();
+    for (const b of state.bullets) {
+      if (b.owner !== 'player') continue;
+      let v = this.laserViews.get(b.id);
+      if (!v) {
+        v = createLaserView(this.cosmetics.laser, this.tex.orb);
+        this.laserViews.set(b.id, v);
+        this.entities.addChild(v.root);
+      }
+      v.update(Math.round(b.x), Math.round(b.y), state.time, pulse, b.onBeat);
+      seen.add(b.id);
+    }
+    for (const [id, v] of this.laserViews) {
+      if (!seen.has(id)) {
+        v.destroy();
+        this.laserViews.delete(id);
+      }
+    }
   }
 
   private renderPlanet(state: SimState, dt: number, warp: boolean): void {

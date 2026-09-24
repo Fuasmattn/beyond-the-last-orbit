@@ -1,4 +1,5 @@
 import { Texture } from 'pixi.js';
+import { SKINS } from '../data/cosmetics';
 import { GLYPHS } from '../data/font';
 import { SPRITES } from '../data/sprites';
 import type { BossKind, EnemyKind } from '../sim/types';
@@ -7,7 +8,9 @@ import { gridToRGBA, type PixelGrid } from './pixelArt';
 export type TexturePair = readonly [Texture, Texture];
 
 export interface GameTextures {
-  player: Texture;
+  /** Ship texture per skin id. */
+  skins: Map<string, Texture>;
+  orb: Texture;
   enemies: Record<EnemyKind, TexturePair>;
   shieldCracked: TexturePair;
   bosses: Record<BossKind, Texture>;
@@ -38,8 +41,11 @@ export function loadTextures(): GameTextures {
   for (const [ch, rows] of Object.entries(GLYPHS)) {
     glyphs.set(ch, textureFromGrid({ rows, palette: { '#': 0xffffff } }));
   }
+  const skins = new Map<string, Texture>();
+  for (const s of SKINS) skins.set(s.id, textureFromGrid({ rows: s.rows, palette: s.palette }));
   return {
-    player: textureFromGrid(SPRITES.player),
+    skins,
+    orb: textureFromGrid({ rows: ['.##.', '####', '####', '.##.'], palette: { '#': 0xffffff } }),
     enemies: {
       grunt: pair(SPRITES.grunt),
       gunner: pair(SPRITES.gunner),

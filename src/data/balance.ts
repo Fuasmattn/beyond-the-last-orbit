@@ -208,3 +208,10 @@ export const CALIBRATION = {
   maxAbsMs: 250,
   maxOffsetMs: 300,
 } as const;
+
+export const FX = {
+  shake: { maxOffset: 6, decay: 1.6 },
+  particles: { capacity: 480 },
+  popup: { life: 0.7, rise: 14, max: 12 },
+  degrade: { windowMs: 2000, maxAvgMs: 20, stallMs: 250 },
+} as const;

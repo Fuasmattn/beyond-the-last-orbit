@@ -9,8 +9,12 @@ describe('mergeInputs', () => {
       { ...NO_INPUT, moveX: 1, dragX: 3, firePressed: true, fireOnBeat: true },
     ]);
     expect(merged).toEqual({
-      moveX: 1, moveY: 0, dragX: 5, dragY: 0, firePressed: true, fireOnBeat: true,
+      moveX: 1, moveY: 0, dragX: 5, dragY: 0, firePressed: true, fireOnBeat: true, beat: null,
     });
+  });
+
+  it('passes the first known beat through', () => {
+    expect(mergeInputs([NO_INPUT, { ...NO_INPUT, beat: 3.5 }]).beat).toBe(3.5);
   });
 
   it('returns neutral input for no sources', () => {

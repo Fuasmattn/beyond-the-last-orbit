@@ -6,6 +6,17 @@ export interface InputSource {
   poll(): InputFrame;
 }
 
+/** Called at the moment fire is pressed; returns rhythm verdict or null (no audio). */
+export type FireJudge = () => boolean | null;
+
+export type MenuAction = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back';
+
+/** A pointer press in logical playfield coordinates. */
+export interface Tap {
+  x: number;
+  y: number;
+}
+
 export function mergeInputs(frames: readonly InputFrame[]): InputFrame {
   let moveX = 0;
   let moveY = 0;
@@ -13,6 +24,7 @@ export function mergeInputs(frames: readonly InputFrame[]): InputFrame {
   let dragY = 0;
   let firePressed = false;
   let fireOnBeat: boolean | null = null;
+  let beat: number | null = null;
   for (const f of frames) {
     moveX += f.moveX;
     moveY += f.moveY;
@@ -22,6 +34,7 @@ export function mergeInputs(frames: readonly InputFrame[]): InputFrame {
       firePressed = true;
       fireOnBeat = f.fireOnBeat;
     }
+    if (beat === null && f.beat !== null) beat = f.beat;
   }
   return {
     moveX: clamp(moveX, -1, 1),
@@ -30,8 +43,6 @@ export function mergeInputs(frames: readonly InputFrame[]): InputFrame {
     dragY,
     firePressed,
     fireOnBeat,
+    beat,
   };
 }
-
-/** Called at the moment fire is pressed; returns rhythm verdict or null (no audio). */
-export type FireJudge = () => boolean | null;

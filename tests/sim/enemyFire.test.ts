@@ -44,6 +44,6 @@ describe('updateEnemyFire', () => {
     updateEnemyFire(s, 0.01, []);
     const b = s.bullets[0]!;
     expect(b.vx).toBeGreaterThan(0);
-    expect(Math.hypot(b.vx, b.vy)).toBeCloseTo(ENEMY.bulletSpeed);
+    expect(Math.hypot(b.vx, b.vy)).toBeCloseTo(s.diff.bulletSpeed);
   });
 });

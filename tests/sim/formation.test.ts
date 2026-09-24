@@ -11,17 +11,23 @@ import { createInitialState } from '../../src/sim/state';
 describe('formation', () => {
   it('spawns rows × cols enemies centered horizontally', () => {
     const s = createInitialState(1);
-    expect(s.enemies).toHaveLength(ENEMY.rows * ENEMY.cols);
-    expect(s.formation.total).toBe(ENEMY.rows * ENEMY.cols);
+    const cols = s.diff.cols;
+    expect(s.enemies).toHaveLength(ENEMY.rows * cols);
+    expect(s.formation.total).toBe(ENEMY.rows * cols);
     const left = s.formation.x;
-    const right = FIELD_W - (left + formationWidth());
+    const right = FIELD_W - (left + formationWidth(cols));
     expect(Math.abs(left - right)).toBeLessThanOrEqual(1);
   });
 
-  it('puts gunners in the top row and grunts below', () => {
+  it('puts gunners in the top row and grunts below on stage 1', () => {
     const s = createInitialState(1);
     expect(s.enemies.filter((e) => e.row === 0).every((e) => e.kind === 'gunner')).toBe(true);
     expect(s.enemies.filter((e) => e.row > 0).every((e) => e.kind === 'grunt')).toBe(true);
+  });
+
+  it('spawns enemies at full hp and not diving', () => {
+    const s = createInitialState(1);
+    expect(s.enemies.every((e) => e.hp === e.maxHp && e.dive === null)).toBe(true);
   });
 
   it('marches in its direction and moves enemies with it', () => {
@@ -33,7 +39,7 @@ describe('formation', () => {
 
   it('reverses and drops when hitting the right edge', () => {
     const s = createInitialState(1);
-    s.formation.x = FIELD_W - formationWidth() - FORMATION.edgeMargin - 0.1;
+    s.formation.x = FIELD_W - formationWidth(s.diff.cols) - FORMATION.edgeMargin - 0.1;
     const y0 = s.formation.y;
     updateFormation(s, 0.5);
     expect(s.formation.dir).toBe(-1);
@@ -51,9 +57,9 @@ describe('formation', () => {
   });
 
   it('speeds up as enemies die', () => {
-    expect(formationSpeed(40, 40)).toBe(FORMATION.minSpeed);
-    expect(formationSpeed(1, 40)).toBeGreaterThan(formationSpeed(20, 40));
-    expect(formationSpeed(0, 40)).toBe(FORMATION.maxSpeed);
+    expect(formationSpeed(40, 40, 10, 90)).toBe(10);
+    expect(formationSpeed(1, 40, 10, 90)).toBeGreaterThan(formationSpeed(20, 40, 10, 90));
+    expect(formationSpeed(0, 40, 10, 90)).toBe(90);
   });
 
   it('reports formation bottom', () => {

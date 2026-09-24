@@ -13,7 +13,7 @@ describe('KeyboardInput', () => {
     let verdict: boolean | null = true;
     const kb = new KeyboardInput(target, () => verdict);
     key(target, 'keydown', 'Space');
-    verdict = false; // changes after the press must not matter
+    verdict = false;
     const f = kb.poll();
     expect(f.firePressed).toBe(true);
     expect(f.fireOnBeat).toBe(true);
@@ -34,5 +34,16 @@ describe('KeyboardInput', () => {
     const kb = new KeyboardInput(target);
     key(target, 'keydown', 'Space', true);
     expect(kb.poll().firePressed).toBe(false);
+  });
+
+  it('queues menu actions, repeating only up/down', () => {
+    const target = new EventTarget();
+    const kb = new KeyboardInput(target);
+    key(target, 'keydown', 'ArrowUp');
+    key(target, 'keydown', 'ArrowUp', true);
+    key(target, 'keydown', 'Enter');
+    key(target, 'keydown', 'Enter', true);
+    expect(kb.consumeMenu()).toEqual(['up', 'up', 'confirm']);
+    expect(kb.consumeMenu()).toEqual([]);
   });
 });

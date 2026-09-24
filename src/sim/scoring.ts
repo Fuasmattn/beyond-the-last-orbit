@@ -14,6 +14,7 @@ export function applyShotRhythm(state: SimState, onBeat: boolean | null): void {
   if (onBeat) {
     r.streak = Math.min(MAX_STREAK, r.streak + 1);
     state.stats.onBeatShots++;
+    state.stageStats.onBeatShots++;
   } else {
     const level = Math.floor(r.streak / RHYTHM.shotsPerStep);
     r.streak = Math.max(0, (level - 1) * RHYTHM.shotsPerStep);
@@ -24,6 +25,16 @@ export function applyShotRhythm(state: SimState, onBeat: boolean | null): void {
 export function resetRhythm(state: SimState): void {
   state.rhythm.streak = 0;
   state.rhythm.mult = 1;
+}
+
+export function recordShot(state: SimState): void {
+  state.stats.shots++;
+  state.stageStats.shots++;
+}
+
+export function recordHit(state: SimState): void {
+  state.stats.hits++;
+  state.stageStats.hits++;
 }
 
 export function comboMult(state: SimState): number {

@@ -1,7 +1,7 @@
-import { FIELD_H, FIELD_W, PLAYER, PLAYER_ZONE_TOP } from '../data/balance';
+import { FIELD_H, FIELD_W, HITSTOP, PLAYER, PLAYER_ZONE_TOP } from '../data/balance';
 import { allocId } from './ids';
 import { clamp } from './math';
-import { applyShotRhythm, resetRhythm } from './scoring';
+import { applyShotRhythm, recordShot, resetRhythm } from './scoring';
 import type { InputFrame, SimEvent, SimState } from './types';
 
 export function updatePlayer(
@@ -46,7 +46,7 @@ function tryFire(state: SimState, input: InputFrame, events: SimEvent[]): void {
     mult: state.rhythm.mult,
   });
   p.cooldown = PLAYER.fireCooldown;
-  state.stats.shots++;
+  recordShot(state);
   events.push({ type: 'shot', x: x + PLAYER.bulletW / 2, y, onBeat });
 }
 
@@ -55,6 +55,8 @@ export function hitPlayer(state: SimState, events: SimEvent[]): void {
   p.lives--;
   p.invuln = PLAYER.invulnTime;
   resetRhythm(state);
+  state.stageStats.hitsTaken++;
+  state.hitStop = HITSTOP.playerHit;
   state.bullets = state.bullets.filter((b) => b.owner === 'player');
   events.push({ type: 'playerHit', x: p.x + p.w / 2, y: p.y + p.h / 2, livesLeft: p.lives });
   if (p.lives <= 0) {

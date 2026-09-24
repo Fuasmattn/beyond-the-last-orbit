@@ -26,15 +26,17 @@ describe('resolveCollisions', () => {
     expect(s.bullets).toHaveLength(0);
     expect(s.score).toBe(POINTS[target.kind]);
     expect(s.stats.hits).toBe(1);
+    expect(s.stageStats.hits).toBe(1);
     expect(events[0]).toMatchObject({ type: 'enemyKilled', id: target.id, points: POINTS[target.kind] });
   });
 
   it('a bullet hits at most one enemy', () => {
     const s = createInitialState(1);
+    const total = s.enemies.length;
     const a = s.enemies[0]!;
     s.bullets = [bullet({ x: a.x, y: a.y, w: 40, h: 40 })];
     resolveCollisions(s, []);
-    expect(s.enemies).toHaveLength(39);
+    expect(s.enemies).toHaveLength(total - 1);
   });
 
   it('damages multi-hp enemies without killing them', () => {
@@ -68,5 +70,18 @@ describe('resolveCollisions', () => {
     resolveCollisions(s, []);
     expect(p.lives).toBe(PLAYER.startLives);
     expect(s.bullets).toHaveLength(1);
+  });
+
+  it('a diving enemy crashing into the player dies and costs a life', () => {
+    const s = createInitialState(1);
+    const e = s.enemies[0]!;
+    e.dive = { t: 1, duration: 2.4, startX: 0, startY: 0, targetX: 0, dir: 1, fired: true };
+    e.x = s.player.x;
+    e.y = s.player.y;
+    const events: SimEvent[] = [];
+    resolveCollisions(s, events);
+    expect(s.player.lives).toBe(PLAYER.startLives - 1);
+    expect(s.enemies.find((x) => x.id === e.id)).toBeUndefined();
+    expect(events.map((x) => x.type)).toEqual(['enemyKilled', 'playerHit']);
   });
 });

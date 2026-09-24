@@ -18,7 +18,7 @@ Style: retro arcade pixel art, top-down 2.5D (parallax, shadows), with modern mi
 | Music | Procedurally synthesized in Web Audio (no audio files); riffs hand-authored as note data |
 | Movement | Free horizontal, vertical limited to bottom 25% of playfield |
 | Run rules | 3 lives, endless loop after Mars; credits kept on death |
-| Rhythm | Forgiving: ±90 ms window on 8th-note grid, streak-based multiplier up to x4, off-beat drops one step |
+| Rhythm | Forgiving: ±70 ms window on quarter-note grid, streak-based multiplier up to x4, off-beat drops one step |
 | Cosmetics | Ship skins, laser styles |
 | Platform | Desktop keyboard + mobile touch |
 | Aspect | Portrait 3:4 everywhere (logical 240×320), letterboxed |
@@ -42,7 +42,7 @@ main.ts → App (Pixi Application, 3:4 letterboxed, DPR-aware)
 
 - Sim runs on a fixed 60 Hz timestep with accumulator; render interpolates with `alpha`. Max 5 sim steps per frame (no spiral of death).
 - Sim has no Pixi/DOM dependencies. It emits events (`hit`, `kill`, `playerHit`, `stageClear`, `bossPhase`, …) consumed by view and audio. One-way flow: view/audio never mutate sim.
-- Fire input is timestamped with `audioCtx.currentTime` at keydown/touchstart (not frame time) and compared against the 8th-note grid.
+- Fire input is timestamped with `audioCtx.currentTime` at keydown/touchstart (not frame time) and compared against the quarter-note grid.
 - Sim uses a seeded RNG for determinism.
 
 ## 4. Gameplay
@@ -116,7 +116,7 @@ Endless loop: after Mars, "LOOP 2" card, back to Earth with `loop + 1`, slightly
 ### Score
 `points = basePoints × rhythmMult × comboMult`
 
-- **Rhythm multiplier (x1–x4):** a shot within ±90 ms (+ user calibration offset) of the 8th-note grid is on-beat and adds +1 streak. Every 4 streak steps = +x0.5 (cap x4). Off-beat shot: −x0.5 (floor x1). Player hit: reset to x1. Not shooting is neutral. The multiplier is captured when the shot is fired and applied to the kill it makes.
+- **Rhythm multiplier (x1–x4):** a shot within ±70 ms (+ user calibration offset) of the quarter-note grid is on-beat (±90 ms on 8ths was rejected: ~84 % of random shots would count at 140 BPM) and adds +1 streak. Every 4 streak steps = +x0.5 (cap x4). Off-beat shot: −x0.5 (floor x1). Player hit: reset to x1. Not shooting is neutral. The multiplier is captured when the shot is fired and applied to the kill it makes.
 - **Kill combo (x1–x2):** kills within 1 s of each other chain; +x0.1 per chained kill, cap x2.
 - **Stage clear bonus:** accuracy % × 1000 + beat % × 1000 + 2000 if no hit + time bonus under par.
 - **Boss kill:** 5000 × world number × loop number.
@@ -220,7 +220,7 @@ tests/        mirrors sim/, audio/beatClock + rhythmJudge, persist/
 
 ## 13. Testing
 
-- Vitest unit tests for pure logic: formation march/drop, collision, scoring & multiplier transitions, rhythm judge window edges (±90 ms, calibration offset), BeatClock math, difficulty curve, credit calculation, save migrations and corrupt-save recovery.
+- Vitest unit tests for pure logic: formation march/drop, collision, scoring & multiplier transitions, rhythm judge window edges (±70 ms, calibration offset), BeatClock math, difficulty curve, credit calculation, save migrations and corrupt-save recovery.
 - Deterministic replay (golden) test: seeded RNG + recorded input sequence → assert final score and state.
 - View/audio: manual browser verification plus a smoke test that the app boots without console errors.
 

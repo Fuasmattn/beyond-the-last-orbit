@@ -1,3 +1,4 @@
+import { SOUR } from '../data/balance';
 import type { BeatClock } from './beatClock';
 import {
   nextBarStep,
@@ -22,6 +23,8 @@ export class Sequencer {
   private readonly stepDur: number;
   private current: Cursor;
   private pending: Cursor | null = null;
+  /** 0..1 — random per-note detune for off-beat "sour" playing. */
+  sour = 0;
 
   constructor(
     ctx: BaseAudioContext,
@@ -53,14 +56,14 @@ export class Sequencer {
       const g = s.guitar[step];
       if (g) {
         const dur = Math.max(MIN_NOTE, g.mute ? this.stepDur * 0.8 : g.len * this.stepDur);
-        this.rig.guitar(time, g.midi, dur, g.mute);
-        this.rig.bass(time, g.midi - 12, dur, g.mute);
+        this.rig.guitar(time, g.midi, dur, g.mute, this.detune());
+        this.rig.bass(time, g.midi - 12, dur, g.mute, this.detune());
       }
       const l = s.lead[step];
       const l2 = s.lead2[step];
       const twin = s.lead2.some((e) => e !== undefined);
-      if (l) this.rig.lead(time, l.midi, Math.max(MIN_NOTE, l.len * this.stepDur), twin ? -TWIN_PAN : 0);
-      if (l2) this.rig.lead(time, l2.midi, Math.max(MIN_NOTE, l2.len * this.stepDur), TWIN_PAN);
+      if (l) this.rig.lead(time, l.midi, Math.max(MIN_NOTE, l.len * this.stepDur), twin ? -TWIN_PAN : 0, this.detune());
+      if (l2) this.rig.lead(time, l2.midi, Math.max(MIN_NOTE, l2.len * this.stepDur), TWIN_PAN, this.detune());
 
       const kick = s.kick[step] ?? 0;
       if (kick) this.rig.kick(time, kick);
@@ -70,6 +73,10 @@ export class Sequencer {
       if (hat) this.rig.hat(time, hat);
       if (s.crash[step]) this.rig.crash(time);
     }
+  }
+
+  private detune(): number {
+    return this.sour * SOUR.maxDetuneCents * (Math.random() * 2 - 1);
   }
 
   private arrangement(name: string): CompiledArrangement {

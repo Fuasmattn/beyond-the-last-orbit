@@ -66,9 +66,9 @@ export function createBuses(ctx: BaseAudioContext): Buses {
 }
 
 export interface Rig {
-  guitar(t: number, midi: number, dur: number, mute: boolean): void;
-  bass(t: number, midi: number, dur: number, mute: boolean): void;
-  lead(t: number, midi: number, dur: number, pan?: number): void;
+  guitar(t: number, midi: number, dur: number, mute: boolean, detune?: number): void;
+  bass(t: number, midi: number, dur: number, mute: boolean, detune?: number): void;
+  lead(t: number, midi: number, dur: number, pan?: number, detune?: number): void;
   kick(t: number, level: number): void;
   snare(t: number, level: number): void;
   hat(t: number, level: number): void;
@@ -159,7 +159,7 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode): Rig {
   };
 
   return {
-    guitar(t, midi, dur, mute) {
+    guitar(t, midi, dur, mute, detune = 0) {
       amps.forEach((amp, side) => {
         const env = envelope(ctx, t, dur, 0.5);
         const tone = filter(ctx, 'lowpass', mute ? 900 : 6000);
@@ -168,7 +168,7 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode): Rig {
           const osc = ctx.createOscillator();
           osc.type = 'sawtooth';
           osc.frequency.value = midiToHz(midi + interval);
-          osc.detune.value = side === 0 ? -8 : 8;
+          osc.detune.value = (side === 0 ? -8 : 8) + detune;
           osc.connect(tone);
           osc.start(t);
           osc.stop(t + dur + 0.01);
@@ -176,7 +176,7 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode): Rig {
       });
     },
 
-    bass(t, midi, dur, mute) {
+    bass(t, midi, dur, mute, detune = 0) {
       const env = envelope(ctx, t, dur, 0.8);
       const tone = filter(ctx, 'lowpass', mute ? 400 : 800);
       tone.connect(env).connect(bassBus);
@@ -184,13 +184,14 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode): Rig {
         const osc = ctx.createOscillator();
         osc.type = type;
         osc.frequency.value = midiToHz(midi);
+        osc.detune.value = detune;
         osc.connect(tone);
         osc.start(t);
         osc.stop(t + dur + 0.01);
       }
     },
 
-    lead(t, midi, dur, pan = 0) {
+    lead(t, midi, dur, pan = 0, detune = 0) {
       const env = envelope(ctx, t, dur, 0.7);
       const panner = ctx.createStereoPanner();
       panner.pan.value = pan;
@@ -201,11 +202,11 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode): Rig {
       depth.gain.setValueAtTime(0, t);
       depth.gain.linearRampToValueAtTime(18, t + Math.min(0.25, dur));
       vibrato.connect(depth);
-      for (const [type, detune] of [['sawtooth', 0], ['square', 6]] as const) {
+      for (const [type, offset] of [['sawtooth', 0], ['square', 6]] as const) {
         const osc = ctx.createOscillator();
         osc.type = type;
         osc.frequency.value = midiToHz(midi);
-        osc.detune.value = detune;
+        osc.detune.value = offset + detune;
         depth.connect(osc.detune);
         osc.connect(env);
         osc.start(t);

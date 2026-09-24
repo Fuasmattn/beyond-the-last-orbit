@@ -187,3 +187,14 @@ export const COMBO = {
   step: 0.1,
   maxChain: 10,
 } as const;
+
+/** Off-beat shots detune the soundtrack; see src/audio/sourness.ts. */
+export const SOUR = {
+  offBeatHit: 0.3,
+  onBeatRelief: 0.2,
+  decayPerSec: 0.25,
+  /** Max modulation depth of the warble delay line, in seconds. */
+  warbleDepth: 0.0025,
+  /** Max random per-note detune at full sourness. */
+  maxDetuneCents: 35,
+} as const;

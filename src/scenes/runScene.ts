@@ -1,4 +1,5 @@
 import { Container } from 'pixi.js';
+import { Sourness } from '../audio/sourness';
 import { createInitialState } from '../sim/state';
 import { step } from '../sim/step';
 import type { SimEvent, SimState } from '../sim/types';
@@ -19,6 +20,7 @@ export class RunScene implements Scene {
   private readonly hud: Hud;
   private paused = false;
   private gameOverTime = 0;
+  private readonly sour = new Sourness();
 
   constructor(private readonly ctx: SceneContext) {
     this.state = createInitialState(newSeed());
@@ -50,6 +52,8 @@ export class RunScene implements Scene {
     const events = step(s, input.sim);
     this.hud.notify(events);
     this.playEvents(events);
+    this.sour.update(dt);
+    this.ctx.audio?.setSour(this.sour.value);
   }
 
   render(elapsed: number): void {
@@ -75,6 +79,7 @@ export class RunScene implements Scene {
       switch (e.type) {
         case 'shot':
           audio.sfx.laser(e.onBeat);
+          this.sour.onShot(e.onBeat);
           break;
         case 'enemyKilled':
         case 'partDestroyed':

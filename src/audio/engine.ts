@@ -1,3 +1,4 @@
+import { SOUR } from '../data/balance';
 import { BeatClock } from './beatClock';
 import { judgeShot } from './rhythmJudge';
 import { Sequencer } from './sequencer';
@@ -9,6 +10,9 @@ const SCHEDULE_INTERVAL_MS = 25;
 const LOOKAHEAD_SEC = 0.1;
 const START_DELAY_SEC = 0.1;
 const FADE_SEC = 0.5;
+/** Fixed delay of the warble line; music is heard this much later than scheduled. */
+const WARBLE_BASE_SEC = 0.012;
+const WARBLE_RATE_HZ = 5.5;
 
 interface Playing {
   seq: Sequencer;
@@ -23,12 +27,27 @@ export class AudioEngine {
   private playing: Playing | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private unlocked = false;
+  private readonly warbleIn: GainNode;
+  private readonly warbleDepth: GainNode;
+  private sour = 0;
 
   private constructor(
     private readonly ctx: AudioContext,
     private readonly buses: Buses,
   ) {
     this.sfx = new Sfx(ctx, buses.sfx);
+    // Music → modulated delay line → music bus. Modulating the delay time bends the pitch
+    // of everything passing through (tape warble); depth 0 = clean.
+    this.warbleIn = ctx.createGain();
+    const delay = ctx.createDelay(0.05);
+    delay.delayTime.value = WARBLE_BASE_SEC;
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = WARBLE_RATE_HZ;
+    this.warbleDepth = ctx.createGain();
+    this.warbleDepth.gain.value = 0;
+    lfo.connect(this.warbleDepth).connect(delay.delayTime);
+    lfo.start();
+    this.warbleIn.connect(delay).connect(buses.music);
   }
 
   static create(): AudioEngine | null {
@@ -52,24 +71,20 @@ export class AudioEngine {
     void this.ctx.resume();
   }
 
-  /** Time the listener is hearing now (audio clock minus output latency). */
+  /** Musical time the listener is hearing now (output latency and warble delay removed). */
   private heardTime(): number {
-    return this.ctx.currentTime - (this.ctx.outputLatency || 0);
+    return this.ctx.currentTime - (this.ctx.outputLatency || 0) - WARBLE_BASE_SEC;
   }
 
   startSong(song: CompiledSong): void {
     this.stopSong();
     const gain = this.ctx.createGain();
-    gain.connect(this.buses.music);
+    gain.connect(this.warbleIn);
     const start = this.ctx.currentTime + START_DELAY_SEC;
     const clock = new BeatClock(song.bpm, start);
-    this.playing = {
-      seq: new Sequencer(this.ctx, gain, song, clock),
-      clock,
-      gain,
-      scheduledTo: start,
-      arrangement: 'main',
-    };
+    const seq = new Sequencer(this.ctx, gain, song, clock);
+    seq.sour = this.sour;
+    this.playing = { seq, clock, gain, scheduledTo: start, arrangement: 'main' };
     this.tick();
     this.timer = setInterval(() => this.tick(), SCHEDULE_INTERVAL_MS);
   }
@@ -80,6 +95,14 @@ export class AudioEngine {
     if (!p || p.arrangement === name) return;
     p.arrangement = name;
     p.seq.queue(name, p.scheduledTo);
+  }
+
+  /** 0 = clean … 1 = fully sour (warble + per-note detune). */
+  setSour(value: number): void {
+    if (Math.abs(value - this.sour) < 0.005) return;
+    this.sour = value;
+    this.warbleDepth.gain.setTargetAtTime(value * SOUR.warbleDepth, this.ctx.currentTime, 0.05);
+    if (this.playing) this.playing.seq.sour = value;
   }
 
   stopSong(): void {

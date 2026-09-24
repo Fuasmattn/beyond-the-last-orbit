@@ -1,6 +1,6 @@
 import type { Layout } from '../app/layout';
 import type { InputFrame } from '../sim/types';
-import type { InputSource } from './inputFrame';
+import type { FireJudge, InputSource } from './inputFrame';
 
 /** Fire button in logical playfield coords. */
 export const FIRE_BUTTON = { x: 206, y: 286, r: 22 } as const;
@@ -19,15 +19,23 @@ export class TouchInput implements InputSource {
   private dx = 0;
   private dy = 0;
   private firePending = false;
+  private fireOnBeat: boolean | null = null;
 
-  constructor(el: HTMLElement, getLayout: () => Layout) {
+  constructor(
+    el: HTMLElement,
+    getLayout: () => Layout,
+    private readonly judgeFire: FireJudge = () => null,
+  ) {
     el.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'mouse') return;
       const l = getLayout();
       const lx = (e.clientX - l.offsetX) / l.scale;
       const ly = (e.clientY - l.offsetY) / l.scale;
       if (isInFireButton(lx, ly)) {
-        this.firePending = true;
+        if (!this.firePending) {
+          this.firePending = true;
+          this.fireOnBeat = this.judgeFire();
+        }
         return;
       }
       if (this.dragPointer === null) {
@@ -58,8 +66,9 @@ export class TouchInput implements InputSource {
       dragX: this.dx,
       dragY: this.dy,
       firePressed: this.firePending,
-      fireOnBeat: null,
+      fireOnBeat: this.firePending ? this.fireOnBeat : null,
     };
+    this.fireOnBeat = null;
     this.dx = 0;
     this.dy = 0;
     this.firePending = false;

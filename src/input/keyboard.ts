@@ -1,5 +1,5 @@
 import type { InputFrame } from '../sim/types';
-import type { InputSource } from './inputFrame';
+import type { FireJudge, InputSource } from './inputFrame';
 
 const LEFT = ['ArrowLeft', 'KeyA'];
 const RIGHT = ['ArrowRight', 'KeyD'];
@@ -12,18 +12,26 @@ const GAME_KEYS = new Set([...LEFT, ...RIGHT, ...UP, ...DOWN, FIRE, ...PAUSE]);
 export class KeyboardInput implements InputSource {
   private readonly held = new Set<string>();
   private firePending = false;
+  private fireOnBeat: boolean | null = null;
   private pausePending = false;
 
-  constructor(target: Window) {
-    target.addEventListener('keydown', (e) => {
+  constructor(
+    target: EventTarget,
+    private readonly judgeFire: FireJudge = () => null,
+  ) {
+    target.addEventListener('keydown', (ev) => {
+      const e = ev as KeyboardEvent;
       if (GAME_KEYS.has(e.code)) e.preventDefault();
       if (!e.repeat) {
-        if (e.code === FIRE) this.firePending = true;
+        if (e.code === FIRE && !this.firePending) {
+          this.firePending = true;
+          this.fireOnBeat = this.judgeFire();
+        }
         if (PAUSE.includes(e.code)) this.pausePending = true;
       }
       this.held.add(e.code);
     });
-    target.addEventListener('keyup', (e) => this.held.delete(e.code));
+    target.addEventListener('keyup', (ev) => this.held.delete((ev as KeyboardEvent).code));
     target.addEventListener('blur', () => this.held.clear());
   }
 
@@ -34,9 +42,10 @@ export class KeyboardInput implements InputSource {
       dragX: 0,
       dragY: 0,
       firePressed: this.firePending,
-      fireOnBeat: null,
+      fireOnBeat: this.firePending ? this.fireOnBeat : null,
     };
     this.firePending = false;
+    this.fireOnBeat = null;
     return frame;
   }
 

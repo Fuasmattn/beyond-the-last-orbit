@@ -32,3 +32,6 @@ export function mergeInputs(frames: readonly InputFrame[]): InputFrame {
     fireOnBeat,
   };
 }
+
+/** Called at the moment fire is pressed; returns rhythm verdict or null (no audio). */
+export type FireJudge = () => boolean | null;

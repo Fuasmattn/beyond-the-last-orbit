@@ -4718,6 +4718,8 @@ const LETTER_SPACING = 24;
 const OK_BOX = { x: 104, y: 172, w: 32, h: 12 } as const;
 const TABLE_X = 82;
 const CONTINUE_DELAY = 0.5;
+/** Ignore input briefly so fire-mashing at death doesn't skip letters. */
+const INPUT_DELAY = 0.4;
 
 function letterLeft(i: number): number {
   return Math.round(FIELD_W / 2 + (i - 1) * LETTER_SPACING - 4.5);
@@ -4793,6 +4795,7 @@ export class GameOverScene implements Scene {
 
   update(input: FrameInput, dt: number): void {
     this.t += dt;
+    if (this.t < INPUT_DELAY) return;
     const p = this.picker;
     if (p && !p.done) {
       for (const a of input.menu) {

@@ -4,9 +4,14 @@ import { SPRITES } from '../data/sprites';
 import type { EnemyKind } from '../sim/types';
 import { gridToRGBA, type PixelGrid } from './pixelArt';
 
+export type TexturePair = readonly [Texture, Texture];
+
 export interface GameTextures {
   player: Texture;
-  enemies: Record<EnemyKind, readonly [Texture, Texture]>;
+  enemies: Record<EnemyKind, TexturePair>;
+  shieldCracked: TexturePair;
+  wardenBody: Texture;
+  turret: Texture;
   glyphs: Map<string, Texture>;
 }
 
@@ -23,6 +28,10 @@ export function textureFromGrid(grid: PixelGrid): Texture {
   return texture;
 }
 
+function pair(grids: readonly [PixelGrid, PixelGrid]): TexturePair {
+  return [textureFromGrid(grids[0]), textureFromGrid(grids[1])];
+}
+
 export function loadTextures(): GameTextures {
   const glyphs = new Map<string, Texture>();
   for (const [ch, rows] of Object.entries(GLYPHS)) {
@@ -31,9 +40,14 @@ export function loadTextures(): GameTextures {
   return {
     player: textureFromGrid(SPRITES.player),
     enemies: {
-      grunt: [textureFromGrid(SPRITES.grunt[0]), textureFromGrid(SPRITES.grunt[1])],
-      gunner: [textureFromGrid(SPRITES.gunner[0]), textureFromGrid(SPRITES.gunner[1])],
+      grunt: pair(SPRITES.grunt),
+      gunner: pair(SPRITES.gunner),
+      diver: pair(SPRITES.diver),
+      shield: pair(SPRITES.shield),
     },
+    shieldCracked: pair(SPRITES.shieldCracked),
+    wardenBody: textureFromGrid(SPRITES.wardenBody),
+    turret: textureFromGrid(SPRITES.turret),
     glyphs,
   };
 }

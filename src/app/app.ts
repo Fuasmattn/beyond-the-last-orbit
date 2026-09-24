@@ -1,24 +1,29 @@
 import { Application, Container, Graphics, TextureSource } from 'pixi.js';
 import { AudioEngine } from '../audio/engine';
-import { compileSong } from '../audio/song';
+import { compileSong, type CompiledSong } from '../audio/song';
 import { MAX_STEPS_PER_FRAME, SIM_DT } from '../data/balance';
 import { EARTH_SONG } from '../data/songs/earth';
+import { worldAt, type WorldId } from '../data/worlds';
 import { mergeInputs } from '../input/inputFrame';
 import { KeyboardInput } from '../input/keyboard';
 import { FIRE_BUTTON, TouchInput } from '../input/touch';
-import { createInitialState } from '../sim/state';
-import { step } from '../sim/step';
-import type { SimEvent, SimState } from '../sim/types';
-import { Hud, type AppMode } from '../view/hud';
-import { GameRenderer } from '../view/renderer';
+import { loadSave, memoryStore, writeSave, type KeyValueStore } from '../persist/save';
+import { GameOverScene } from '../scenes/gameOverScene';
+import { RunScene } from '../scenes/runScene';
+import type { FrameInput, Scene, SceneContext } from '../scenes/scene';
+import { TitleScene } from '../scenes/titleScene';
 import { loadTextures } from '../view/textures';
 import { FixedLoop } from './fixedLoop';
 import { computeLayout, type Layout } from './layout';
 
-const RESTART_DELAY = 1;
-
-function newSeed(): number {
-  return (Math.random() * 2 ** 32) >>> 0;
+function browserStore(): KeyValueStore {
+  try {
+    const s = window.localStorage;
+    s.getItem('space-alliance:probe');
+    return s;
+  } catch {
+    return memoryStore();
+  }
 }
 
 export async function startApp(host: HTMLElement): Promise<void> {
@@ -34,17 +39,22 @@ export async function startApp(host: HTMLElement): Promise<void> {
   host.appendChild(app.canvas);
 
   const audio = AudioEngine.create();
-  const earthSong = compileSong(EARTH_SONG);
   const unlockAudio = () => audio?.unlock();
   window.addEventListener('keydown', unlockAudio);
   window.addEventListener('pointerdown', unlockAudio);
   const judgeFire = () => audio?.judgeFire() ?? null;
 
+  const songs: Partial<Record<WorldId, CompiledSong>> = { earth: compileSong(EARTH_SONG) };
+  const fallbackSong = songs.earth!;
+  const songForWorld = (world: number) => songs[worldAt(world).id] ?? fallbackSong;
+
+  const store = browserStore();
+  const { data: save, reset } = loadSave(store);
+
   const textures = loadTextures();
   const game = new Container();
-  const renderer = new GameRenderer(textures);
-  const hud = new Hud(textures.glyphs);
-  game.addChild(renderer.root, hud);
+  const sceneLayer = new Container();
+  game.addChild(sceneLayer);
 
   const isTouch = window.matchMedia('(pointer: coarse)').matches;
   if (isTouch) {
@@ -68,95 +78,63 @@ export async function startApp(host: HTMLElement): Promise<void> {
   const keyboard = new KeyboardInput(window, judgeFire);
   const touch = new TouchInput(app.canvas, () => layout, judgeFire);
 
-  let mode: AppMode = 'title';
-  let paused = false;
-  let gameOverTime = 0;
-  let state: SimState = createInitialState(newSeed());
-
-  const setPaused = (p: boolean) => {
-    if (paused === p) return;
-    paused = p;
-    audio?.setPaused(p);
+  let scene: Scene;
+  const ctx: SceneContext = {
+    textures,
+    audio,
+    save,
+    isTouch,
+    notice: reset ? 'SAVE DATA WAS RESET' : null,
+    songForWorld,
+    persist: () => {
+      writeSave(store, save);
+    },
+    goto: (next) => {
+      scene.destroy();
+      scene = next;
+      sceneLayer.addChild(next.root);
+    },
+    scenes: {
+      title: () => new TitleScene(ctx),
+      run: () => new RunScene(ctx),
+      gameOver: (summary) => new GameOverScene(ctx, summary),
+    },
   };
-
-  const playEvents = (events: readonly SimEvent[]) => {
-    if (!audio) return;
-    for (const e of events) {
-      switch (e.type) {
-        case 'shot':
-          audio.sfx.laser(e.onBeat);
-          break;
-        case 'enemyKilled':
-          audio.sfx.explosion();
-          break;
-        case 'enemyShot':
-          audio.sfx.enemyShot();
-          break;
-        case 'playerHit':
-          audio.sfx.playerHit();
-          break;
-        case 'stageClear':
-          audio.sfx.stageClear();
-          break;
-        case 'gameOver':
-          audio.stopSong();
-          break;
-        default:
-          break;
-      }
-    }
-  };
+  scene = ctx.scenes.title();
+  sceneLayer.addChild(scene.root);
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && mode === 'run') setPaused(true);
+    if (document.hidden) scene.onHidden?.();
   });
 
   if (import.meta.env.DEV) {
     // Dev-only inspection hook for manual/browser verification.
     (window as unknown as { __sa: unknown }).__sa = {
-      get state() {
-        return state;
+      get scene() {
+        return scene;
       },
-      get mode() {
-        return mode;
+      get run() {
+        return scene instanceof RunScene ? scene.state : null;
       },
       audio,
+      save,
     };
   }
 
   const loop = new FixedLoop(SIM_DT, MAX_STEPS_PER_FRAME);
   app.ticker.add((ticker) => {
     const elapsed = Math.min(ticker.deltaMS / 1000, 0.25);
-    if (keyboard.consumePause() && mode === 'run' && state.phase !== 'gameOver') setPaused(!paused);
-
     loop.advance(elapsed, () => {
-      const input = mergeInputs([keyboard.poll(), touch.poll()]);
-      if (mode === 'title') {
-        if (input.firePressed) {
-          state = createInitialState(newSeed());
-          mode = 'run';
-          audio?.sfx.start();
-          audio?.startSong(earthSong);
-        }
-        return;
-      }
-      if (paused) {
-        if (input.firePressed && isTouch) setPaused(false);
-        return;
-      }
-      if (state.phase === 'gameOver') {
-        gameOverTime += SIM_DT;
-        if (gameOverTime > RESTART_DELAY && input.firePressed) {
-          gameOverTime = 0;
-          mode = 'title';
-        }
-        return;
-      }
-      playEvents(step(state, input));
+      const sim = mergeInputs([keyboard.poll(), touch.poll()]);
+      sim.beat = audio?.currentBeat() ?? null;
+      const input: FrameInput = {
+        sim,
+        menu: keyboard.consumeMenu(),
+        taps: touch.consumeTaps(),
+        pause: keyboard.consumePause(),
+      };
+      scene.update(input, SIM_DT);
     });
-
-    const beat = audio?.currentBeat() ?? null;
-    renderer.render(state, paused ? 0 : elapsed, beat);
-    hud.update(state, mode, paused, beat, audio !== null);
+    scene.render(elapsed);
   });
 }

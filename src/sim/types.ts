@@ -22,6 +22,8 @@ export interface Bullet extends Box {
   vy: number;
   owner: 'player' | 'enemy';
   onBeat: boolean;
+  /** Rhythm multiplier captured at fire time. */
+  mult: number;
 }
 
 export interface Player extends Box {
@@ -54,7 +56,9 @@ export interface SimState {
   bullets: Bullet[];
   formation: Formation;
   enemyFireTimer: number;
-  stats: { shots: number; hits: number };
+  rhythm: { streak: number; mult: number };
+  combo: { chain: number; timer: number };
+  stats: { shots: number; hits: number; onBeatShots: number };
 }
 
 export type SimEvent =

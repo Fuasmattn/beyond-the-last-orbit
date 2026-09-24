@@ -5,7 +5,7 @@ import { createInitialState } from '../../src/sim/state';
 import type { Bullet, SimEvent } from '../../src/sim/types';
 
 const bullet = (over: Partial<Bullet>): Bullet => ({
-  id: 999, x: 0, y: 0, w: 2, h: 6, vx: 0, vy: 0, owner: 'player', onBeat: false, ...over,
+  id: 999, x: 0, y: 0, w: 2, h: 6, vx: 0, vy: 0, owner: 'player', onBeat: false, mult: 1, ...over,
 });
 
 describe('overlaps', () => {

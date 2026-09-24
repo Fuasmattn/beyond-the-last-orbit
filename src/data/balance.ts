@@ -46,3 +46,19 @@ export const FORMATION = {
 export const POINTS = { grunt: 10, gunner: 20 } as const;
 
 export const STAGE_CLEAR_TIME = 2;
+
+export const RHYTHM = {
+  /** ± seconds around a grid line that count as on-beat. */
+  windowSec: 0.07,
+  /** Grid lines per beat (1 = quarter notes). */
+  subdivision: 1,
+  shotsPerStep: 4,
+  multStep: 0.5,
+  maxMult: 4,
+} as const;
+
+export const COMBO = {
+  window: 1,
+  step: 0.1,
+  maxChain: 10,
+} as const;

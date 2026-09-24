@@ -26,7 +26,9 @@ export function createInitialState(seed: number): SimState {
     bullets: [],
     formation: { x: 0, y: 0, dir: 1, total: 0 },
     enemyFireTimer: 1.5,
-    stats: { shots: 0, hits: 0 },
+    rhythm: { streak: 0, mult: 1 },
+    combo: { chain: 0, timer: 0 },
+    stats: { shots: 0, hits: 0, onBeatShots: 0 },
   };
   spawnFormation(state);
   return state;

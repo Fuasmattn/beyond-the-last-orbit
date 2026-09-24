@@ -74,8 +74,8 @@ describe('hitPlayer', () => {
   it('removes a life, grants invulnerability and clears enemy bullets', () => {
     const s = createInitialState(1);
     s.bullets.push(
-      { id: 900, x: 0, y: 0, w: 2, h: 6, vx: 0, vy: 1, owner: 'enemy', onBeat: false },
-      { id: 901, x: 0, y: 0, w: 2, h: 6, vx: 0, vy: -1, owner: 'player', onBeat: false },
+      { id: 900, x: 0, y: 0, w: 2, h: 6, vx: 0, vy: 1, owner: 'enemy', onBeat: false, mult: 1 },
+      { id: 901, x: 0, y: 0, w: 2, h: 6, vx: 0, vy: -1, owner: 'player', onBeat: false, mult: 1 },
     );
     const events: SimEvent[] = [];
     hitPlayer(s, events);

@@ -1,5 +1,6 @@
 import { ENEMY, POINTS } from '../data/balance';
 import { hitPlayer } from './player';
+import { registerKill } from './scoring';
 import type { Box, SimEvent, SimState } from './types';
 
 export function overlaps(a: Box, b: Box): boolean {
@@ -20,8 +21,7 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
       const cx = e.x + e.w / 2;
       const cy = e.y + e.h / 2;
       if (e.hp <= 0) {
-        const points = POINTS[e.kind];
-        state.score += points;
+        const points = registerKill(state, POINTS[e.kind], b.mult);
         events.push({ type: 'enemyKilled', id: e.id, kind: e.kind, x: cx, y: cy, points });
       } else {
         events.push({ type: 'enemyHit', id: e.id, x: cx, y: cy });

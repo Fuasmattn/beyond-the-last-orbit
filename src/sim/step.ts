@@ -4,6 +4,7 @@ import { resolveCollisions } from './collision';
 import { updateEnemyFire } from './enemyFire';
 import { formationBottom, spawnFormation, updateFormation } from './formation';
 import { hitPlayer, updatePlayer } from './player';
+import { updateCombo } from './scoring';
 import type { InputFrame, SimEvent, SimState } from './types';
 
 export function step(state: SimState, input: InputFrame, dt: number = SIM_DT): SimEvent[] {
@@ -26,6 +27,7 @@ export function step(state: SimState, input: InputFrame, dt: number = SIM_DT): S
   }
 
   updatePlayer(state, input, dt, events);
+  updateCombo(state, dt);
   updateFormation(state, dt);
   updateEnemyFire(state, dt, events);
   moveBullets(state, dt);

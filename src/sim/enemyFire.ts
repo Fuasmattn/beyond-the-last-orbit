@@ -47,6 +47,7 @@ export function updateEnemyFire(state: SimState, dt: number, events: SimEvent[])
     vy,
     owner: 'enemy',
     onBeat: false,
+    mult: 1,
   });
   events.push({ type: 'enemyShot', x: x + ENEMY.bulletW / 2, y });
 }

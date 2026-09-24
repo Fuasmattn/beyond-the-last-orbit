@@ -3,8 +3,8 @@ import type { InputFrame } from '../sim/types';
 import type { FireJudge, InputSource, Tap } from './inputFrame';
 
 /** Fire button in logical playfield coords. */
-export const FIRE_BUTTON = { x: 206, y: 286, r: 22 } as const;
-const FIRE_SLOP = 8;
+export const FIRE_BUTTON = { x: 204, y: 284, r: 26 } as const;
+const FIRE_SLOP = 10;
 const DRAG_SENSITIVITY = 1.25;
 
 export function isInFireButton(lx: number, ly: number): boolean {

@@ -59,6 +59,7 @@ export class RunScene implements Scene {
     }
     const events = step(s, input.sim);
     this.hud.notify(events);
+    this.renderer.notify(events);
     this.playEvents(events);
     this.sour.update(dt);
     this.ctx.audio?.setSour(this.sour.value);
@@ -67,10 +68,15 @@ export class RunScene implements Scene {
   render(elapsed: number): void {
     const beat = this.ctx.audio?.currentBeat() ?? null;
     this.renderer.render(this.state, this.paused ? 0 : elapsed, beat);
+    const shakeOn = this.ctx.save.settings.shake;
+    const off = shakeOn ? this.renderer.shakeOffset(this.state.time) : { x: 0, y: 0 };
+    this.renderer.root.position.set(Math.round(off.x), Math.round(off.y));
+    this.ctx.setAberration(shakeOn ? this.renderer.trauma : 0);
     this.hud.update(this.state, this.paused, beat, this.ctx.audio !== null, elapsed);
   }
 
   destroy(): void {
+    this.ctx.setAberration(0);
     this.root.destroy({ children: true });
   }
 

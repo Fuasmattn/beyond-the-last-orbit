@@ -1,15 +1,16 @@
 import { Application, Container, Graphics, TextureSource } from 'pixi.js';
 import { AudioEngine } from '../audio/engine';
 import { compileSong, type CompiledSong } from '../audio/song';
-import { FIELD_H, FIELD_W, MAX_STEPS_PER_FRAME, SIM_DT } from '../data/balance';
+import { FIELD_H, FIELD_W, FX, MAX_STEPS_PER_FRAME, SIM_DT } from '../data/balance';
 import { EARTH_SONG } from '../data/songs/earth';
 import { MARS_SONG } from '../data/songs/mars';
 import { METRONOME_SONG } from '../data/songs/metronome';
 import { MOON_SONG } from '../data/songs/moon';
 import { worldAt, type WorldId } from '../data/worlds';
+import { FrameMonitor } from '../fx/frameMonitor';
 import { mergeInputs } from '../input/inputFrame';
 import { KeyboardInput } from '../input/keyboard';
-import { FIRE_BUTTON, TouchInput } from '../input/touch';
+import { TouchInput } from '../input/touch';
 import { loadSave, memoryStore, writeSave, type KeyValueStore } from '../persist/save';
 import { CalibrationScene } from '../scenes/calibrationScene';
 import { GameOverScene } from '../scenes/gameOverScene';
@@ -18,6 +19,10 @@ import type { FrameInput, Scene, SceneContext } from '../scenes/scene';
 import { SettingsScene } from '../scenes/settingsScene';
 import { ShopScene } from '../scenes/shopScene';
 import { TitleScene } from '../scenes/titleScene';
+import { beatPulse } from '../view/beatPulse';
+import { Bezel } from '../view/bezel';
+import { FireButtonView } from '../view/fireButton';
+import { PostFx } from '../view/postfx';
 import { loadTextures } from '../view/textures';
 import { FixedLoop } from './fixedLoop';
 import { computeLayout, type Layout } from './layout';
@@ -75,20 +80,20 @@ export async function startApp(host: HTMLElement): Promise<void> {
   sceneLayer.mask = fieldMask;
 
   const isTouch = window.matchMedia('(pointer: coarse)').matches;
-  if (isTouch) {
-    const button = new Graphics()
-      .circle(FIRE_BUTTON.x, FIRE_BUTTON.y, FIRE_BUTTON.r)
-      .fill({ color: 0xff3b5c, alpha: 0.25 })
-      .stroke({ color: 0xff3b5c, width: 1, alpha: 0.8 });
-    game.addChild(button);
-  }
-  app.stage.addChild(game);
+  const fireButton = isTouch ? new FireButtonView() : null;
+  if (fireButton) game.addChild(fireButton);
+  const bezel = new Bezel();
+  app.stage.addChild(bezel, game);
+  const postFx = new PostFx(game, window.devicePixelRatio || 1);
+  app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
   let layout: Layout = computeLayout(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1);
   const applyLayout = () => {
     layout = computeLayout(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1);
     game.scale.set(layout.scale);
     game.position.set(layout.offsetX, layout.offsetY);
+    bezel.draw(layout, window.innerWidth, window.innerHeight);
+    postFx.setScale(layout.scale);
   };
   applyLayout();
   window.addEventListener('resize', applyLayout);
@@ -110,7 +115,11 @@ export async function startApp(host: HTMLElement): Promise<void> {
       pressDelta = null;
       return d;
     },
-    applySettings: () => audio?.setVolumes(save.settings.musicVolume, save.settings.sfxVolume),
+    applySettings: () => {
+      audio?.setVolumes(save.settings.musicVolume, save.settings.sfxVolume);
+      postFx.configure(save.settings);
+    },
+    setAberration: (a) => postFx.setAberration(a),
     persist: () => {
       writeSave(store, save);
     },
@@ -150,11 +159,17 @@ export async function startApp(host: HTMLElement): Promise<void> {
     };
   }
 
+  const monitor = new FrameMonitor(FX.degrade.windowMs, FX.degrade.maxAvgMs, FX.degrade.stallMs);
   const loop = new FixedLoop(SIM_DT, MAX_STEPS_PER_FRAME);
   app.ticker.add((ticker) => {
     const elapsed = Math.min(ticker.deltaMS / 1000, 0.25);
+    if (!document.hidden && monitor.push(ticker.deltaMS) && postFx.degrade()) {
+      console.info('Performance: reduced post-FX');
+    }
     loop.advance(elapsed, () => {
-      const sim = mergeInputs([keyboard.poll(), touch.poll()]);
+      const touchFrame = touch.poll();
+      if (touchFrame.firePressed) fireButton?.press();
+      const sim = mergeInputs([keyboard.poll(), touchFrame]);
       sim.beat = audio?.currentBeat() ?? null;
       const input: FrameInput = {
         sim,
@@ -165,5 +180,9 @@ export async function startApp(host: HTMLElement): Promise<void> {
       scene.update(input, SIM_DT);
     });
     scene.render(elapsed);
+    const pulse = beatPulse(audio?.currentBeat() ?? null);
+    bezel.pulse(pulse);
+    fireButton?.update(elapsed, pulse);
+    postFx.update(elapsed);
   });
 }

@@ -1,7 +1,7 @@
 # Space Alliance — Design Spec
 
 Date: 2026-09-24
-Status: Approved design, pending implementation plan
+Status: Implemented (milestones M1–M6)
 
 ## 1. Summary
 

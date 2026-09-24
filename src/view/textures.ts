@@ -12,8 +12,11 @@ export interface GameTextures {
   skins: Map<string, Texture>;
   orb: Texture;
   enemies: Record<EnemyKind, TexturePair>;
+  /** Solid white silhouettes for hit flashes. */
+  enemiesWhite: Record<EnemyKind, TexturePair>;
   shieldCracked: TexturePair;
   bosses: Record<BossKind, Texture>;
+  bossesWhite: Record<BossKind, Texture>;
   turret: Texture;
   plate: Texture;
   glyphs: Map<string, Texture>;
@@ -32,8 +35,33 @@ export function textureFromGrid(grid: PixelGrid): Texture {
   return texture;
 }
 
-function pair(grids: readonly [PixelGrid, PixelGrid]): TexturePair {
-  return [textureFromGrid(grids[0]), textureFromGrid(grids[1])];
+function white(grid: PixelGrid): PixelGrid {
+  const palette: Record<string, number> = {};
+  for (const k of Object.keys(grid.palette)) palette[k] = 0xffffff;
+  return { rows: grid.rows, palette };
+}
+
+function pair(grids: readonly [PixelGrid, PixelGrid], silhouette = false): TexturePair {
+  const f = (g: PixelGrid) => textureFromGrid(silhouette ? white(g) : g);
+  return [f(grids[0]), f(grids[1])];
+}
+
+function enemySet(silhouette: boolean): Record<EnemyKind, TexturePair> {
+  return {
+    grunt: pair(SPRITES.grunt, silhouette),
+    gunner: pair(SPRITES.gunner, silhouette),
+    diver: pair(SPRITES.diver, silhouette),
+    shield: pair(SPRITES.shield, silhouette),
+    splitter: pair(SPRITES.splitter, silhouette),
+    phaser: pair(SPRITES.phaser, silhouette),
+    bomber: pair(SPRITES.bomber, silhouette),
+    mini: pair(SPRITES.mini, silhouette),
+  };
+}
+
+function bossSet(silhouette: boolean): Record<BossKind, Texture> {
+  const f = (g: PixelGrid) => textureFromGrid(silhouette ? white(g) : g);
+  return { warden: f(SPRITES.warden), hive: f(SPRITES.hive), dreadnought: f(SPRITES.dreadnought) };
 }
 
 export function loadTextures(): GameTextures {
@@ -46,22 +74,11 @@ export function loadTextures(): GameTextures {
   return {
     skins,
     orb: textureFromGrid({ rows: ['.##.', '####', '####', '.##.'], palette: { '#': 0xffffff } }),
-    enemies: {
-      grunt: pair(SPRITES.grunt),
-      gunner: pair(SPRITES.gunner),
-      diver: pair(SPRITES.diver),
-      shield: pair(SPRITES.shield),
-      splitter: pair(SPRITES.splitter),
-      phaser: pair(SPRITES.phaser),
-      bomber: pair(SPRITES.bomber),
-      mini: pair(SPRITES.mini),
-    },
+    enemies: enemySet(false),
+    enemiesWhite: enemySet(true),
     shieldCracked: pair(SPRITES.shieldCracked),
-    bosses: {
-      warden: textureFromGrid(SPRITES.warden),
-      hive: textureFromGrid(SPRITES.hive),
-      dreadnought: textureFromGrid(SPRITES.dreadnought),
-    },
+    bosses: bossSet(false),
+    bossesWhite: bossSet(true),
     turret: textureFromGrid(SPRITES.turret),
     plate: textureFromGrid(SPRITES.plate),
     glyphs,

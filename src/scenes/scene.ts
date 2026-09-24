@@ -56,6 +56,8 @@ export interface SceneContext {
   takePressDelta(): number | null;
   /** Push settings (volumes) to the audio engine. */
   applySettings(): void;
+  /** 0..1 chromatic aberration strength (driven by screen shake). */
+  setAberration(amount: number): void;
   persist(): void;
   goto(next: Scene): void;
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BeatClock } from '../../src/audio/beatClock';
 import {
   compileSong,
+  nextBarStep,
   resolveStep,
   STEPS_PER_BAR,
   stepsInWindow,
@@ -28,21 +29,25 @@ const tiny: SongDef = {
       hat: '................',
     },
   },
-  order: ['a', 'b'],
-  loopFrom: 1,
+  arrangements: {
+    main: { order: ['a', 'b'], loopFrom: 1 },
+    alt: { order: ['b'], loopFrom: 0 },
+  },
 };
 
 describe('compileSong', () => {
-  it('lays out sections in order with offsets', () => {
+  it('lays out each arrangement with offsets', () => {
     const song = compileSong(tiny);
-    expect(song.totalSteps).toBe(32);
-    expect(song.loopStartStep).toBe(16);
-    expect(song.entries.map((e) => [e.section.name, e.offset])).toEqual([
+    const main = song.arrangements.main!;
+    expect(main.totalSteps).toBe(32);
+    expect(main.loopStartStep).toBe(16);
+    expect(main.entries.map((e) => [e.section.name, e.offset])).toEqual([
       ['a', 0],
       ['b', 16],
     ]);
-    expect(song.entries[0]!.section.guitar[0]).toMatchObject({ midi: 40, len: 4 });
-    expect(song.entries[0]!.section.crash).toHaveLength(16);
+    expect(main.entries[0]!.section.guitar[0]).toMatchObject({ midi: 40, len: 4 });
+    expect(main.entries[0]!.section.crash).toHaveLength(16);
+    expect(song.arrangements.alt!.totalSteps).toBe(16);
   });
 
   it('rejects tracks with the wrong length', () => {
@@ -53,31 +58,44 @@ describe('compileSong', () => {
     expect(() => compileSong(bad)).toThrow(/a\.kick/);
   });
 
-  it('rejects unknown sections in the order', () => {
-    expect(() => compileSong({ ...tiny, order: ['a', 'zzz'] })).toThrow(/zzz/);
+  it('rejects unknown sections in an arrangement', () => {
+    expect(() =>
+      compileSong({ ...tiny, arrangements: { main: { order: ['a', 'zzz'], loopFrom: 0 } } }),
+    ).toThrow(/zzz/);
   });
 });
 
 describe('resolveStep', () => {
-  const song = compileSong(tiny);
+  const main = compileSong(tiny).arrangements.main!;
 
   it('finds section and local step', () => {
-    expect(resolveStep(song, 3)).toMatchObject({ step: 3, section: { name: 'a' } });
-    expect(resolveStep(song, 20)).toMatchObject({ step: 4, section: { name: 'b' } });
+    expect(resolveStep(main, 3)).toMatchObject({ step: 3, section: { name: 'a' } });
+    expect(resolveStep(main, 20)).toMatchObject({ step: 4, section: { name: 'b' } });
   });
 
   it('loops from loopFrom after the end', () => {
-    expect(resolveStep(song, 32)).toMatchObject({ step: 0, section: { name: 'b' } });
-    expect(resolveStep(song, 49)).toMatchObject({ step: 1, section: { name: 'b' } });
+    expect(resolveStep(main, 32)).toMatchObject({ step: 0, section: { name: 'b' } });
+    expect(resolveStep(main, 49)).toMatchObject({ step: 1, section: { name: 'b' } });
   });
 
-  it('returns null before the song starts', () => {
-    expect(resolveStep(song, -1)).toBeNull();
+  it('returns null before the start', () => {
+    expect(resolveStep(main, -1)).toBeNull();
+  });
+});
+
+describe('nextBarStep', () => {
+  const clock = new BeatClock(120, 0); // 16th = 0.125 s, bar = 2 s
+
+  it('rounds up to the next bar line', () => {
+    expect(nextBarStep(clock, 0)).toBe(0);
+    expect(nextBarStep(clock, 0.01)).toBe(16);
+    expect(nextBarStep(clock, 2)).toBe(16);
+    expect(nextBarStep(clock, 2.01)).toBe(32);
   });
 });
 
 describe('stepsInWindow', () => {
-  const clock = new BeatClock(120, 0); // 16th = 0.125 s
+  const clock = new BeatClock(120, 0);
 
   it('lists 16th steps inside a half-open window', () => {
     expect(stepsInWindow(clock, 0, 1).map((s) => s.index)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
@@ -95,10 +113,14 @@ describe('stepsInWindow', () => {
 });
 
 describe('EARTH_SONG', () => {
-  it('compiles and is in E minor at 140 BPM', () => {
+  it('compiles main and boss arrangements at 140 BPM', () => {
     const song = compileSong(EARTH_SONG);
     expect(song.bpm).toBe(140);
-    expect(song.totalSteps % STEPS_PER_BAR).toBe(0);
-    expect(song.totalSteps).toBeGreaterThan(STEPS_PER_BAR * 16);
+    for (const name of ['main', 'boss', 'bossFinal']) {
+      const arr = song.arrangements[name];
+      expect(arr, name).toBeDefined();
+      expect(arr!.totalSteps % STEPS_PER_BAR).toBe(0);
+    }
+    expect(song.arrangements.main!.totalSteps).toBeGreaterThan(STEPS_PER_BAR * 16);
   });
 });

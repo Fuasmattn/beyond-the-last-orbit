@@ -1,4 +1,4 @@
-import { makeNoiseBuffer } from './synth';
+import { makeNoiseBuffer, midiToHz } from './synth';
 
 export class Sfx {
   private readonly noise: AudioBuffer;
@@ -24,8 +24,8 @@ export class Sfx {
     osc.stop(t + length + 0.01);
   }
 
-  private burst(length: number, peak: number, f0: number, f1: number): void {
-    const t = this.ctx.currentTime;
+  private burst(length: number, peak: number, f0: number, f1: number, delay = 0): void {
+    const t = this.ctx.currentTime + delay;
     const src = this.ctx.createBufferSource();
     src.buffer = this.noise;
     const lp = this.ctx.createBiquadFilter();
@@ -38,6 +38,13 @@ export class Sfx {
     src.connect(lp).connect(g).connect(this.out);
     src.start(t, Math.random() * 0.5);
     src.stop(t + length + 0.01);
+  }
+
+  private arpeggio(midis: readonly number[], gap: number, peak: number): void {
+    midis.forEach((midi, i) => {
+      const f = midiToHz(midi);
+      this.tone('square', f, f, 0.14, peak, i * gap);
+    });
   }
 
   laser(onBeat: boolean): void {
@@ -65,13 +72,42 @@ export class Sfx {
   }
 
   stageClear(): void {
-    [64, 67, 71, 76].forEach((midi, i) => {
-      const f = 440 * 2 ** ((midi - 69) / 12);
-      this.tone('square', f, f, 0.14, 0.08, i * 0.09);
-    });
+    this.arpeggio([64, 67, 71, 76], 0.09, 0.08);
+  }
+
+  extraLife(): void {
+    this.arpeggio([72, 76, 79, 84, 88], 0.07, 0.07);
   }
 
   start(): void {
     this.tone('square', 440, 880, 0.12, 0.08);
+  }
+
+  dive(): void {
+    this.tone('triangle', 900, 300, 0.4, 0.05);
+  }
+
+  bossHit(): void {
+    this.tone('square', 180, 120, 0.04, 0.04);
+  }
+
+  bossPhase(): void {
+    this.burst(1.0, 0.8, 1500, 60);
+    this.tone('sawtooth', 120, 40, 0.8, 0.3);
+  }
+
+  bossKilled(): void {
+    this.burst(1.6, 0.9, 4000, 50);
+    this.burst(1.0, 0.6, 3000, 80, 0.4);
+    this.tone('sine', 150, 30, 1.4, 0.4);
+  }
+
+  laserWarn(): void {
+    this.tone('square', 300, 1200, 0.7, 0.05);
+  }
+
+  laserFire(): void {
+    this.burst(1.2, 0.3, 6000, 1500);
+    this.tone('sawtooth', 90, 80, 1.2, 0.15);
   }
 }

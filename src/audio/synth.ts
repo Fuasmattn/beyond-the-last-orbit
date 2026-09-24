@@ -13,6 +13,20 @@ export function makeDistortionCurve(amount: number): Float32Array<ArrayBuffer> {
   return curve;
 }
 
+/** Linear below `knee`, tanh-rounded above; WaveShaper clamps input to ±1 so output stays < 1. */
+export function makeSoftClipCurve(knee = 0.8): Float32Array<ArrayBuffer> {
+  const n = 2048;
+  const curve = new Float32Array(n);
+  const room = 1 - knee;
+  for (let i = 0; i < n; i++) {
+    const x = (i * 2) / (n - 1) - 1;
+    const ax = Math.abs(x);
+    const y = ax <= knee ? ax : knee + room * Math.tanh((ax - knee) / room);
+    curve[i] = Math.sign(x) * y;
+  }
+  return curve;
+}
+
 export function makeNoiseBuffer(ctx: BaseAudioContext): AudioBuffer {
   const buf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
   const data = buf.getChannelData(0);
@@ -45,7 +59,9 @@ export function createBuses(ctx: BaseAudioContext): Buses {
   sfx.gain.value = 0.8;
   music.connect(comp);
   sfx.connect(comp);
-  comp.connect(limiter).connect(master).connect(ctx.destination);
+  const clip = ctx.createWaveShaper();
+  clip.curve = makeSoftClipCurve();
+  comp.connect(limiter).connect(master).connect(clip).connect(ctx.destination);
   return { master, music, sfx };
 }
 

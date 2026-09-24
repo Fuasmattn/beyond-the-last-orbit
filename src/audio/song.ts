@@ -14,13 +14,17 @@ export interface SectionDef {
   crash?: string;
 }
 
+export interface ArrangementDef {
+  order: readonly string[];
+  /** Index into `order` where playback loops back to after the end. */
+  loopFrom: number;
+}
+
 export interface SongDef {
   name: string;
   bpm: number;
   sections: Record<string, SectionDef>;
-  order: readonly string[];
-  /** Index into `order` where playback loops back to after the end. */
-  loopFrom: number;
+  arrangements: Record<string, ArrangementDef> & { main: ArrangementDef };
 }
 
 export interface CompiledSection {
@@ -34,16 +38,20 @@ export interface CompiledSection {
   crash: number[];
 }
 
-export interface CompiledSong {
-  name: string;
-  bpm: number;
+export interface CompiledArrangement {
   entries: { section: CompiledSection; offset: number }[];
   totalSteps: number;
   loopStartStep: number;
 }
 
+export interface CompiledSong {
+  name: string;
+  bpm: number;
+  arrangements: Record<string, CompiledArrangement>;
+}
+
 function noteTrack(name: string, src: string | undefined, steps: number): (NoteEvent | undefined)[] {
-  const track: (NoteEvent | undefined)[] = new Array<NoteEvent | undefined>(steps).fill(undefined);
+  const track = new Array<NoteEvent | undefined>(steps).fill(undefined);
   if (src === undefined) return track;
   const parsed = parseNotePattern(src);
   if (parsed.steps !== steps) throw new Error(`${name}: expected ${steps} steps, got ${parsed.steps}`);
@@ -72,38 +80,56 @@ function compileSection(name: string, def: SectionDef): CompiledSection {
   };
 }
 
-export function compileSong(def: SongDef): CompiledSong {
-  const compiled = new Map<string, CompiledSection>();
-  for (const [name, section] of Object.entries(def.sections)) {
-    compiled.set(name, compileSection(name, section));
-  }
-  const entries: CompiledSong['entries'] = [];
+function compileArrangement(
+  name: string,
+  def: ArrangementDef,
+  sections: Map<string, CompiledSection>,
+): CompiledArrangement {
+  const entries: CompiledArrangement['entries'] = [];
   let offset = 0;
   let loopStartStep = 0;
-  def.order.forEach((name, i) => {
-    const section = compiled.get(name);
-    if (!section) throw new Error(`unknown section "${name}" in order`);
+  def.order.forEach((sectionName, i) => {
+    const section = sections.get(sectionName);
+    if (!section) throw new Error(`arrangement "${name}": unknown section "${sectionName}"`);
     if (i === def.loopFrom) loopStartStep = offset;
     entries.push({ section, offset });
     offset += section.steps;
   });
-  return { name: def.name, bpm: def.bpm, entries, totalSteps: offset, loopStartStep };
+  if (offset === 0) throw new Error(`arrangement "${name}" is empty`);
+  return { entries, totalSteps: offset, loopStartStep };
+}
+
+export function compileSong(def: SongDef): CompiledSong {
+  const sections = new Map<string, CompiledSection>();
+  for (const [name, section] of Object.entries(def.sections)) sections.set(name, compileSection(name, section));
+  const arrangements: Record<string, CompiledArrangement> = {};
+  for (const [name, arr] of Object.entries(def.arrangements)) {
+    arrangements[name] = compileArrangement(name, arr, sections);
+  }
+  return { name: def.name, bpm: def.bpm, arrangements };
 }
 
 export function resolveStep(
-  song: CompiledSong,
-  globalStep: number,
+  arr: CompiledArrangement,
+  step: number,
 ): { section: CompiledSection; step: number } | null {
-  if (globalStep < 0) return null;
-  let i = globalStep;
-  if (i >= song.totalSteps) {
-    const loopLen = song.totalSteps - song.loopStartStep;
-    i = song.loopStartStep + ((i - song.loopStartStep) % loopLen);
+  if (step < 0) return null;
+  let i = step;
+  if (i >= arr.totalSteps) {
+    const loopLen = arr.totalSteps - arr.loopStartStep;
+    i = arr.loopStartStep + ((i - arr.loopStartStep) % loopLen);
   }
-  for (const entry of song.entries) {
+  for (const entry of arr.entries) {
     if (i < entry.offset + entry.section.steps) return { section: entry.section, step: i - entry.offset };
   }
   return null;
+}
+
+/** First 16th-step index on a bar line at or after `time`. */
+export function nextBarStep(clock: BeatClock, time: number): number {
+  const stepDur = clock.beatDur / STEPS_PER_BEAT;
+  const step = Math.ceil((time - clock.startTime) / stepDur - 1e-6);
+  return Math.max(0, Math.ceil(step / STEPS_PER_BAR) * STEPS_PER_BAR);
 }
 
 export function stepsInWindow(

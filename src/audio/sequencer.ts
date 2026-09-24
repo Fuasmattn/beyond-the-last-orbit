@@ -1,12 +1,26 @@
 import type { BeatClock } from './beatClock';
-import { resolveStep, STEPS_PER_BEAT, stepsInWindow, type CompiledSong } from './song';
+import {
+  nextBarStep,
+  resolveStep,
+  STEPS_PER_BEAT,
+  stepsInWindow,
+  type CompiledArrangement,
+  type CompiledSong,
+} from './song';
 import { createRig, type Rig } from './synth';
 
 const MIN_NOTE = 0.04;
 
+interface Cursor {
+  arr: CompiledArrangement;
+  startStep: number;
+}
+
 export class Sequencer {
   private readonly rig: Rig;
   private readonly stepDur: number;
+  private current: Cursor;
+  private pending: Cursor | null = null;
 
   constructor(
     ctx: BaseAudioContext,
@@ -16,12 +30,22 @@ export class Sequencer {
   ) {
     this.rig = createRig(ctx, out);
     this.stepDur = clock.beatDur / STEPS_PER_BEAT;
+    this.current = { arr: this.arrangement('main'), startStep: 0 };
+  }
+
+  /** Switch to arrangement `name` at the first bar line at or after `fromTime`. */
+  queue(name: string, fromTime: number): void {
+    this.pending = { arr: this.arrangement(name), startStep: nextBarStep(this.clock, fromTime) };
   }
 
   /** Schedules every 16th step whose time falls in [from, to). */
   scheduleRange(from: number, to: number): void {
     for (const { index, time } of stepsInWindow(this.clock, from, to)) {
-      const r = resolveStep(this.song, index);
+      if (this.pending && index >= this.pending.startStep) {
+        this.current = this.pending;
+        this.pending = null;
+      }
+      const r = resolveStep(this.current.arr, index - this.current.startStep);
       if (!r) continue;
       const { section: s, step } = r;
 
@@ -42,5 +66,11 @@ export class Sequencer {
       if (hat) this.rig.hat(time, hat);
       if (s.crash[step]) this.rig.crash(time);
     }
+  }
+
+  private arrangement(name: string): CompiledArrangement {
+    const a = this.song.arrangements[name];
+    if (!a) throw new Error(`unknown arrangement "${name}" in song "${this.song.name}"`);
+    return a;
   }
 }

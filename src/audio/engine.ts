@@ -15,6 +15,7 @@ interface Playing {
   clock: BeatClock;
   gain: GainNode;
   scheduledTo: number;
+  arrangement: string;
 }
 
 export class AudioEngine {
@@ -62,9 +63,23 @@ export class AudioEngine {
     gain.connect(this.buses.music);
     const start = this.ctx.currentTime + START_DELAY_SEC;
     const clock = new BeatClock(song.bpm, start);
-    this.playing = { seq: new Sequencer(this.ctx, gain, song, clock), clock, gain, scheduledTo: start };
+    this.playing = {
+      seq: new Sequencer(this.ctx, gain, song, clock),
+      clock,
+      gain,
+      scheduledTo: start,
+      arrangement: 'main',
+    };
     this.tick();
     this.timer = setInterval(() => this.tick(), SCHEDULE_INTERVAL_MS);
+  }
+
+  /** Switch arrangement at the next bar line; no-op if it is already playing or queued. */
+  queueArrangement(name: string): void {
+    const p = this.playing;
+    if (!p || p.arrangement === name) return;
+    p.arrangement = name;
+    p.seq.queue(name, p.scheduledTo);
   }
 
   stopSong(): void {

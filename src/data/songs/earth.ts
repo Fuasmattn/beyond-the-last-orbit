@@ -4,6 +4,7 @@ const bars = (...b: string[]) => b.join(' | ');
 
 const GALLOP = 'E2p . E2p E2p E2p . E2p E2p E2p . E2p E2p E2p . E2p E2p';
 const GALLOP_KICK = 'x.xxx.xxx.xxx.xx';
+const DOUBLE_KICK = 'xxxxxxxxxxxxxxxx';
 const BACKBEAT = '....x.......x...';
 const EIGHTH_HAT = 'x.x.x.x.x.x.x.x.';
 const EMPTY = '................';
@@ -15,10 +16,7 @@ export const EARTH_SONG: SongDef = {
   sections: {
     intro: {
       bars: 2,
-      guitar: bars(
-        'E2 - - - - - - - - - - - - - - -',
-        'G2 - - - - - - - A2 - - - B2 - - -',
-      ),
+      guitar: bars('E2 - - - - - - - - - - - - - - -', 'G2 - - - - - - - A2 - - - B2 - - -'),
       kick: bars('X...............', 'x.......x...x...'),
       snare: bars(EMPTY, '........x.x.xxxx'),
       hat: bars(EMPTY, EMPTY),
@@ -71,15 +69,38 @@ export const EARTH_SONG: SongDef = {
     },
     breakdown: {
       bars: 2,
-      guitar: bars(
-        'E2p . . E2p . . E2p . . . E2p . E2p . . .',
-        'E2p . . E2p . . E2p . F2 - - - F#2 - - -',
-      ),
+      guitar: bars('E2p . . E2p . . E2p . . . E2p . E2p . . .', 'E2p . . E2p . . E2p . F2 - - - F#2 - - -'),
       kick: bars('x..x..x...x.x...', 'x..x..x.x...x...'),
       snare: bars('........x.......', '........x...xxxx'),
       hat: bars(EMPTY, EMPTY),
     },
+    bossRiff: {
+      bars: 2,
+      guitar: bars(
+        'E2p E2p E2p E2p F2 - E2p E2p E2p E2p E2p E2p A#2 - A2 -',
+        'E2p E2p E2p E2p F2 - E2p E2p G2 - F#2 - F2 - E2 -',
+      ),
+      kick: bars(DOUBLE_KICK, DOUBLE_KICK),
+      snare: bars(BACKBEAT, '....x.......x.xx'),
+      hat: bars(EIGHTH_HAT, EIGHTH_HAT),
+      crash: bars('X...............', EMPTY),
+    },
+    bossFinal: {
+      bars: 2,
+      guitar: bars(
+        'E2p E2p E2p E2p E2p E2p E2p E2p G2p G2p G2p G2p F#2p F#2p F#2p F#2p',
+        'E2p E2p E2p E2p E2p E2p E2p E2p A#2p A#2p A#2p A#2p A2p A2p A2p A2p',
+      ),
+      lead: bars('E5 - - - - - - - D#5 - - - D5 - - -', 'C#5 - - - C5 - - - B4 - - - A#4 - - -'),
+      kick: bars(DOUBLE_KICK, DOUBLE_KICK),
+      snare: bars('x...x...x...x...', 'x...x...x...xxxx'),
+      hat: bars(EMPTY, EMPTY),
+      crash: bars('X...............', '........X.......'),
+    },
   },
-  order: ['intro', 'A', 'A', 'B', 'chorus', 'A', 'B', 'chorus', 'breakdown'],
-  loopFrom: 1,
+  arrangements: {
+    main: { order: ['intro', 'A', 'A', 'B', 'chorus', 'A', 'B', 'chorus', 'breakdown'], loopFrom: 1 },
+    boss: { order: ['bossRiff'], loopFrom: 0 },
+    bossFinal: { order: ['bossFinal'], loopFrom: 0 },
+  },
 };

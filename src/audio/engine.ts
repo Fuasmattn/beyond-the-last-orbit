@@ -13,6 +13,9 @@ const FADE_SEC = 0.5;
 /** Fixed delay of the warble line; music is heard this much later than scheduled. */
 const WARBLE_BASE_SEC = 0.012;
 const WARBLE_RATE_HZ = 5.5;
+/** Bus levels at volume 1 (match createBuses). */
+const MUSIC_LEVEL = 0.7;
+const SFX_LEVEL = 0.8;
 
 interface Playing {
   seq: Sequencer;
@@ -115,6 +118,18 @@ export class AudioEngine {
     p.gain.gain.setValueAtTime(p.gain.gain.value, t);
     p.gain.gain.linearRampToValueAtTime(0, t + FADE_SEC);
     setTimeout(() => p.gain.disconnect(), (FADE_SEC + LOOKAHEAD_SEC) * 1000 + 100);
+  }
+
+  /** 0..1 each; applied on top of the fixed bus mix levels. */
+  setVolumes(music: number, sfx: number): void {
+    const t = this.ctx.currentTime;
+    this.buses.music.gain.setTargetAtTime(MUSIC_LEVEL * music, t, 0.02);
+    this.buses.sfx.gain.setTargetAtTime(SFX_LEVEL * sfx, t, 0.02);
+  }
+
+  /** Signed seconds from the nearest heard beat right now (no calibration offset); null if silent. */
+  beatDelta(): number | null {
+    return this.playing ? this.playing.clock.gridDelta(this.heardTime(), 1) : null;
   }
 
   setPaused(paused: boolean): void {

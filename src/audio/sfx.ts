@@ -120,6 +120,26 @@ export class Sfx {
     this.tone('sine', 700, 1400, 0.3, 0.04);
   }
 
+  menuMove(): void {
+    this.tone('square', 660, 660, 0.04, 0.04);
+  }
+
+  menuSelect(): void {
+    this.tone('square', 880, 1320, 0.08, 0.06);
+  }
+
+  buy(): void {
+    this.arpeggio([76, 79, 84], 0.06, 0.07);
+  }
+
+  deny(): void {
+    this.tone('sawtooth', 140, 110, 0.18, 0.08);
+  }
+
+  coin(): void {
+    this.tone('square', 1760, 1760, 0.025, 0.03);
+  }
+
   warp(): void {
     this.tone('sawtooth', 80, 1600, 2.2, 0.08);
     this.burst(2.6, 0.25, 800, 8000);

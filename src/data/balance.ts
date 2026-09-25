@@ -8,7 +8,7 @@ export const FIELD_H = 320;
 /** Top edge of the player movement zone (bottom 25 % of the field). */
 export const PLAYER_ZONE_TOP = 240;
 /** Rhythm strip along the bottom edge; the player stays above it. */
-export const BEAT_TRACK = { h: 16 } as const;
+export const BEAT_TRACK = { h: 20 } as const;
 export const SIM_DT = 1 / 60;
 export const MAX_STEPS_PER_FRAME = 5;
 

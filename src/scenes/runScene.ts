@@ -5,6 +5,7 @@ import { equippedLaser, equippedSkin } from '../data/cosmetics';
 import { createInitialState } from '../sim/state';
 import { step } from '../sim/step';
 import type { SimEvent, SimState } from '../sim/types';
+import { judgeLabel } from '../view/beatJudge';
 import { Hud } from '../view/hud';
 import { GameRenderer } from '../view/renderer';
 import type { FrameInput, Scene, SceneContext } from './scene';
@@ -60,6 +61,7 @@ export class RunScene implements Scene {
     }
     s.nextFieldW = viewport.w;
     const events = step(s, input.sim);
+    this.gradeShots(events);
     this.hud.notify(events);
     this.renderer.notify(events);
     this.playEvents(events);
@@ -80,6 +82,15 @@ export class RunScene implements Scene {
   destroy(): void {
     this.ctx.setAberration(0);
     this.root.destroy({ children: true });
+  }
+
+  /** Shows PERFECT/GOOD/OFF on the beat track, using the press timing measured at input time. */
+  private gradeShots(events: readonly SimEvent[]): void {
+    const shot = events.find((e) => e.type === 'shot');
+    const press = this.ctx.takePressDelta();
+    if (!shot || shot.type !== 'shot') return;
+    const delta = press === null ? null : press - this.ctx.save.settings.latencyOffsetMs / 1000;
+    this.hud.judge(judgeLabel(delta, shot.onBeat));
   }
 
   private setPaused(p: boolean): void {

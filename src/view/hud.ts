@@ -1,45 +1,32 @@
 import { Container, Graphics, type Texture } from 'pixi.js';
-import { FIELD_H, RHYTHM, STAGE } from '../data/balance';
+import { STAGE } from '../data/balance';
 import { worldAt } from '../data/worlds';
 import type { SimEvent, SimState } from '../sim/types';
-import { beatPulse } from './beatPulse';
-import { centerText, PixelText } from './pixelText';
 import { viewport } from '../app/viewport';
-
-const MULT_COLORS: readonly [number, number][] = [
-  [4, 0xffe14a],
-  [3, 0xff5ad1],
-  [2, 0x4af2ff],
-  [1.5, 0x7dff6b],
-  [1, 0xffffff],
-];
-
-function multColor(mult: number): number {
-  for (const [min, color] of MULT_COLORS) if (mult >= min) return color;
-  return 0xffffff;
-}
+import type { JudgeLabel } from './beatJudge';
+import { BeatTrack } from './beatTrack';
+import { centerText, PixelText } from './pixelText';
 
 function pct(v: number): string {
   return `${Math.round(v * 100)}%`;
 }
 
-const RING_X = 104;
-const MULT_X = 111;
 const RESULT_LINES = 5;
 const RESULT_LINE_DELAY = 0.25;
 const POPUP_TIME = 1.5;
-const BOSS_BAR = { x: 40, y: 13, w: 160, h: 3 } as const;
+const BOSS_BAR = { y: 13, h: 3, margin: 40, maxW: 240 } as const;
+const RESULTS_W = 96;
 
 export class Hud extends Container {
   private readonly score: PixelText;
   private readonly stage: PixelText;
   private readonly lives: PixelText;
+  private readonly track: BeatTrack;
+  private readonly noAudio: PixelText;
   private readonly banner: PixelText;
   private readonly sub: PixelText;
-  private readonly mult: PixelText;
   private readonly popup: PixelText;
   private readonly results: PixelText[] = [];
-  private readonly ring = new Graphics();
   private readonly bossBar = new Graphics();
   private popupTime = 0;
 
@@ -48,33 +35,38 @@ export class Hud extends Container {
     this.score = new PixelText(glyphs);
     this.stage = new PixelText(glyphs);
     this.lives = new PixelText(glyphs, '', 0x4af2ff);
+    this.track = new BeatTrack(glyphs);
+    this.noAudio = new PixelText(glyphs, 'NO AUDIO', 0x777777);
     this.banner = new PixelText(glyphs, '', 0xffe14a);
     this.banner.scale.set(2);
     this.sub = new PixelText(glyphs, '', 0xcccccc);
-    this.mult = new PixelText(glyphs);
     this.popup = new PixelText(glyphs, '', 0x7dff6b);
     for (let i = 0; i < RESULT_LINES; i++) {
       const t = new PixelText(glyphs, '', i === RESULT_LINES - 1 ? 0xffe14a : 0xcccccc);
-      t.position.set(72, 138 + i * 9);
+      t.y = 138 + i * 9;
       this.results.push(t);
     }
     this.score.position.set(4, 4);
     this.stage.y = 4;
-    this.lives.position.set(4, FIELD_H - 9);
-    this.ring.position.set(RING_X, 6);
-    this.mult.position.set(MULT_X, 4);
+    this.lives.position.set(4, 12);
+    this.noAudio.y = 4;
     this.addChild(
+      this.track,
       this.score,
       this.stage,
       this.lives,
-      this.ring,
-      this.mult,
+      this.noAudio,
       this.bossBar,
       this.banner,
       this.sub,
       ...this.results,
       this.popup,
     );
+  }
+
+  /** Grades the latest shot on the beat track. */
+  judge(label: JudgeLabel): void {
+    this.track.judge(label);
   }
 
   notify(events: readonly SimEvent[]): void {
@@ -91,8 +83,10 @@ export class Hud extends Container {
     const label = `${state.world + 1}-${state.stage}`;
     this.stage.setText(state.loop > 0 ? `L${state.loop + 1} ${label}` : `STAGE ${label}`);
     this.stage.x = viewport.w - 4 - this.stage.pixelWidth;
+    this.track.update(viewport.w, audioOk ? beat : null, state.rhythm.mult, state.rhythm.streak, dt);
     this.lives.setText(`SHIPS ${Math.max(0, state.player.lives)}`);
-    this.updateRhythm(state, beat, audioOk);
+    this.noAudio.visible = !audioOk;
+    centerText(this.noAudio, 4, viewport.w);
     this.updateBossBar(state);
     this.updateBanner(state, paused);
     this.updateResults(state);
@@ -101,37 +95,18 @@ export class Hud extends Container {
     centerText(this.popup, 200, viewport.w);
   }
 
-  private updateRhythm(state: SimState, beat: number | null, audioOk: boolean): void {
-    this.ring.visible = audioOk;
-    if (!audioOk) {
-      this.mult.setText('NO AUDIO');
-      centerText(this.mult, 4, viewport.w);
-      return;
-    }
-    const m = state.rhythm.mult;
-    const color = multColor(m);
-    this.mult.setText(`X${m.toFixed(1)}`);
-    this.mult.x = MULT_X;
-    this.mult.tint = color;
-    const progress =
-      m >= RHYTHM.maxMult ? 1 : (state.rhythm.streak % RHYTHM.shotsPerStep) / RHYTHM.shotsPerStep;
-    this.ring.clear().circle(0, 0, 4).stroke({ color: 0x333a55, width: 1 });
-    if (progress > 0) {
-      this.ring.arc(0, 0, 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress).stroke({ color, width: 1 });
-    }
-    this.ring.scale.set(1 + 0.35 * beatPulse(beat));
-  }
-
   private updateBossBar(state: SimState): void {
     const b = state.boss;
     this.bossBar.visible = b !== null && !b.entering && b.dying === 0;
     if (!b || !this.bossBar.visible) return;
     const ratio = Math.max(0, b.hp / b.maxHp);
+    const w = Math.min(BOSS_BAR.maxW, viewport.w - BOSS_BAR.margin * 2);
+    const x = (viewport.w - w) / 2;
     this.bossBar
       .clear()
-      .rect(BOSS_BAR.x, BOSS_BAR.y, BOSS_BAR.w, BOSS_BAR.h)
+      .rect(x, BOSS_BAR.y, w, BOSS_BAR.h)
       .fill(0x331018)
-      .rect(BOSS_BAR.x, BOSS_BAR.y, BOSS_BAR.w * ratio, BOSS_BAR.h)
+      .rect(x, BOSS_BAR.y, w * ratio, BOSS_BAR.h)
       .fill(b.phased ? 0x8a7fb5 : 0xff3b5c);
   }
 
@@ -183,6 +158,7 @@ export class Hud extends Container {
     this.results.forEach((t, i) => {
       t.setText(lines[i] ?? '');
       t.visible = i < shown;
+      t.x = Math.round((viewport.w - RESULTS_W) / 2);
     });
   }
 }

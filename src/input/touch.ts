@@ -1,4 +1,5 @@
 import type { Layout } from '../app/layout';
+import { BEAT_TRACK, FIELD_H } from '../data/balance';
 import type { InputFrame } from '../sim/types';
 import type { FireJudge, InputSource, Tap } from './inputFrame';
 
@@ -7,7 +8,7 @@ const FIRE_SLOP = 10;
 
 /** Fire button in logical playfield coords: bottom right, just above the beat track. */
 export function fireButton(fieldW: number): { x: number; y: number; r: number } {
-  return { x: fieldW - 36, y: 272, r: FIRE_RADIUS };
+  return { x: fieldW - 36, y: FIELD_H - BEAT_TRACK.h - 30, r: FIRE_RADIUS };
 }
 const DRAG_SENSITIVITY = 1.25;
 

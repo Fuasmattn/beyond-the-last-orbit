@@ -9,6 +9,8 @@ import { ENEMY_COLOR as KIND_COLOR } from './vectorArt';
 
 const FIRE: readonly number[] = [0xffffff, 0xffe14a, 0xff7a3d, 0xff3b5c];
 const CHAIN_EVERY = 0.08;
+/** Streak length in logical px per px/s of particle speed. */
+const SPARK_STRETCH = 0.05;
 const EXHAUST_EVERY = 1 / 60;
 const TRAUMA = {
   kill: 0.06,
@@ -34,6 +36,7 @@ export class Effects extends Container {
     super();
     for (let i = 0; i < FX.particles.capacity; i++) {
       const s = new Sprite(Texture.WHITE);
+      s.anchor.set(0.5);
       s.visible = false;
       this.sprites.push(s);
       this.addChild(s);
@@ -137,9 +140,12 @@ export class Effects extends Container {
       const s = this.sprites[i]!;
       s.visible = p.active;
       if (!p.active) return;
-      s.position.set(Math.round(p.x), Math.round(p.y));
-      s.width = p.size;
-      s.height = p.size;
+      // Sparks: thin streaks stretched along their velocity.
+      const speed = Math.hypot(p.vx, p.vy);
+      s.position.set(p.x, p.y);
+      s.rotation = Math.atan2(p.vy, p.vx);
+      s.width = Math.max(p.size, speed * SPARK_STRETCH);
+      s.height = Math.max(0.6, p.size * 0.6);
       s.tint = p.color;
       s.alpha = Math.min(1, (p.life / p.maxLife) * 1.5);
     });

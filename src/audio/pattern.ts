@@ -1,12 +1,17 @@
-const NOTE_RE = /^([A-G])(#?)(-?\d)$/;
+const NOTE_RE = /^([A-G])(#|b)?(-?\d)$/;
+/** A note token: pitch, then optional flags — `p` palm mute, `n` single note, `o` octave. */
+const TOKEN_RE = /^([A-G](?:#|b)?-?\d)([pno]*)$/;
 const SEMITONES: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
 export function noteToMidi(name: string): number {
   const m = NOTE_RE.exec(name);
   if (!m) throw new Error(`bad note "${name}"`);
-  const [, letter, sharp, octave] = m;
-  return (Number(octave) + 1) * 12 + SEMITONES[letter!]! + (sharp ? 1 : 0);
+  const [, letter, accidental, octave] = m;
+  return (Number(octave) + 1) * 12 + SEMITONES[letter!]! + (accidental === '#' ? 1 : accidental === 'b' ? -1 : 0);
 }
+
+/** Rhythm guitar voicing: power chord (root, fifth, octave), a single string, or root + octave. */
+export type Voicing = 'power' | 'single' | 'octave';
 
 export interface NoteEvent {
   step: number;
@@ -14,6 +19,7 @@ export interface NoteEvent {
   /** Length in 16th steps. */
   len: number;
   mute: boolean;
+  voicing: Voicing;
 }
 
 function tokens(src: string): string[] {
@@ -31,9 +37,11 @@ export function parseNotePattern(src: string): { events: NoteEvent[]; steps: num
       if (!current) throw new Error(`sustain without note at step ${step}`);
       current.len++;
     } else {
-      const mute = tok.endsWith('p');
-      const midi = noteToMidi(mute ? tok.slice(0, -1) : tok);
-      current = { step, midi, len: 1, mute };
+      const m = TOKEN_RE.exec(tok);
+      if (!m) throw new Error(`bad note "${tok}" at step ${step}`);
+      const flags = m[2]!;
+      const voicing: Voicing = flags.includes('n') ? 'single' : flags.includes('o') ? 'octave' : 'power';
+      current = { step, midi: noteToMidi(m[1]!), len: 1, mute: flags.includes('p'), voicing };
       events.push(current);
     }
   });

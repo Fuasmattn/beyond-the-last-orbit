@@ -7,6 +7,8 @@ describe('noteToMidi', () => {
     expect(noteToMidi('E2')).toBe(40);
     expect(noteToMidi('F#2')).toBe(42);
     expect(noteToMidi('C-1')).toBe(0);
+    expect(noteToMidi('Bb1')).toBe(34);
+    expect(noteToMidi('Db2')).toBe(37);
   });
 
   it('rejects garbage', () => {
@@ -19,9 +21,18 @@ describe('parseNotePattern', () => {
     const p = parseNotePattern('E2p . E2 - - | G2 -');
     expect(p.steps).toBe(7);
     expect(p.events).toEqual([
-      { step: 0, midi: 40, len: 1, mute: true },
-      { step: 2, midi: 40, len: 3, mute: false },
-      { step: 5, midi: 43, len: 2, mute: false },
+      { step: 0, midi: 40, len: 1, mute: true, voicing: 'power' },
+      { step: 2, midi: 40, len: 3, mute: false, voicing: 'power' },
+      { step: 5, midi: 43, len: 2, mute: false, voicing: 'power' },
+    ]);
+  });
+
+  it('parses voicing flags', () => {
+    const p = parseNotePattern('C2pn G3o Eb4n');
+    expect(p.events.map((e) => [e.midi, e.mute, e.voicing])).toEqual([
+      [36, true, 'single'],
+      [55, false, 'octave'],
+      [63, false, 'single'],
     ]);
   });
 

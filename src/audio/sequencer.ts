@@ -8,10 +8,37 @@ import {
   type CompiledArrangement,
   type CompiledSong,
 } from './song';
-import { createRig, type GuitarTone, type Rig } from './synth';
+import { createRig, type GuitarTone, type Rig, type WarmNote } from './synth';
 
 const MIN_NOTE = 0.04;
 const TWIN_PAN = 0.4;
+/** Single-note riffs above this (C3) are melodies; the bass sits them out. */
+const BASS_FOLLOW_BELOW = 48;
+
+/** Every distinct guitar and lead note in the song, in play order (so the earliest warm first). */
+export function songNotes(song: CompiledSong): WarmNote[] {
+  const seen = new Set<string>();
+  const out: WarmNote[] = [];
+  const add = (n: WarmNote) => {
+    const key = `${n.kind}:${n.midi}:${n.mute}:${n.voicing}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(n);
+  };
+  const arrangements = Object.values(song.arrangements);
+  for (const arr of arrangements) {
+    for (const { section } of arr.entries) {
+      for (let i = 0; i < section.steps; i++) {
+        const g = section.guitar[i];
+        if (g) add({ kind: 'guitar', midi: g.midi, mute: g.mute, voicing: g.voicing });
+        for (const l of [section.lead[i], section.lead2[i]]) {
+          if (l) add({ kind: 'lead', midi: l.midi, mute: false, voicing: 'single' });
+        }
+      }
+    }
+  }
+  return out;
+}
 
 interface Cursor {
   arr: CompiledArrangement;
@@ -34,6 +61,7 @@ export class Sequencer {
     tone: GuitarTone = 'amp',
   ) {
     this.rig = createRig(ctx, out, tone);
+    this.rig.prewarm(songNotes(song));
     this.stepDur = clock.beatDur / STEPS_PER_BEAT;
     this.current = { arr: this.arrangement('main'), startStep: 0 };
   }
@@ -57,8 +85,11 @@ export class Sequencer {
       const g = s.guitar[step];
       if (g) {
         const dur = Math.max(MIN_NOTE, g.mute ? this.stepDur * 0.8 : g.len * this.stepDur);
-        this.rig.guitar(time, g.midi, dur, g.mute, this.detune());
-        this.rig.bass(time, g.midi - 12, dur, g.mute, this.detune());
+        this.rig.guitar(time, g.midi, dur, g.mute, this.detune(), g.voicing);
+        // Bass doubles the riff's root an octave down, but stays out of high single-note lines.
+        if (g.voicing !== 'single' || g.midi < BASS_FOLLOW_BELOW) {
+          this.rig.bass(time, g.midi - 12, dur, g.mute, this.detune());
+        }
       }
       const l = s.lead[step];
       const l2 = s.lead2[step];
@@ -73,6 +104,8 @@ export class Sequencer {
       const hat = s.hat[step] ?? 0;
       if (hat) this.rig.hat(time, hat);
       if (s.crash[step]) this.rig.crash(time);
+      const china = s.china[step] ?? 0;
+      if (china) this.rig.china(time, china);
     }
   }
 

@@ -14,6 +14,8 @@ export interface SectionDef {
   snare: string;
   hat: string;
   crash?: string;
+  /** Trashy china cymbal (breakdowns, choruses). */
+  china?: string;
 }
 
 export interface ArrangementDef {
@@ -39,6 +41,7 @@ export interface CompiledSection {
   snare: number[];
   hat: number[];
   crash: number[];
+  china: number[];
 }
 
 export interface CompiledArrangement {
@@ -81,6 +84,7 @@ function compileSection(name: string, def: SectionDef): CompiledSection {
     snare: drumTrack(`${name}.snare`, def.snare, steps),
     hat: drumTrack(`${name}.hat`, def.hat, steps),
     crash: drumTrack(`${name}.crash`, def.crash, steps),
+    china: drumTrack(`${name}.china`, def.china, steps),
   };
 }
 

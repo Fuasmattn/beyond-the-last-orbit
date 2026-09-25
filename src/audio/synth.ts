@@ -1,4 +1,7 @@
 import { renderLeadNote, renderPowerChord } from './guitar';
+import type { Voicing } from './pattern';
+
+const RETRO_INTERVALS: Record<Voicing, readonly number[]> = { power: [0, 7, 12], single: [0], octave: [0, 12] };
 
 /** `amp`: plucked-string guitars through a modeled amp and cab. `retro`: the original sawtooth synth. */
 export type GuitarTone = 'amp' | 'retro';
@@ -70,14 +73,25 @@ export function createBuses(ctx: BaseAudioContext): Buses {
   return { master, music, sfx };
 }
 
+/** A note the amp tone may need; see `Rig.prewarm`. */
+export interface WarmNote {
+  kind: 'guitar' | 'lead';
+  midi: number;
+  mute: boolean;
+  voicing: Voicing;
+}
+
 export interface Rig {
-  guitar(t: number, midi: number, dur: number, mute: boolean, detune?: number): void;
+  /** Renders these notes' buffers ahead of time, a few per timer tick, so playback never stalls on one. */
+  prewarm(notes: readonly WarmNote[]): void;
+  guitar(t: number, midi: number, dur: number, mute: boolean, detune?: number, voicing?: Voicing): void;
   bass(t: number, midi: number, dur: number, mute: boolean, detune?: number): void;
   lead(t: number, midi: number, dur: number, pan?: number, detune?: number): void;
   kick(t: number, level: number): void;
   snare(t: number, level: number): void;
   hat(t: number, level: number): void;
   crash(t: number): void;
+  china(t: number, level: number): void;
 }
 
 function filter(ctx: BaseAudioContext, type: BiquadFilterType, freq: number, q = 0.7, gain = 0): BiquadFilterNode {
@@ -154,6 +168,8 @@ const AMP_GUITAR_LEVEL = 0.34;
 const AMP_LEAD_LEVEL = 0.13;
 const VIBRATO_DEPTH = 0.009;
 const CHOKE_SEC = 0.02;
+/** Pre-render budget: one note per tick keeps each tick under ~5 ms. */
+const WARM_INTERVAL_MS = 12;
 
 /** Rendered notes per audio context, shared across songs. */
 const noteCache = new WeakMap<BaseAudioContext, Map<string, AudioBuffer>>();
@@ -226,24 +242,44 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode, tone: GuitarTon
     src.stop(t + length);
   };
 
+  const chordBuffer = (midi: number, mute: boolean, voicing: Voicing, take: number) =>
+    cachedNote(ctx, `chord:${midi}:${mute ? 'm' : 'o'}:${voicing}:${take}`, () =>
+      renderPowerChord(midi, {
+        sampleRate: ctx.sampleRate,
+        mute,
+        take,
+        seconds: mute ? CHORD_SEC.mute : CHORD_SEC.open,
+        voicing,
+      }),
+    );
+  const leadBuffer = (midi: number) =>
+    cachedNote(ctx, `lead:${midi}`, () => renderLeadNote(midi, { sampleRate: ctx.sampleRate, take: 0, seconds: LEAD_SEC }));
+
   return {
-    guitar(t, midi, dur, mute, detune = 0) {
+    prewarm(notes) {
+      if (tone !== 'amp') return;
+      const jobs: (() => void)[] = [];
+      for (const n of notes) {
+        if (n.kind === 'lead') jobs.push(() => leadBuffer(n.midi));
+        else for (const take of [0, 1]) jobs.push(() => chordBuffer(n.midi, n.mute, n.voicing, take));
+      }
+      const next = () => {
+        jobs.shift()?.();
+        if (jobs.length > 0) setTimeout(next, WARM_INTERVAL_MS);
+      };
+      setTimeout(next, WARM_INTERVAL_MS);
+    },
+
+    guitar(t, midi, dur, mute, detune = 0, voicing = 'power') {
       if (tone === 'amp') {
-        cabs.forEach((cab, take) => {
-          const key = `chord:${midi}:${mute ? 'm' : 'o'}:${take}`;
-          const seconds = mute ? CHORD_SEC.mute : CHORD_SEC.open;
-          const buf = cachedNote(ctx, key, () =>
-            renderPowerChord(midi, { sampleRate: ctx.sampleRate, mute, take, seconds }),
-          );
-          playNote(ctx, buf, t, dur, cab, detune);
-        });
+        cabs.forEach((cab, take) => playNote(ctx, chordBuffer(midi, mute, voicing, take), t, dur, cab, detune));
         return;
       }
       amps.forEach((amp, side) => {
         const env = envelope(ctx, t, dur, 0.5);
         const tone = filter(ctx, 'lowpass', mute ? 900 : 6000);
         tone.connect(env).connect(amp);
-        for (const interval of [0, 7, 12]) {
+        for (const interval of RETRO_INTERVALS[voicing]) {
           const osc = ctx.createOscillator();
           osc.type = 'sawtooth';
           osc.frequency.value = midiToHz(midi + interval);
@@ -272,9 +308,7 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode, tone: GuitarTon
 
     lead(t, midi, dur, pan = 0, detune = 0) {
       if (leadCab) {
-        const buf = cachedNote(ctx, `lead:${midi}`, () =>
-          renderLeadNote(midi, { sampleRate: ctx.sampleRate, take: 0, seconds: LEAD_SEC }),
-        );
+        const buf = leadBuffer(midi);
         const panner = ctx.createStereoPanner();
         panner.pan.value = pan;
         panner.connect(leadCab);
@@ -314,32 +348,35 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode, tone: GuitarTon
       vibrato.stop(t + dur + 0.01);
     },
 
+    // Modern metal kick: short, tight low end plus a pronounced beater click that cuts through fast doubles.
     kick(t, level) {
       const osc = ctx.createOscillator();
-      osc.frequency.setValueAtTime(160, t);
-      osc.frequency.exponentialRampToValueAtTime(45, t + 0.12);
-      osc.connect(decay(ctx, t, level === 2 ? 1.2 : 1, 0.3)).connect(drums);
+      osc.frequency.setValueAtTime(180, t);
+      osc.frequency.exponentialRampToValueAtTime(48, t + 0.06);
+      osc.connect(decay(ctx, t, level === 2 ? 1.25 : 1.05, 0.2)).connect(drums);
       osc.start(t);
-      osc.stop(t + 0.32);
-      const clickEnv = decay(ctx, t, 0.3, 0.012);
+      osc.stop(t + 0.22);
+      const clickEnv = decay(ctx, t, 0.55, 0.018);
       clickEnv.connect(drums);
-      const clickHp = filter(ctx, 'highpass', 3000);
-      clickHp.connect(clickEnv);
-      noiseBurst(t, 0.012, clickHp);
+      const clickBp = filter(ctx, 'bandpass', 3500, 1.2);
+      clickBp.connect(clickEnv);
+      noiseBurst(t, 0.02, clickBp);
     },
 
+    // Fat snare: a pitched body under a longer, brighter wire rattle.
     snare(t, level) {
-      const body = decay(ctx, t, level === 2 ? 0.8 : 0.6, 0.18);
+      const body = decay(ctx, t, level === 2 ? 0.95 : 0.75, 0.24);
       body.connect(drums);
-      const bp = filter(ctx, 'bandpass', 1800, 0.8);
+      const bp = filter(ctx, 'bandpass', 2400, 0.6);
       bp.connect(body);
-      noiseBurst(t, 0.2, bp);
+      noiseBurst(t, 0.26, bp);
       const tone = ctx.createOscillator();
       tone.type = 'triangle';
-      tone.frequency.value = 190;
-      tone.connect(decay(ctx, t, 0.4, 0.1)).connect(drums);
+      tone.frequency.setValueAtTime(240, t);
+      tone.frequency.exponentialRampToValueAtTime(180, t + 0.05);
+      tone.connect(decay(ctx, t, 0.6, 0.12)).connect(drums);
       tone.start(t);
-      tone.stop(t + 0.12);
+      tone.stop(t + 0.14);
     },
 
     hat(t, level) {
@@ -349,6 +386,27 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode, tone: GuitarTon
       const hp = filter(ctx, 'highpass', 7500);
       hp.connect(g);
       noiseBurst(t, open ? 0.26 : 0.05, hp);
+    },
+
+    // China: inharmonic square partials plus band-passed noise, a short trashy decay.
+    china(t, level) {
+      const g = decay(ctx, t, level === 2 ? 0.26 : 0.18, 0.55);
+      g.connect(drums);
+      const hp = filter(ctx, 'highpass', 2500);
+      hp.connect(g);
+      for (const f of [417, 587, 821, 1123]) {
+        const osc = ctx.createOscillator();
+        osc.type = 'square';
+        osc.frequency.value = f;
+        const og = ctx.createGain();
+        og.gain.value = 0.12;
+        osc.connect(og).connect(hp);
+        osc.start(t);
+        osc.stop(t + 0.56);
+      }
+      const bp = filter(ctx, 'bandpass', 5200, 0.9);
+      bp.connect(g);
+      noiseBurst(t, 0.56, bp);
     },
 
     crash(t) {

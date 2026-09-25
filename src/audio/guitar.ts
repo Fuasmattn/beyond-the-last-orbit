@@ -11,6 +11,8 @@ export interface GuitarNoteOptions {
   /** Take variation (different pick noise and tuning) for double-tracked left/right guitars. */
   take: number;
   seconds: number;
+  /** Strings played: power chord (default), single note, or root + octave. */
+  voicing?: 'power' | 'single' | 'octave';
 }
 
 export interface LeadNoteOptions {
@@ -19,8 +21,8 @@ export interface LeadNoteOptions {
   seconds: number;
 }
 
-/** Power chord: root, fifth, octave — strummed downwards. */
-const CHORD = [0, 7, 12] as const;
+/** Intervals per voicing, strummed downwards. */
+const VOICINGS = { power: [0, 7, 12], single: [0], octave: [0, 12] } as const;
 const STRUM_SEC = 0.006;
 const OPEN_T60 = 3.5;
 const MUTE_T60 = 0.14;
@@ -132,13 +134,14 @@ function drive(x: Float32Array, sampleRate: number, gain1: number, gain2: number
   }
 }
 
-/** Distorted power chord (or palm-muted chug) on `midi`, mono. */
+/** Distorted rhythm-guitar note on `midi` (power chord by default; palm-muted chug if `mute`), mono. */
 export function renderPowerChord(midi: number, o: GuitarNoteOptions): Float32Array<ArrayBuffer> {
   const out = new Float32Array(Math.max(1, Math.round(o.seconds * o.sampleRate)));
-  const random = rng(midi * 7919 + o.take * 104729 + (o.mute ? 1 : 0));
+  const voicing = o.voicing ?? 'power';
+  const random = rng(midi * 7919 + o.take * 104729 + (o.mute ? 1 : 0) + voicing.length * 13);
   // Each take is tuned a hair differently so the two tracks beat against each other.
   const detune = 2 ** ((o.take % 2 === 0 ? -4 : 4) / 1200);
-  CHORD.forEach((interval, s) => {
+  VOICINGS[voicing].forEach((interval, s) => {
     const offset = Math.round(s * STRUM_SEC * o.sampleRate * (0.7 + 0.6 * random()));
     const gain = interval === 12 ? 0.6 : 1;
     pluck(

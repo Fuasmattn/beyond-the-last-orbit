@@ -1,6 +1,6 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { viewport } from '../app/viewport';
-import { FIELD_H, WARP } from '../data/balance';
+import { FIELD_H, PLAYER, WARP } from '../data/balance';
 import type { LaserDef, SkinDef } from '../data/cosmetics';
 import { worldAt, type WorldId } from '../data/worlds';
 import { laserBox } from '../sim/boss/warden';
@@ -41,6 +41,8 @@ const RECOIL_TIME = 0.06;
 /** Extra scale on the downbeat; enemies "thump" with the kick. */
 const ENEMY_PULSE = 0.18;
 const FLAME_COLOR = 0x9ff6ff;
+const MASTER_PULSE = 1.6;
+const MASTER_BACKDROP = 0x2a0f2e;
 
 export interface Cosmetics {
   skin: SkinDef;
@@ -142,11 +144,13 @@ export class GameRenderer {
   }
 
   render(state: SimState, dt: number, beat: number | null): void {
-    const pulse = beatPulse(beat);
+    // Beat stages thump harder so the rhythm is felt even with the sound low.
+    const pulse = Math.min(1, beatPulse(beat) * (state.beatMode === 'master' ? MASTER_PULSE : 1));
     const warp = state.phase === 'warp';
     const warpProgress = warp ? 1 - state.phaseTimer / WARP.time : 0;
     this.backdrop.width = viewport.w;
-    this.backdrop.tint = lerpColor(BACKDROP_BASE, BACKDROP_PULSE, pulse * 0.6);
+    const pulseColor = state.beatMode === 'master' ? MASTER_BACKDROP : BACKDROP_PULSE;
+    this.backdrop.tint = lerpColor(BACKDROP_BASE, pulseColor, pulse * 0.6);
     this.starfield.update(dt, warp ? 1 + WARP_SPEED * Math.sin(Math.PI * warpProgress) : 1);
     this.renderPlanet(state, dt, warp, pulse);
 
@@ -253,7 +257,15 @@ export class GameRenderer {
         v.root.visible = false;
         this.laserPool.push(v);
       },
-      (v, b) => v.update(b.x, b.y, state.time, pulse, b.onBeat, b.vy !== 0 ? -b.vx / b.vy : 0),
+      (v, b) => {
+        // Laser art is drawn for the standard bolt width; center it on wider bolts.
+        const x = b.x + (b.w - PLAYER.bulletW) / 2;
+        v.update(x, b.y, state.time, pulse, b.onBeat, b.vy !== 0 ? -b.vx / b.vy : 0);
+        // Power shots (beat-stage PERFECT) are drawn double width around the bolt's center.
+        const cx = b.power ? b.x + b.w / 2 : 0;
+        v.root.scale.x = b.power ? 2 : 1;
+        v.root.pivot.x = v.root.position.x = cx;
+      },
     );
   }
 

@@ -144,7 +144,7 @@ export class RunScene implements Scene {
   private gradeShots(events: readonly SimEvent[]): void {
     const shot = events.find((e) => e.type === 'shot');
     const press = this.ctx.takePressDelta();
-    if (!shot || shot.type !== 'shot' || this.state.mode !== 'rhythm') return;
+    if (!shot || shot.type !== 'shot' || this.state.beatMode === 'off') return;
     const delta = press === null ? null : press - this.ctx.save.settings.latencyOffsetMs / 1000;
     this.hud.judge(judgeLabel(delta, shot.onBeat));
   }
@@ -162,8 +162,9 @@ export class RunScene implements Scene {
       switch (e.type) {
         case 'shot':
           audio.sfx.laser(e.onBeat);
-          // Only rhythm runs judge timing; rogue runs keep the music clean.
-          if (this.state.mode === 'rhythm') this.sour.onShot(e.onBeat);
+          // Only judged stages (rhythm runs, rogue beat stages) sour the music.
+          if (this.state.beatMode !== 'off') this.sour.onShot(e.onBeat);
+          if (e.power) audio.sfx.powerShot();
           break;
         case 'enemyKilled':
         case 'partDestroyed':
@@ -214,6 +215,7 @@ export class RunScene implements Scene {
           break;
         case 'stageIntro':
           audio.queueArrangement(e.boss ? 'boss' : 'main');
+          if (this.state.beatMode === 'master') audio.sfx.beatStage();
           break;
         case 'warpStart':
           audio.sfx.warp();

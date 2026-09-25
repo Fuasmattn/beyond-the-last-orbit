@@ -19,6 +19,7 @@ const BOSS_Y = 70;
 const BOX = 12;
 const TAP_RADIUS = 14;
 const DIM = 0x3a4060;
+const BEAT_COLOR = 0xff5ad1;
 const PATH = 0xffe14a;
 
 /** Slay-the-Spire-style map between rogue stages; bottom row first, boss on top. */
@@ -32,6 +33,7 @@ export class RouteOverlay extends Container {
   private readonly desc: PixelText;
   private readonly hint: PixelText;
   private readonly boss: PixelText;
+  private readonly beatLabel: PixelText;
   private pick = 0;
   private fieldW = 0;
 
@@ -45,7 +47,8 @@ export class RouteOverlay extends Container {
     this.desc = new PixelText(glyphs, '', 0xcccccc);
     this.hint = new PixelText(glyphs, isTouch ? 'TAP A LIT NODE' : 'LEFT/RIGHT  FIRE TO GO', 0x777777);
     this.boss = new PixelText(glyphs, 'BOSS', 0xff3b5c);
-    this.addChild(this.shade, this.links, this.boxes, this.title, this.nodeName, this.desc, this.hint, this.boss);
+    this.beatLabel = new PixelText(glyphs, 'BEAT', BEAT_COLOR);
+    this.addChild(this.shade, this.links, this.boxes, this.title, this.nodeName, this.desc, this.hint, this.boss, this.beatLabel);
     this.visible = false;
   }
 
@@ -102,8 +105,15 @@ export class RouteOverlay extends Container {
       }
     });
 
-    // Nodes.
+    // Nodes. The beat row sits on a pulsing pink band.
     const b = this.boxes.clear();
+    const beatRow = r.map.rows.findIndex((nodes) => nodes.some((n) => n.beat));
+    this.beatLabel.visible = beatRow >= 0;
+    if (beatRow >= 0) {
+      const y = ROW_Y[beatRow]!;
+      b.rect(0, y - BOX, fieldW, BOX * 2).fill({ color: BEAT_COLOR, alpha: 0.08 + 0.06 * Math.sin(time * 6) });
+      this.beatLabel.position.set(4, y - 2);
+    }
     b.circle(cx, START_Y, 3).fill(PATH);
     let li = 0;
     r.map.rows.forEach((nodes, i) => {
@@ -134,9 +144,9 @@ export class RouteOverlay extends Container {
     centerText(this.title, 30, fieldW);
     const node = selected === undefined ? undefined : r.map.rows[row]?.find((n) => n.lane === selected);
     const info = node ? NODE_INFO[node.kind] : null;
-    this.nodeName.setText(info?.name ?? '');
-    this.nodeName.tint = info?.color ?? 0xffffff;
-    this.desc.setText(info?.desc ?? '');
+    this.nodeName.setText(info ? (node?.beat ? `BEAT ${info.name}` : info.name) : '');
+    this.nodeName.tint = node?.beat ? BEAT_COLOR : (info?.color ?? 0xffffff);
+    this.desc.setText(node?.beat ? 'ON BEAT X8 - RANK A+ UPGRADES' : (info?.desc ?? ''));
     centerText(this.nodeName, 256, fieldW);
     centerText(this.desc, 266, fieldW);
     centerText(this.hint, FIELD_H - 40, fieldW);

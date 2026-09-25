@@ -53,6 +53,10 @@ export class Effects extends Container {
     for (const e of events) {
       switch (e.type) {
         case 'shot':
+          if (e.power) {
+            this.explode(e.x, e.y, 10, [0xff5ad1, 0xffe14a, 0xffffff], 80);
+            this.shake.add(TRAUMA.kill);
+          }
           this.spawn({
             x: e.x,
             y: e.y,

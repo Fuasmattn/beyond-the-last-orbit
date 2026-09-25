@@ -9,6 +9,8 @@ const MID = TOP + BEAT_TRACK.h / 2;
 const GATE_HALF = 6;
 const EDGE_PAD = 6;
 const MARKER_COLOR = 0x4af2ff;
+/** Beat stages (rogue): markers turn pink so the stage reads as special at a glance. */
+const MASTER_COLOR = 0xff5ad1;
 const DOWNBEAT_COLOR = 0xffe14a;
 const GATE_COLOR = 0xffffff;
 const FLASH_TIME = 0.3;
@@ -43,6 +45,7 @@ export class BeatTrack extends Container {
   private flash = 0;
   private flashColor = GATE_COLOR;
   private labelTime = 0;
+  private markerColor = MARKER_COLOR;
 
   constructor(glyphs: Map<string, Texture>) {
     super();
@@ -62,7 +65,16 @@ export class BeatTrack extends Container {
    * `beat` null (no audio) hides the rhythm parts. `streak` drives the pips toward the next multiplier step.
    * `markers` false (rogue runs): only the multiplier and pips are shown, audio or not.
    */
-  update(fieldW: number, beat: number | null, mult: number, streak: number, dt: number, markers = true): void {
+  update(
+    fieldW: number,
+    beat: number | null,
+    mult: number,
+    streak: number,
+    dt: number,
+    markers = true,
+    master = false,
+  ): void {
+    this.markerColor = master ? MASTER_COLOR : MARKER_COLOR;
     if (fieldW !== this.trackW) this.layout(fieldW);
     const cx = fieldW / 2;
     this.flash = Math.max(0, this.flash - dt);
@@ -120,7 +132,7 @@ export class BeatTrack extends Container {
       const down = ((k % 4) + 4) % 4 === 0;
       const h = down ? 16 : 11;
       const w = down ? 4 : 3;
-      const color = down ? DOWNBEAT_COLOR : MARKER_COLOR;
+      const color = down ? DOWNBEAT_COLOR : this.markerColor;
       // Fade in from the edges, snap bright near the gate, vanish just past it.
       const near = 1 - Math.min(1, Math.abs(d) / halfW);
       const alpha = d < 0 ? Math.max(0, 1 + d / 4) : 0.4 + 0.6 * near;
@@ -139,7 +151,7 @@ export class BeatTrack extends Container {
     const whole = Math.floor(beat);
     const frac = beat - whole;
     const onBeat = Math.max(0, 1 - frac * 4) ** 2;
-    const beatColor = ((whole % 4) + 4) % 4 === 0 ? DOWNBEAT_COLOR : MARKER_COLOR;
+    const beatColor = ((whole % 4) + 4) % 4 === 0 ? DOWNBEAT_COLOR : this.markerColor;
     const flash = this.flash / FLASH_TIME;
     const color = lerpColor(GATE_COLOR, this.flashColor, flash);
     const open = GATE_HALF + 3 * onBeat + 2 * flash;

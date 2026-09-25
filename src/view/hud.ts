@@ -92,8 +92,9 @@ export class Hud extends Container {
     const label = `${state.world + 1}-${state.stage}`;
     this.stage.setText(state.loop > 0 ? `L${state.loop + 1} ${label}` : `STAGE ${label}`);
     this.stage.x = viewport.w - 4 - this.stage.pixelWidth;
-    const rhythm = state.mode === 'rhythm';
-    this.track.update(viewport.w, audioOk ? beat : null, state.rhythm.mult, state.rhythm.streak, dt, rhythm);
+    const rhythm = state.beatMode !== 'off';
+    const master = state.beatMode === 'master';
+    this.track.update(viewport.w, audioOk ? beat : null, state.rhythm.mult, state.rhythm.streak, dt, rhythm, master);
     const shield = state.player.shield > 0 ? `  SHIELD ${state.player.shield}` : '';
     this.lives.setText(`SHIPS ${Math.max(0, state.player.lives)}${shield}`);
     this.noAudio.visible = !audioOk && rhythm;
@@ -141,16 +142,20 @@ export class Hud extends Container {
         banner = Math.floor(state.time * 6) % 2 === 0 ? 'WARNING' : '';
         sub = world.bossName;
       } else {
-        banner = `STAGE ${state.world + 1}-${state.stage}`;
-        if (state.stage === 1) sub = world.name;
+        banner = state.beatMode === 'master' ? 'BEAT STAGE' : `STAGE ${state.world + 1}-${state.stage}`;
+        if (state.beatMode === 'master') sub = state.diff.elite ? 'ELITE - ON BEAT X8' : 'ON BEAT X8 - PERFECT: POWER SHOT';
+        else if (state.stage === 1) sub = world.name;
         else if (state.diff.elite) sub = 'ELITE - STAY SHARP';
       }
     } else if (state.phase === 'stageClear') {
       banner = state.stage === STAGE.perWorld ? 'WORLD CLEAR' : 'STAGE CLEAR';
+      const rank = state.result?.beatRank;
+      if (rank) sub = rank === 'S' ? 'BEAT RANK S - BONUS X2' : `BEAT RANK ${rank}`;
       y = 110;
     }
     this.banner.setText(banner);
     this.sub.setText(sub);
+    this.sub.tint = state.beatMode === 'master' && !paused ? 0xff5ad1 : 0xcccccc;
     centerText(this.banner, y, viewport.w);
     centerText(this.sub, y + 20, viewport.w);
   }
@@ -160,7 +165,7 @@ export class Hud extends Container {
     const lines = r
       ? [
           `ACCURACY  ${pct(r.accuracy)}`,
-          state.mode === 'rogue' ? `GRAZES    ${state.stageStats.grazes}` : `ON BEAT   ${pct(r.beatPct)}`,
+          state.beatMode === 'off' ? `GRAZES    ${state.stageStats.grazes}` : `ON BEAT   ${pct(r.beatPct)}`,
           r.noHit ? 'NO HIT    +2000' : 'HIT TAKEN',
           r.perfect ? 'PERFECT!' : '',
           `BONUS     +${r.bonus}`,

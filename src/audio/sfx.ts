@@ -120,6 +120,17 @@ export class Sfx {
     this.tone('sine', 700, 1400, 0.3, 0.04);
   }
 
+  /** A rogue beat stage begins. */
+  beatStage(): void {
+    this.arpeggio([64, 67, 71, 76, 79, 83], 0.07, 0.07);
+  }
+
+  /** PERFECT shot in a beat stage: extra bite on top of the laser. */
+  powerShot(): void {
+    this.tone('square', 220, 55, 0.12, 0.1);
+    this.burst(0.08, 0.1, 6000, 2000);
+  }
+
   /** Rogue runs: a bullet skimmed past the ship. */
   graze(): void {
     this.tone('sine', 2600, 3400, 0.05, 0.035);

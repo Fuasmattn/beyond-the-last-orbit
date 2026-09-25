@@ -60,6 +60,24 @@ describe('parseSave', () => {
   });
 });
 
+describe('v1 → v2 migration', () => {
+  it('keeps v1 data and adds empty rogue table and upgrades', () => {
+    const v1 = { version: 1, credits: 50, highscores: [entry(10)], owned: [], equipped: {}, settings: {} };
+    const r = parseSave(JSON.stringify(v1));
+    expect(r.reset).toBe(false);
+    expect(r.data.version).toBe(2);
+    expect(r.data.credits).toBe(50);
+    expect(r.data.highscores).toEqual([entry(10)]);
+    expect(r.data.rogueHighscores).toEqual([]);
+    expect(r.data.upgrades).toEqual({});
+  });
+
+  it('sanitizes upgrade levels', () => {
+    const r = parseSave(JSON.stringify({ ...defaultSave(), upgrades: { hull: 2.7, cannon: -1, bad: 'x' } }));
+    expect(r.data.upgrades).toEqual({ hull: 2 });
+  });
+});
+
 describe('loadSave / writeSave', () => {
   it('round-trips through a store', () => {
     const store = memoryStore();

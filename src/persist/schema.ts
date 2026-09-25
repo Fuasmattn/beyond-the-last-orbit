@@ -1,5 +1,5 @@
 export const SAVE_KEY = 'space-alliance:v1';
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 export const MAX_HIGHSCORES = 10;
 
 export interface HighscoreEntry {
@@ -24,7 +24,11 @@ export interface Settings {
 export interface SaveData {
   version: number;
   credits: number;
+  /** Rhythm-run table. */
   highscores: HighscoreEntry[];
+  rogueHighscores: HighscoreEntry[];
+  /** Permanent upgrade levels by id (see data/upgrades.ts). */
+  upgrades: Record<string, number>;
   owned: string[];
   equipped: { skin: string; laser: string };
   settings: Settings;
@@ -35,6 +39,8 @@ export function defaultSave(): SaveData {
     version: SAVE_VERSION,
     credits: 0,
     highscores: [],
+    rogueHighscores: [],
+    upgrades: {},
     owned: ['skin.classic', 'laser.classic'],
     equipped: { skin: 'skin.classic', laser: 'laser.classic' },
     settings: {

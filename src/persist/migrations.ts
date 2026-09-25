@@ -44,19 +44,36 @@ function sanitizeSettings(v: unknown): Settings {
   };
 }
 
-function sanitizeV1(o: Rec): SaveData {
+function sanitizeHighscores(v: unknown): HighscoreEntry[] {
+  return Array.isArray(v)
+    ? v
+        .filter(isHighscore)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, MAX_HIGHSCORES)
+    : [];
+}
+
+function sanitizeUpgrades(v: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!isRecord(v)) return out;
+  for (const [id, level] of Object.entries(v)) {
+    const n = Math.floor(num(level, 0, 0, 99));
+    if (n > 0) out[id] = n;
+  }
+  return out;
+}
+
+/** v1 and v2 share a layout; v2 adds `rogueHighscores` and `upgrades` (empty when missing). */
+function sanitize(o: Rec): SaveData {
   const d = defaultSave();
   const owned = Array.isArray(o.owned) ? o.owned.filter((x): x is string => typeof x === 'string') : [];
   const equipped: Rec = isRecord(o.equipped) ? o.equipped : {};
   return {
     version: SAVE_VERSION,
     credits: Math.floor(num(o.credits, d.credits, 0)),
-    highscores: Array.isArray(o.highscores)
-      ? o.highscores
-          .filter(isHighscore)
-          .sort((a, b) => b.score - a.score)
-          .slice(0, MAX_HIGHSCORES)
-      : [],
+    highscores: sanitizeHighscores(o.highscores),
+    rogueHighscores: sanitizeHighscores(o.rogueHighscores),
+    upgrades: sanitizeUpgrades(o.upgrades),
     owned: [...new Set([...d.owned, ...owned])],
     equipped: {
       skin: str(equipped.skin, d.equipped.skin),
@@ -71,7 +88,8 @@ export function migrate(raw: unknown): SaveData {
   if (!isRecord(raw)) throw new Error('save is not an object');
   switch (raw.version) {
     case 1:
-      return sanitizeV1(raw);
+    case 2:
+      return sanitize(raw);
     default:
       throw new Error(`unsupported save version ${String(raw.version)}`);
   }

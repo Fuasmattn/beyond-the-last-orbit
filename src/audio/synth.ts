@@ -1,5 +1,6 @@
 import { renderLeadNote, renderPowerChord } from './guitar';
 import type { Voicing } from './pattern';
+import type { CabName, DrumName, SampleBank } from './samples';
 
 const RETRO_INTERVALS: Record<Voicing, readonly number[]> = { power: [0, 7, 12], single: [0], octave: [0, 12] };
 
@@ -142,8 +143,36 @@ function decay(ctx: BaseAudioContext, t: number, peak: number, length: number): 
   return g;
 }
 
-/** Speaker cabinet: tight lows, low-mid scoop, presence bump, steep roll-off above ~5 kHz (no fizz). */
-function cabinet(ctx: BaseAudioContext, out: AudioNode, pan: number, level: number): AudioNode {
+/** Mix level per recorded drum (clips are peak-normalized to −1 dBFS). */
+const DRUM_MIX: Readonly<Record<DrumName, number>> = {
+  kick: 1.9,
+  snare: 1.6,
+  hat: 0.6,
+  hatopen: 0.55,
+  china: 0.7,
+  crash: 0.8,
+};
+/** Normal hits without their own recording play the accent this much quieter. */
+const SOFT_HIT = 0.72;
+/** Convolution cabinets (normalized IRs) come out much quieter than the modeled EQ chain; this matches them. */
+const IR_CAB_TRIM = 5;
+
+/**
+ * Real speaker cabinet from an impulse response when one is loaded, else the modeled EQ chain.
+ * `ir` names the recording (see samples.ts).
+ */
+function cabinet(ctx: BaseAudioContext, out: AudioNode, pan: number, level: number, ir: AudioBuffer | null = null): AudioNode {
+  if (ir) {
+    const input = ctx.createGain();
+    const conv = ctx.createConvolver();
+    conv.buffer = ir;
+    const post = ctx.createGain();
+    post.gain.value = level * IR_CAB_TRIM;
+    const panner = ctx.createStereoPanner();
+    panner.pan.value = pan;
+    input.connect(filter(ctx, 'highpass', 80)).connect(conv).connect(post).connect(panner).connect(out);
+    return input;
+  }
   const input = ctx.createGain();
   const post = ctx.createGain();
   post.gain.value = level;
@@ -203,10 +232,23 @@ function playNote(ctx: BaseAudioContext, buf: AudioBuffer, t: number, dur: numbe
   return src;
 }
 
-export function createRig(ctx: BaseAudioContext, out: AudioNode, tone: GuitarTone = 'amp'): Rig {
+export function createRig(
+  ctx: BaseAudioContext,
+  out: AudioNode,
+  tone: GuitarTone = 'amp',
+  bank: SampleBank | null = null,
+): Rig {
   const noise = makeNoiseBuffer(ctx);
   const amps = [guitarAmp(ctx, out, -0.6), guitarAmp(ctx, out, 0.6)];
-  const cabs = tone === 'amp' ? [cabinet(ctx, out, -0.7, AMP_GUITAR_LEVEL), cabinet(ctx, out, 0.7, AMP_GUITAR_LEVEL)] : [];
+  const ir = (name: CabName) => (tone === 'amp' ? (bank?.cab(name) ?? null) : null);
+  // Left and right rhythm guitars through different cabinets, like two miked amps.
+  const cabs =
+    tone === 'amp'
+      ? [
+          cabinet(ctx, out, -0.7, AMP_GUITAR_LEVEL, ir('v30-sm57')),
+          cabinet(ctx, out, 0.7, AMP_GUITAR_LEVEL, ir('v30-rockdriver-blend')),
+        ]
+      : [];
 
   const bassBus = ctx.createGain();
   bassBus.gain.value = 0.3;
@@ -228,7 +270,20 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode, tone: GuitarTon
   else leadBus.connect(leadShaper).connect(leadTone).connect(out);
   leadTone.connect(echo).connect(echoFb).connect(echo);
   echoFb.connect(out);
-  const leadCab = tone === 'amp' ? cabinet(ctx, leadBus, 0, AMP_LEAD_LEVEL / leadBus.gain.value) : null;
+  const leadCab = tone === 'amp' ? cabinet(ctx, leadBus, 0, AMP_LEAD_LEVEL / leadBus.gain.value, ir('v30-sm57')) : null;
+
+  /** Plays a recorded drum hit; false when it isn't loaded (caller falls back to synthesis). */
+  const sampled = (name: DrumName, t: number, level: number): boolean => {
+    const buf = bank?.drum(name, level);
+    if (!buf) return false;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const g = ctx.createGain();
+    g.gain.value = DRUM_MIX[name] * (level < 2 && !bank!.hasNormal(name) ? SOFT_HIT : 1);
+    src.connect(g).connect(drums);
+    src.start(t);
+    return true;
+  };
 
   const drums = ctx.createGain();
   drums.gain.value = 0.8;
@@ -350,6 +405,7 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode, tone: GuitarTon
 
     // Modern metal kick: short, tight low end plus a pronounced beater click that cuts through fast doubles.
     kick(t, level) {
+      if (sampled('kick', t, level)) return;
       const osc = ctx.createOscillator();
       osc.frequency.setValueAtTime(180, t);
       osc.frequency.exponentialRampToValueAtTime(48, t + 0.06);
@@ -365,6 +421,7 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode, tone: GuitarTon
 
     // Fat snare: a pitched body under a longer, brighter wire rattle.
     snare(t, level) {
+      if (sampled('snare', t, level)) return;
       const body = decay(ctx, t, level === 2 ? 0.95 : 0.75, 0.24);
       body.connect(drums);
       const bp = filter(ctx, 'bandpass', 2400, 0.6);
@@ -381,6 +438,7 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode, tone: GuitarTon
 
     hat(t, level) {
       const open = level === 2;
+      if (sampled(open ? 'hatopen' : 'hat', t, open ? 2 : 1)) return;
       const g = decay(ctx, t, 0.16, open ? 0.25 : 0.04);
       g.connect(drums);
       const hp = filter(ctx, 'highpass', 7500);
@@ -390,6 +448,7 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode, tone: GuitarTon
 
     // China: inharmonic square partials plus band-passed noise, a short trashy decay.
     china(t, level) {
+      if (sampled('china', t, level)) return;
       const g = decay(ctx, t, level === 2 ? 0.26 : 0.18, 0.55);
       g.connect(drums);
       const hp = filter(ctx, 'highpass', 2500);
@@ -410,6 +469,7 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode, tone: GuitarTon
     },
 
     crash(t) {
+      if (sampled('crash', t, 2)) return;
       const g = decay(ctx, t, 0.22, 1.4);
       g.connect(drums);
       const hp = filter(ctx, 'highpass', 4000);

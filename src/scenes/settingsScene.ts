@@ -51,8 +51,11 @@ export class SettingsScene implements Scene {
       0x777777,
     );
     centerText(hint, 290);
+    // CC-BY 4.0 attribution for the recorded drums (full credits in audio/CREDITS.md).
+    const credit = new PixelText(g, 'DRUMS: DRUMGIZMO MULDJORDKIT - CC BY 4.0', 0x555a77);
+    centerText(credit, 304);
     this.list = new MenuList(g, { x: 36, y: 90, lineH: 16, width: 168 });
-    this.root.addChild(sceneBackground(), title, this.list, hint);
+    this.root.addChild(sceneBackground(), title, this.list, hint, credit);
   }
 
   update(input: FrameInput, dt: number): void {

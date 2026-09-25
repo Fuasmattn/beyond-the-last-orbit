@@ -43,3 +43,10 @@ Calibrate your audio/input latency under **Settings → Calibrate timing** (impo
 - `src/scenes` — title, run, game over, shop, settings, calibration
 - `docs/superpowers` — design spec and per-milestone implementation plans
 - `docs/research` — background research (roguelite structure, bullet-hell/rhythm hybrids, rhythm timing)
+
+## Credits
+
+- Drums: [DrumGizmo MuldjordKit](https://github.com/sfzinstruments/DrumGizmo.MuldjordKit) by Lars Muldjord, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — mixed down to stereo hits.
+- Guitar cabinet impulse responses: [Jester's Brutal Pack](https://www.jester-dyne-productions.com/brutal-ir-pack/) by Jester Dyne Productions, CC0.
+
+Details in `public/audio/CREDITS.md`.

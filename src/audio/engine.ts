@@ -3,6 +3,7 @@ import { BeatClock } from './beatClock';
 import { AudioClockSync } from './clockSync';
 import { gradeShot, type ShotJudgement } from './rhythmJudge';
 import { Sequencer } from './sequencer';
+import { SampleBank } from './samples';
 import { Sfx } from './sfx';
 import type { CompiledSong } from './song';
 import { createBuses, type Buses, type GuitarTone } from './synth';
@@ -41,6 +42,8 @@ export class AudioEngine {
   private readonly sync = new AudioClockSync();
   private visualOffsetSec = 0;
   private guitarTone: GuitarTone = 'amp';
+  /** Recorded drums and cabinet IRs; used by songs started after they finish loading. */
+  private readonly samples = new SampleBank();
 
   private constructor(
     private readonly ctx: AudioContext,
@@ -59,6 +62,7 @@ export class AudioEngine {
     lfo.connect(this.warbleDepth).connect(delay.delayTime);
     lfo.start();
     this.warbleIn.connect(delay).connect(buses.music);
+    void this.samples.load(ctx, import.meta.env.BASE_URL);
   }
 
   static create(): AudioEngine | null {
@@ -101,7 +105,7 @@ export class AudioEngine {
     this.sync.reset();
     const start = this.ctx.currentTime + START_DELAY_SEC;
     const clock = new BeatClock(song.bpm, start);
-    const seq = new Sequencer(this.ctx, gain, song, clock, this.guitarTone);
+    const seq = new Sequencer(this.ctx, gain, song, clock, this.guitarTone, this.samples);
     seq.sour = this.sour;
     this.playing = { seq, clock, gain, scheduledTo: start, arrangement: 'main' };
     this.tick();

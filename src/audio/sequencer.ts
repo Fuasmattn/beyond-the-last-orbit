@@ -8,6 +8,7 @@ import {
   type CompiledArrangement,
   type CompiledSong,
 } from './song';
+import type { SampleBank } from './samples';
 import { createRig, type GuitarTone, type Rig, type WarmNote } from './synth';
 
 const MIN_NOTE = 0.04;
@@ -59,8 +60,9 @@ export class Sequencer {
     private readonly song: CompiledSong,
     private readonly clock: BeatClock,
     tone: GuitarTone = 'amp',
+    bank: SampleBank | null = null,
   ) {
-    this.rig = createRig(ctx, out, tone);
+    this.rig = createRig(ctx, out, tone, bank);
     this.rig.prewarm(songNotes(song));
     this.stepDur = clock.beatDur / STEPS_PER_BEAT;
     this.current = { arr: this.arrangement('main'), startStep: 0 };

@@ -1,6 +1,7 @@
 import { Container, Graphics, type Texture } from 'pixi.js';
 import { STAGE } from '../data/balance';
 import { worldAt } from '../data/worlds';
+import { boonDef } from '../sim/boons';
 import type { SimEvent, SimState } from '../sim/types';
 import { viewport } from '../app/viewport';
 import type { JudgeLabel } from './beatJudge';
@@ -71,8 +72,16 @@ export class Hud extends Container {
 
   notify(events: readonly SimEvent[]): void {
     for (const e of events) {
-      if (e.type === 'extraLife') {
-        this.popup.setText('EXTRA SHIP!');
+      const text =
+        e.type === 'extraLife'
+          ? 'EXTRA SHIP!'
+          : e.type === 'repaired'
+            ? 'REPAIRED!'
+            : e.type === 'boonTaken' && e.id
+              ? `${boonDef(e.id).name}!`
+              : null;
+      if (text) {
+        this.popup.setText(text);
         this.popupTime = POPUP_TIME;
       }
     }
@@ -134,6 +143,7 @@ export class Hud extends Container {
       } else {
         banner = `STAGE ${state.world + 1}-${state.stage}`;
         if (state.stage === 1) sub = world.name;
+        else if (state.diff.elite) sub = 'ELITE - STAY SHARP';
       }
     } else if (state.phase === 'stageClear') {
       banner = state.stage === STAGE.perWorld ? 'WORLD CLEAR' : 'STAGE CLEAR';

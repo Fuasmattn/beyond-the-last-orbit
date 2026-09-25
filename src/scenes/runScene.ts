@@ -1,14 +1,18 @@
 import { Container } from 'pixi.js';
 import { viewport } from '../app/viewport';
 import { Sourness } from '../audio/sourness';
+import { ROUTE } from '../data/balance';
 import { equippedLaser, equippedSkin } from '../data/cosmetics';
 import { rogueRunOptions } from '../meta/upgrades';
 import { defaultRunOptions } from '../sim/ship';
 import { createInitialState } from '../sim/state';
+import { chooseBoon, chooseNode, rerollDraft } from '../sim/stageFlow';
 import { step } from '../sim/step';
 import type { RunMode, SimEvent, SimState } from '../sim/types';
 import { judgeLabel } from '../view/beatJudge';
+import { DraftOverlay } from '../view/draftOverlay';
 import { Hud } from '../view/hud';
+import { RouteOverlay } from '../view/routeOverlay';
 import { GameRenderer } from '../view/renderer';
 import type { FrameInput, Scene, SceneContext } from './scene';
 
@@ -23,6 +27,9 @@ export class RunScene implements Scene {
   readonly state: SimState;
   private readonly renderer: GameRenderer;
   private readonly hud: Hud;
+  private readonly route: RouteOverlay;
+  private readonly draft: DraftOverlay;
+  private elapsed = 0;
   private paused = false;
   private gameOverTime = 0;
   private readonly sour = new Sourness();
@@ -35,7 +42,9 @@ export class RunScene implements Scene {
     this.state = createInitialState(newSeed(), viewport.w, opts);
     this.renderer = new GameRenderer(ctx.textures, { skin: equippedSkin(ctx.save), laser: equippedLaser(ctx.save) });
     this.hud = new Hud(ctx.textures.glyphs);
-    this.root.addChild(this.renderer.root, this.hud);
+    this.route = new RouteOverlay(ctx.textures.glyphs, ctx.isTouch);
+    this.draft = new DraftOverlay(ctx.textures.glyphs, ctx.isTouch);
+    this.root.addChild(this.renderer.root, this.hud, this.route, this.draft);
     ctx.audio?.sfx.start();
     ctx.audio?.startSong(ctx.songForWorld(this.state.world, this.state.loop));
   }
@@ -68,12 +77,43 @@ export class RunScene implements Scene {
     }
     s.nextFieldW = viewport.w;
     const events = step(s, input.sim);
+    this.handleChoices(input, events);
     this.gradeShots(events);
     this.hud.notify(events);
     this.renderer.notify(events);
     this.playEvents(events);
     this.sour.update(dt);
     this.ctx.audio?.setSour(this.sour.value);
+  }
+
+  /**
+   * Route map and draft picks (rogue runs); input is ignored briefly so fire-mashing can't pick.
+   * Events raised by a pick (stage intro, warp, repair) are appended to `events` for the views and audio.
+   */
+  private handleChoices(input: FrameInput, events: SimEvent[]): void {
+    const s = this.state;
+    this.pick(input, events);
+    // Overlays opened by this step or by the pick start with the cursor on the first entry.
+    if (events.some((e) => e.type === 'routeOpen')) this.route.open();
+    if (events.some((e) => e.type === 'draftOpen')) this.draft.open();
+  }
+
+  private pick(input: FrameInput, events: SimEvent[]): void {
+    const s = this.state;
+    if (!s.rogue || s.phaseTimer < ROUTE.inputDelay) return;
+    const moved = input.menu.some((a) => a !== 'confirm' && a !== 'back');
+    if (s.phase === 'route') {
+      const lane = this.route.handle(s.rogue, input.menu, input.taps);
+      if (lane !== null && chooseNode(s, lane, events)) this.ctx.audio?.sfx.choose();
+      else if (moved) this.ctx.audio?.sfx.menuMove();
+    } else if (s.phase === 'draft') {
+      const pick = this.draft.handle(s.rogue, input.menu, input.taps);
+      if (pick?.type === 'reroll') {
+        if (rerollDraft(s)) this.ctx.audio?.sfx.menuSelect();
+      } else if (pick && chooseBoon(s, pick.type === 'boon' ? pick.index : null, events)) {
+        this.ctx.audio?.sfx.choose();
+      } else if (moved) this.ctx.audio?.sfx.menuMove();
+    }
   }
 
   render(elapsed: number): void {
@@ -84,6 +124,12 @@ export class RunScene implements Scene {
     this.renderer.root.position.set(Math.round(off.x), Math.round(off.y));
     this.ctx.setAberration(shakeOn ? this.renderer.trauma : 0);
     this.hud.update(this.state, this.paused, beat, this.ctx.audio !== null, elapsed);
+    this.elapsed += this.paused ? 0 : elapsed;
+    const r = this.state.rogue;
+    this.route.visible = r !== null && this.state.phase === 'route';
+    this.draft.visible = r !== null && this.state.phase === 'draft';
+    if (r && this.route.visible) this.route.update(r, viewport.w, this.elapsed);
+    if (r && this.draft.visible) this.draft.update(r, viewport.w, this.elapsed);
   }
 
   destroy(): void {

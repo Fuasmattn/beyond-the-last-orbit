@@ -202,6 +202,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
       },
       audio,
       save,
+      app,
     };
   }
 

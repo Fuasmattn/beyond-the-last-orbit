@@ -113,6 +113,8 @@ export interface Bullet extends Box {
   pierced?: number[];
   /** Player side bolts (twin/spread): not capped and not counted for accuracy. */
   extra?: boolean;
+  /** Enemy bullets: entered the graze margin (scores once it leaves without hitting). */
+  nearMiss?: boolean;
   /** Enemy bullets: already scored a graze. */
   grazed?: boolean;
 }

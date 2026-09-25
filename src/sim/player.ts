@@ -73,7 +73,9 @@ function tryFire(state: SimState, input: InputFrame, events: SimEvent[]): void {
 export function hitPlayer(state: SimState, events: SimEvent[]): void {
   const p = state.player;
   if (p.shield > 0) {
+    // Absorbed: no life lost and NO HIT survives, but the multiplier still drops a level.
     p.shield--;
+    dropStreakLevel(state);
     p.invuln = PLAYER.invulnTime;
     state.hitStop = HITSTOP.playerHit;
     state.bullets = state.bullets.filter((b) => b.owner === 'player');

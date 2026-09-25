@@ -1,5 +1,8 @@
-/** A reset threshold: the audio clock fell this far behind the estimate (suspend, glitch). */
-const RESYNC_SEC = 0.03;
+/**
+ * A reset threshold: the audio clock fell this far behind the estimate (stall, glitch). Above the
+ * largest render-buffer step seen in practice (~40 ms on big Android/Bluetooth buffers).
+ */
+const RESYNC_SEC = 0.1;
 /** Per-sample pull toward the latest sample, so slow clock drift cannot accumulate. */
 const DRIFT_DECAY_SEC = 0.00002;
 

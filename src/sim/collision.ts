@@ -72,13 +72,21 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
   if (spent.size > 0) state.bullets = state.bullets.filter((b) => !spent.has(b.id));
 }
 
-/** Enemy bullets inside the graze margin around the ship (but not touching it) score once each. */
+/**
+ * Enemy bullets that enter the graze margin around the ship and then leave it without hitting
+ * score once each. (A hit clears all enemy bullets, so a bullet that hits never scores.)
+ */
 function checkGrazes(state: SimState, spent: ReadonlySet<number>, events: SimEvent[]): void {
   const p = state.player;
   const m = GRAZE.margin;
   const zone: Box = { x: p.x - m, y: p.y - m, w: p.w + m * 2, h: p.h + m * 2 };
   for (const b of state.bullets) {
-    if (b.owner !== 'enemy' || b.grazed || spent.has(b.id) || !overlaps(b, zone)) continue;
+    if (b.owner !== 'enemy' || b.grazed || spent.has(b.id)) continue;
+    if (overlaps(b, zone)) {
+      b.nearMiss = true;
+      continue;
+    }
+    if (!b.nearMiss) continue;
     b.grazed = true;
     const points = registerGraze(state);
     events.push({ type: 'graze', x: b.x + b.w / 2, y: b.y + b.h / 2, points });

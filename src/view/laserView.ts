@@ -7,7 +7,8 @@ const ON_BEAT_GOLD = 0xffe14a;
 export interface LaserView {
   readonly root: Container;
   /** (x, y) = top-left of the 2×6 bullet hitbox. */
-  update(x: number, y: number, time: number, pulse: number, onBeat: boolean): void;
+  /** `slope`: horizontal px per px of upward travel (spread bolts), so trails follow the angle. */
+  update(x: number, y: number, time: number, pulse: number, onBeat: boolean, slope?: number): void;
   destroy(): void;
 }
 
@@ -70,12 +71,13 @@ export function createLaserView(laser: LaserDef, orb: Texture): LaserView {
         s.alpha = alpha;
         return s;
       });
-      return view((x, y, _t, _p, onBeat) => {
+      return view((x, y, _t, _p, onBeat, slope = 0) => {
         const tint = tintFor(c, onBeat);
         head.position.set(x, y);
         head.tint = tint;
         tail.forEach((s, i) => {
-          s.position.set(x, y + 7 + i * 4);
+          const back = 7 + i * 4;
+          s.position.set(x - slope * back, y + back);
           s.tint = tint;
         });
       });

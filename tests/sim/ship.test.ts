@@ -93,6 +93,7 @@ describe('shield', () => {
     expect(s.player.lives).toBe(PLAYER.startLives);
     expect(s.player.shield).toBe(0);
     expect(events[0]).toMatchObject({ type: 'shieldHit', shieldLeft: 0 });
+    expect(s.stageStats.hitsTaken).toBe(0);
     hitPlayer(s, events);
     expect(s.player.lives).toBe(PLAYER.startLives - 1);
   });

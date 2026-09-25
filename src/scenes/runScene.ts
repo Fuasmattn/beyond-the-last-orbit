@@ -109,7 +109,10 @@ export class RunScene implements Scene {
     } else if (s.phase === 'draft') {
       const pick = this.draft.handle(s.rogue, input.menu, input.taps);
       if (pick?.type === 'reroll') {
-        if (rerollDraft(s)) this.ctx.audio?.sfx.menuSelect();
+        if (rerollDraft(s)) {
+          this.draft.open();
+          this.ctx.audio?.sfx.menuSelect();
+        }
       } else if (pick && chooseBoon(s, pick.type === 'boon' ? pick.index : null, events)) {
         this.ctx.audio?.sfx.choose();
       } else if (moved) this.ctx.audio?.sfx.menuMove();

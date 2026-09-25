@@ -64,11 +64,14 @@ describe('rogue streak', () => {
 });
 
 describe('graze', () => {
-  it('scores once per enemy bullet skimming the ship', () => {
+  it('scores once per enemy bullet that skims past the ship', () => {
     const s = rogue();
     const p = s.player;
     s.bullets = [bullet({ owner: 'enemy', x: p.x - GRAZE.margin + 1, y: p.y })];
     const events: SimEvent[] = [];
+    resolveCollisions(s, events);
+    expect(events.filter((e) => e.type === 'graze')).toHaveLength(0);
+    s.bullets[0]!.y = p.y + p.h + GRAZE.margin + 2;
     resolveCollisions(s, events);
     resolveCollisions(s, events);
     expect(events.filter((e) => e.type === 'graze')).toHaveLength(1);
@@ -76,6 +79,18 @@ describe('graze', () => {
     expect(s.rhythm.streak).toBe(1);
     expect(s.stageStats.grazes).toBe(1);
     expect(p.lives).toBe(PLAYER.startLives);
+  });
+
+  it('does not score a bullet that goes on to hit the ship', () => {
+    const s = rogue();
+    const p = s.player;
+    s.bullets = [bullet({ owner: 'enemy', x: p.x - GRAZE.margin + 1, y: p.y })];
+    const events: SimEvent[] = [];
+    resolveCollisions(s, events);
+    s.bullets[0]!.x = p.x + 2;
+    resolveCollisions(s, events);
+    expect(events.some((e) => e.type === 'playerHit')).toBe(true);
+    expect(events.some((e) => e.type === 'graze')).toBe(false);
   });
 
   it('does not graze in rhythm runs or while invulnerable', () => {

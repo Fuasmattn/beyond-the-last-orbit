@@ -218,7 +218,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
       const touchFrame = touch.poll();
       if (touchFrame.firePressed) fireButton?.press();
       const sim = mergeInputs([keyboard.poll(), touchFrame]);
-      sim.beat = audio?.currentBeat() ?? null;
+      sim.beat = audio?.simBeat() ?? null;
       const input: FrameInput = {
         sim,
         menu: keyboard.consumeMenu(),

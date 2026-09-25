@@ -253,7 +253,7 @@ export class GameRenderer {
         v.root.visible = false;
         this.laserPool.push(v);
       },
-      (v, b) => v.update(b.x, b.y, state.time, pulse, b.onBeat),
+      (v, b) => v.update(b.x, b.y, state.time, pulse, b.onBeat, b.vy !== 0 ? -b.vx / b.vy : 0),
     );
   }
 

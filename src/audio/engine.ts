@@ -97,6 +97,7 @@ export class AudioEngine {
     this.stopSong();
     const gain = this.ctx.createGain();
     gain.connect(this.warbleIn);
+    this.sync.reset();
     const start = this.ctx.currentTime + START_DELAY_SEC;
     const clock = new BeatClock(song.bpm, start);
     const seq = new Sequencer(this.ctx, gain, song, clock);
@@ -148,6 +149,8 @@ export class AudioEngine {
 
   setPaused(paused: boolean): void {
     if (!this.unlocked) return;
+    // The clock stops while suspended; re-anchor from scratch rather than decaying the old offset.
+    this.sync.reset();
     void (paused ? this.ctx.suspend() : this.ctx.resume());
   }
 
@@ -155,6 +158,11 @@ export class AudioEngine {
   currentBeat(): number | null {
     if (!this.playing) return null;
     return this.playing.clock.beatAt(this.heardTime() + VISUAL_LEAD_SEC + this.visualOffsetSec);
+  }
+
+  /** Beat the listener hears now, for the simulation (no visual lead or offset). */
+  simBeat(): number | null {
+    return this.playing ? this.playing.clock.beatAt(this.heardTime()) : null;
   }
 
   /** User trim for beat visuals (+ = earlier), from Settings → Visual offset. */

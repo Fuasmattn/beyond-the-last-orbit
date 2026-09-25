@@ -70,7 +70,8 @@ Side bolts (twin/spread) do not count toward the on-screen bolt cap.
 ### Scoring in the Rogue run
 
 - **Streak multiplier**: every hit adds 1 to the streak, same steps as rhythm (4 per +0.5, max x4). A bolt that leaves the screen without hitting drops one level; so does getting hit (a reset felt too punishing next to denser elite fire — Danmaku Unlimited model, see research).
-- **Graze**: an enemy bullet passing within 6 px of the ship without hitting scores 10 × mult and adds 1 to the streak (once per bullet). This is the bullet-hell reward for playing close.
+- **Graze**: an enemy bullet that enters the 6 px margin around the ship and leaves it without hitting scores 10 × mult and adds 1 to the streak (once per bullet). This is the bullet-hell reward for playing close.
+- **Shield hits** cost no ship and keep NO HIT, but drop one multiplier level.
 - Stage bonus: accuracy × 2000 instead of accuracy + on-beat; PERFECT = no hit and accuracy ≥ 70 %.
 
 ## Permanent upgrades (HANGAR)

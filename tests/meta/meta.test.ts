@@ -95,3 +95,13 @@ describe('computeLatencyOffset', () => {
     expect(computeLatencyOffset([0.02, 0.5, 0.6, -0.7, 0.9, 0.8, 0.02, 0.4])).toBeNull();
   });
 });
+
+describe('visual offset setting', () => {
+  it('steps by 10 ms and clamps to ±100 ms', () => {
+    let s = defaultSave().settings;
+    s = adjustSetting(s, 'visualOffsetMs', 1);
+    expect(s.visualOffsetMs).toBe(10);
+    for (let i = 0; i < 30; i++) s = adjustSetting(s, 'visualOffsetMs', -1);
+    expect(s.visualOffsetMs).toBe(-100);
+  });
+});

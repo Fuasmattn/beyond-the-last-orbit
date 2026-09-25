@@ -14,10 +14,13 @@ const ROWS: readonly { key: Row; label: string }[] = [
   { key: 'bloom', label: 'BLOOM' },
   { key: 'shake', label: 'SCREEN SHAKE' },
   { key: 'calibrate', label: 'CALIBRATE TIMING' },
+  { key: 'visualOffsetMs', label: 'VISUAL OFFSET' },
   { key: 'back', label: 'BACK' },
 ];
 
-const isVolume = (k: Row): k is 'musicVolume' | 'sfxVolume' => k === 'musicVolume' || k === 'sfxVolume';
+/** Rows adjusted by tapping their left or right half. */
+const isStepped = (k: Row): k is 'musicVolume' | 'sfxVolume' | 'visualOffsetMs' =>
+  k === 'musicVolume' || k === 'sfxVolume' || k === 'visualOffsetMs';
 
 export class SettingsScene implements Scene {
   readonly root = new Container();
@@ -59,7 +62,7 @@ export class SettingsScene implements Scene {
       if (i === null) continue;
       this.list.selected = i;
       const row = ROWS[i]!.key;
-      if (isVolume(row)) {
+      if (isStepped(row)) {
         const mid = this.list.layout.x + this.list.layout.width / 2;
         this.change(row, tap.x < mid ? -1 : 1);
       } else if (this.activate(row)) {
@@ -84,6 +87,10 @@ export class SettingsScene implements Scene {
             return { label, value: onOff(s[key]) };
           case 'calibrate':
             return { label, value: `${offset >= 0 ? '+' : ''}${offset}MS` };
+          case 'visualOffsetMs': {
+            const v = s.visualOffsetMs;
+            return { label, value: `< ${v > 0 ? '+' : ''}${v}MS >` };
+          }
           case 'back':
             return { label };
         }

@@ -156,6 +156,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
     },
     applySettings: () => {
       audio?.setVolumes(save.settings.musicVolume, save.settings.sfxVolume);
+      audio?.setVisualOffset(save.settings.visualOffsetMs);
       postFx.configure(save.settings);
     },
     setAberration: (a) => postFx.setAberration(a),

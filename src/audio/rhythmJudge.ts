@@ -8,6 +8,12 @@ import type { BeatClock } from './beatClock';
 export function judgeShot(clock: BeatClock | null, heardTime: number, offsetMs = 0): boolean | null {
   if (!clock) return null;
   const t = heardTime - offsetMs / 1000;
-  if (t < clock.startTime - RHYTHM.windowSec) return false;
-  return Math.abs(clock.gridDelta(t, RHYTHM.subdivision)) <= RHYTHM.windowSec;
+  const window = onBeatWindow(clock);
+  if (t < clock.startTime - window) return false;
+  return Math.abs(clock.gridDelta(t, RHYTHM.subdivision)) <= window;
+}
+
+/** ± seconds that count as on-beat at this clock's tempo. */
+export function onBeatWindow(clock: BeatClock): number {
+  return Math.min(RHYTHM.windowSec, (clock.beatDur / RHYTHM.subdivision) * RHYTHM.maxWindowBeats);
 }

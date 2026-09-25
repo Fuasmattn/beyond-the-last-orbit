@@ -199,6 +199,8 @@ export const RHYTHM = {
   windowSec: 0.1,
   /** ± seconds for a PERFECT grade (display only; scoring treats PERFECT and GOOD alike). */
   perfectSec: 0.045,
+  /** The window never exceeds this fraction of a grid step, so fast endless-loop tempos stay a timing test. */
+  maxWindowBeats: 0.25,
   /** Grid lines per beat (1 = quarter notes). */
   subdivision: 1,
   shotsPerStep: 4,

@@ -23,6 +23,12 @@ describe('judgeShot', () => {
     expect(judgeShot(clock, 1.15, 150)).toBe(true);
   });
 
+  it('caps the window at a quarter beat for fast tempos', () => {
+    const fast = new BeatClock(240, 0); // 250 ms beats → ±62.5 ms
+    expect(judgeShot(fast, 0.25 + 0.06)).toBe(true);
+    expect(judgeShot(fast, 0.25 + 0.07)).toBe(false);
+  });
+
   it('rejects shots before the song starts', () => {
     expect(judgeShot(new BeatClock(120, 5), 1)).toBe(false);
   });

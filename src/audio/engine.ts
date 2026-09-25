@@ -39,6 +39,7 @@ export class AudioEngine {
   private readonly warbleDepth: GainNode;
   private sour = 0;
   private readonly sync = new AudioClockSync();
+  private visualOffsetSec = 0;
 
   private constructor(
     private readonly ctx: AudioContext,
@@ -153,7 +154,12 @@ export class AudioEngine {
   /** Beat the listener hears when the frame being drawn now reaches the screen. */
   currentBeat(): number | null {
     if (!this.playing) return null;
-    return this.playing.clock.beatAt(this.heardTime() + VISUAL_LEAD_SEC);
+    return this.playing.clock.beatAt(this.heardTime() + VISUAL_LEAD_SEC + this.visualOffsetSec);
+  }
+
+  /** User trim for beat visuals (+ = earlier), from Settings → Visual offset. */
+  setVisualOffset(ms: number): void {
+    this.visualOffsetSec = ms / 1000;
   }
 
   /** `perfMs`: the press event's timestamp, so handler delay does not count against the player. */

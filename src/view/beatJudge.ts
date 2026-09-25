@@ -7,11 +7,13 @@ export const LOOKAHEAD_BEATS = 2;
 /** Markers linger this many beats past the gate while fading out. */
 const TRAIL_BEATS = 0.1;
 
-/** Display grade for a shot; `deltaSec` is the signed distance to the nearest beat. Scoring is unaffected. */
+/**
+ * Display grade for a shot. `onBeat` is the scoring verdict, so grades always agree with scoring;
+ * `deltaSec` (signed distance to the nearest beat) only splits on-beat shots into PERFECT and GOOD.
+ */
 export function judgeLabel(deltaSec: number | null, onBeat: boolean): JudgeLabel {
-  if (deltaSec === null) return onBeat ? 'GOOD' : 'OFF';
-  const d = Math.abs(deltaSec);
-  return d <= RHYTHM.perfectSec ? 'PERFECT' : d <= RHYTHM.windowSec ? 'GOOD' : 'OFF';
+  if (!onBeat) return 'OFF';
+  return deltaSec !== null && Math.abs(deltaSec) <= RHYTHM.perfectSec ? 'PERFECT' : 'GOOD';
 }
 
 /** Distance of a beat's marker from the gate: `halfWidth` at the lookahead, 0 on the beat, negative after. */

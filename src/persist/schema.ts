@@ -19,6 +19,8 @@ export interface Settings {
   bloom: boolean;
   shake: boolean;
   latencyOffsetMs: number;
+  /** Shifts beat visuals only (+ = earlier); judging is unaffected. */
+  visualOffsetMs: number;
 }
 
 export interface SaveData {
@@ -50,6 +52,7 @@ export function defaultSave(): SaveData {
       bloom: true,
       shake: true,
       latencyOffsetMs: 0,
+      visualOffsetMs: 0,
     },
   };
 }

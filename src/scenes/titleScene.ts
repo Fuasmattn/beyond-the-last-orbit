@@ -9,10 +9,11 @@ import { sceneBackground } from './ui';
 const PAGE_TIME = 5;
 const NOTICE_TIME = 3;
 const TABLE_X = 82;
-const ITEMS = ['RHYTHM RUN', 'ROGUE RUN', 'HANGAR', 'SHOP', 'SETTINGS'] as const;
+/** The rogue run is the main game; the pure beat run is a secondary mode. */
+const ITEMS = ['START RUN', 'HANGAR', 'SHOP', 'BEAT RUN', 'SETTINGS'] as const;
 const TABLES = [
-  { key: 'highscores', title: 'RHYTHM HIGH SCORES' },
-  { key: 'rogueHighscores', title: 'ROGUE HIGH SCORES' },
+  { key: 'rogueHighscores', title: 'HIGH SCORES' },
+  { key: 'highscores', title: 'BEAT RUN HIGH SCORES' },
 ] as const;
 
 export class TitleScene implements Scene {
@@ -118,7 +119,7 @@ export class TitleScene implements Scene {
   private activate(i: number): void {
     this.ctx.audio?.sfx.menuSelect();
     const s = this.ctx.scenes;
-    const next = [() => s.run('rhythm'), () => s.run('rogue'), () => s.hangar(), () => s.shop(), () => s.settings()];
+    const next = [() => s.run('rogue'), () => s.hangar(), () => s.shop(), () => s.run('rhythm'), () => s.settings()];
     this.ctx.goto(next[i]!());
   }
 }

@@ -8,11 +8,11 @@ Three worlds (Near Earth Orbit, Moon, Mars) × 5 stages, a boss on every fifth s
 
 Two run types, each with its own highscore table:
 
-- **Rhythm run** — the beat game above: linear stages, multiplier from on-beat shots. Best with sound.
-- **Rogue run** — hits and grazes (enemy bullets skimming the ship's core, shown as a dot) build the multiplier, misses drop it. After each stage pick the next node on a branching map (BATTLE, ELITE, CACHE, REPAIR); elites and bosses grant a pick-1-of-3 upgrade draft. Elites fire telegraphed per-world volleys (walls, rings, fans).
+- **Run** (START RUN, the main game) — hits and grazes (enemy bullets skimming the ship's core, shown as a dot) build the multiplier, misses drop it. After each stage pick the next node on a branching map (BATTLE, ELITE, CACHE, REPAIR); elites and bosses grant a pick-1-of-3 upgrade draft. Elites fire telegraphed per-world volleys (walls, rings, fans).
   - **Beat stages**: stage 3 of every world is a beat stage — only on-beat shots build the multiplier (up to x8), off-beat shots cost two levels, PERFECT shots fire power shots, and a beat rank S/A earns an upgrade draft (S also doubles the stage bonus).
+- **Beat run** (secondary) — the original pure rhythm game: linear stages, multiplier from on-beat shots, no upgrades. Best with sound.
 
-Credits earned per run buy cosmetic ship skins and laser styles (SHOP) and permanent rogue-run upgrades (HANGAR).
+Credits earned per run buy cosmetic ship skins and laser styles (SHOP) and permanent upgrades for the main run (HANGAR).
 
 ## Run
 
@@ -29,7 +29,7 @@ npm run build      # typecheck + production build in dist/
 |---|---|---|
 | Move | Arrows / WASD (up/down limited to the bottom zone) | Drag anywhere |
 | Fire | Space | Fire button (bottom right, pulses on the beat) |
-| Pause | P / Esc | Switch away from the tab |
+| Pause (resume / end run) | P / Esc | Switch away from the tab |
 | Menus | Arrows + Space/Enter, Esc back | Tap |
 
 Calibrate your audio/input latency under **Settings → Calibrate timing** (important with Bluetooth headphones). If the beat markers look early or late against the music, adjust **Settings → Visual offset** (moves visuals only).

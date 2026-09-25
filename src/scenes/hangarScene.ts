@@ -35,7 +35,7 @@ export class HangarScene implements Scene {
     const title = new PixelText(g, 'HANGAR', 0xffe14a);
     title.scale.set(2);
     title.position.set(6, 4);
-    const sub = new PixelText(g, 'PERMANENT UPGRADES FOR ROGUE RUNS', 0x4af2ff);
+    const sub = new PixelText(g, 'PERMANENT UPGRADES - NOT FOR BEAT RUNS', 0x4af2ff);
     centerText(sub, 30);
     this.credits = new PixelText(g, '', 0x7dff6b);
     this.list = new MenuList(g, LIST);

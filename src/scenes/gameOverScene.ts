@@ -137,7 +137,7 @@ export class GameOverScene implements Scene {
   }
 
   private get tableTitle(): string {
-    return this.summary.mode === 'rogue' ? 'ROGUE HIGH SCORES' : 'RHYTHM HIGH SCORES';
+    return this.summary.mode === 'rogue' ? 'HIGH SCORES' : 'BEAT RUN HIGH SCORES';
   }
 
   private get table(): HighscoreEntry[] {

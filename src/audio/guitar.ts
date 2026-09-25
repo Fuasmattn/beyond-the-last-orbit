@@ -61,7 +61,14 @@ const MUTE_T60 = 0.14;
 const LEAD_T60 = 9;
 const FADE_SEC = 0.08;
 /** Decay time constant of a palm-muted recorded string. */
-const MUTE_TAU = 0.07;
+const MUTE_TAU = 0.12;
+/** Palm-muted strings lose their highs: two one-pole passes (≈ −12 dB/oct) at this cutoff. */
+const MUTE_TONE_HZ = 850;
+/** A chug's body length before it releases, and the release time constant. */
+const MUTE_HOLD_SEC = 0.08;
+const MUTE_RELEASE_SEC = 0.05;
+/** Palm-muted chugs sit a little below ringing chords after the amp. */
+const MUTE_PEAK = 0.75;
 
 function hz(midi: number): number {
   return 440 * 2 ** ((midi - 69) / 12);
@@ -140,6 +147,12 @@ export function addRecorded(out: Float32Array, sampleRate: number, freq: number,
 /** Palm mute on a recorded string: the hand stops the ring within a fraction of a second. */
 function dampen(x: Float32Array, sampleRate: number, tau: number): void {
   for (let i = 0; i < x.length; i++) x[i] = x[i]! * Math.exp(-i / (tau * sampleRate));
+}
+
+/** Post-amp palm-mute envelope: full level for MUTE_HOLD_SEC, then a fast exponential release. */
+function chugEnvelope(x: Float32Array, sampleRate: number): void {
+  const hold = Math.round(MUTE_HOLD_SEC * sampleRate);
+  for (let i = hold; i < x.length; i++) x[i] = x[i]! * Math.exp(-(i - hold) / (MUTE_RELEASE_SEC * sampleRate));
 }
 
 /** One-pole high-pass, in place. */
@@ -228,11 +241,13 @@ function drive(x: Float32Array, sampleRate: number, gain1: number, gain2: number
 export function renderPowerChord(midi: number, o: GuitarNoteOptions): Float32Array<ArrayBuffer> {
   const out = new Float32Array(Math.max(1, Math.round(o.seconds * o.sampleRate)));
   const voicing = o.voicing ?? 'power';
+  // Chugs are played on the two lowest strings only; the octave string just adds buzz when muted.
+  const intervals = o.mute && voicing === 'power' ? [0, 7] : VOICINGS[voicing];
   const random = rng(midi * 7919 + o.take * 104729 + (o.mute ? 1 : 0) + voicing.length * 13);
   // Each take is tuned a hair differently so the two tracks beat against each other.
   const detune = 2 ** ((o.take % 2 === 0 ? -4 : 4) / 1200);
   let recorded = false;
-  VOICINGS[voicing].forEach((interval, s) => {
+  intervals.forEach((interval, s) => {
     const offset = Math.round(s * STRUM_SEC * o.sampleRate * (0.7 + 0.6 * random()));
     const gain = interval === 12 ? 0.6 : 1;
     const rec = o.source?.(midi + interval, o.take) ?? null;
@@ -254,8 +269,14 @@ export function renderPowerChord(midi: number, o: GuitarNoteOptions): Float32Arr
   });
   // Palm mutes: the heel of the hand darkens the strings before the amp (and stops recorded ones ringing).
   if (o.mute && recorded) dampen(out, o.sampleRate, MUTE_TAU);
-  if (o.mute) lowpass(out, o.sampleRate, 1400);
-  drive(out, o.sampleRate, o.mute ? 22 : 30, 2.5, 0.9);
+  if (o.mute) {
+    lowpass(out, o.sampleRate, MUTE_TONE_HZ);
+    lowpass(out, o.sampleRate, MUTE_TONE_HZ);
+  }
+  drive(out, o.sampleRate, o.mute ? 18 : 30, 2.5, o.mute ? MUTE_PEAK : 0.9);
+  // The amp would re-amplify the damped tail into a buzz; a real chug drops out of saturation
+  // almost at once. Hold the body, then let it die fast.
+  if (o.mute) chugEnvelope(out, o.sampleRate);
   return out;
 }
 

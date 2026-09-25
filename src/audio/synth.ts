@@ -153,6 +153,10 @@ const DRUM_MIX: Readonly<Record<DrumName, number>> = {
   china: 0.7,
   crash: 0.8,
 };
+/** Drum-bus makeup gain after the glue compressor. */
+const DRUM_MAKEUP = 1.25;
+/** Peak level of the sine sub layered under recorded kicks. */
+const KICK_SUB = 0.55;
 /** Normal hits without their own recording play the accent this much quieter. */
 const SOFT_HIT = 0.72;
 /** Convolution cabinets (normalized IRs) come out much quieter than the modeled EQ chain; this matches them. */
@@ -198,6 +202,8 @@ const AMP_GUITAR_LEVEL = 0.34;
 const AMP_LEAD_LEVEL = 0.13;
 const VIBRATO_DEPTH = 0.009;
 const CHOKE_SEC = 0.02;
+/** Palm mutes release a little softer so rapid chugs don't click. */
+const MUTE_CHOKE_SEC = 0.035;
 /** Level of notes rendered from recorded DI strings relative to synthesized ones. */
 const DI_LEVEL = 0.63;
 /** Main-thread pre-render pacing when no worker is available. */
@@ -233,6 +239,7 @@ function playNote(
   dest: AudioNode,
   detune: number,
   level = 1,
+  choke = CHOKE_SEC,
 ): AudioBufferSourceNode {
   const src = ctx.createBufferSource();
   src.buffer = buf;
@@ -240,11 +247,11 @@ function playNote(
   const env = ctx.createGain();
   const end = t + Math.min(dur, buf.duration);
   env.gain.setValueAtTime(level, t);
-  env.gain.setValueAtTime(level, Math.max(t, end - CHOKE_SEC));
-  env.gain.linearRampToValueAtTime(0, end);
+  // Hand on the strings: a short exponential fade rather than a linear cut (no click).
+  env.gain.setTargetAtTime(0, Math.max(t, end - choke), choke / 3);
   src.connect(env).connect(dest);
   src.start(t);
-  src.stop(end + 0.01);
+  src.stop(end + choke);
   return src;
 }
 
@@ -296,14 +303,45 @@ export function createRig(
     src.buffer = buf;
     const g = ctx.createGain();
     g.gain.value = DRUM_MIX[name] * (level < 2 && !bank!.hasNormal(name) ? SOFT_HIT : 1);
-    src.connect(g).connect(drums);
+    src.connect(g).connect(drumBus(name));
     src.start(t);
     return true;
   };
 
+  // Drum bus: glue compressor with a slow-ish attack so every hit's transient punches through.
   const drums = ctx.createGain();
   drums.gain.value = 0.8;
-  drums.connect(out);
+  const drumComp = ctx.createDynamicsCompressor();
+  drumComp.threshold.value = -16;
+  drumComp.knee.value = 6;
+  drumComp.ratio.value = 4;
+  drumComp.attack.value = 0.008;
+  drumComp.release.value = 0.12;
+  const drumMakeup = ctx.createGain();
+  drumMakeup.gain.value = DRUM_MAKEUP;
+  drums.connect(drumComp).connect(drumMakeup).connect(out);
+  // Kick: extra low end and beater click. Snare: fatter body, a touch more crack.
+  const kickBus = ctx.createGain();
+  kickBus
+    .connect(filter(ctx, 'lowshelf', 70, 0.7, 6))
+    .connect(filter(ctx, 'peaking', 4000, 1.2, 3))
+    .connect(drums);
+  const snareBus = ctx.createGain();
+  snareBus
+    .connect(filter(ctx, 'peaking', 200, 1.2, 4))
+    .connect(filter(ctx, 'highshelf', 5000, 0.7, 2))
+    .connect(drums);
+  const drumBus = (name: DrumName): AudioNode => (name === 'kick' ? kickBus : name === 'snare' ? snareBus : drums);
+
+  /** Short sine sub under the recorded kick: the chest-hit low end a close mic doesn't capture. */
+  const kickSub = (t: number, level: number) => {
+    const osc = ctx.createOscillator();
+    osc.frequency.setValueAtTime(62, t);
+    osc.frequency.exponentialRampToValueAtTime(44, t + 0.12);
+    osc.connect(decay(ctx, t, KICK_SUB * (level === 2 ? 1 : 0.85), 0.22)).connect(kickBus);
+    osc.start(t);
+    osc.stop(t + 0.24);
+  };
 
   const noiseBurst = (t: number, length: number, dest: AudioNode) => {
     const src = ctx.createBufferSource();
@@ -377,7 +415,9 @@ export function createRig(
 
     guitar(t, midi, dur, mute, detune = 0, voicing = 'power') {
       if (tone === 'amp') {
-        cabs.forEach((cab, take) => playNote(ctx, chordBuffer(midi, mute, voicing, take), t, dur, cab, detune, noteLevel));
+        cabs.forEach((cab, take) =>
+          playNote(ctx, chordBuffer(midi, mute, voicing, take), t, dur, cab, detune, noteLevel, mute ? MUTE_CHOKE_SEC : CHOKE_SEC),
+        );
         return;
       }
       amps.forEach((amp, side) => {
@@ -455,15 +495,18 @@ export function createRig(
 
     // Modern metal kick: short, tight low end plus a pronounced beater click that cuts through fast doubles.
     kick(t, level) {
-      if (sampled('kick', t, level)) return;
+      if (sampled('kick', t, level)) {
+        kickSub(t, level);
+        return;
+      }
       const osc = ctx.createOscillator();
       osc.frequency.setValueAtTime(180, t);
       osc.frequency.exponentialRampToValueAtTime(48, t + 0.06);
-      osc.connect(decay(ctx, t, level === 2 ? 1.25 : 1.05, 0.2)).connect(drums);
+      osc.connect(decay(ctx, t, level === 2 ? 1.25 : 1.05, 0.2)).connect(kickBus);
       osc.start(t);
       osc.stop(t + 0.22);
       const clickEnv = decay(ctx, t, 0.55, 0.018);
-      clickEnv.connect(drums);
+      clickEnv.connect(kickBus);
       const clickBp = filter(ctx, 'bandpass', 3500, 1.2);
       clickBp.connect(clickEnv);
       noiseBurst(t, 0.02, clickBp);
@@ -473,7 +516,7 @@ export function createRig(
     snare(t, level) {
       if (sampled('snare', t, level)) return;
       const body = decay(ctx, t, level === 2 ? 0.95 : 0.75, 0.24);
-      body.connect(drums);
+      body.connect(snareBus);
       const bp = filter(ctx, 'bandpass', 2400, 0.6);
       bp.connect(body);
       noiseBurst(t, 0.26, bp);
@@ -481,7 +524,7 @@ export function createRig(
       tone.type = 'triangle';
       tone.frequency.setValueAtTime(240, t);
       tone.frequency.exponentialRampToValueAtTime(180, t + 0.05);
-      tone.connect(decay(ctx, t, 0.6, 0.12)).connect(drums);
+      tone.connect(decay(ctx, t, 0.6, 0.12)).connect(snareBus);
       tone.start(t);
       tone.stop(t + 0.14);
     },

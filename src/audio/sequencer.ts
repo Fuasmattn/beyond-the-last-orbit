@@ -86,7 +86,8 @@ export class Sequencer {
 
       const g = s.guitar[step];
       if (g) {
-        const dur = Math.max(MIN_NOTE, g.mute ? this.stepDur * 0.8 : g.len * this.stepDur);
+        // Chugs ring for their full length (the choke starts just before the next step).
+        const dur = Math.max(MIN_NOTE, g.len * this.stepDur * (g.mute ? 0.95 : 1));
         this.rig.guitar(time, g.midi, dur, g.mute, this.detune(), g.voicing);
         // Bass doubles the riff's root an octave down, but stays out of high single-note lines.
         if (g.voicing !== 'single' || g.midi < BASS_FOLLOW_BELOW) {

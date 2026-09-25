@@ -27,11 +27,14 @@ describe('world songs', () => {
     }
   });
 
-  it('gives the Moon twin harmony leads', () => {
-    const song = compileSong(MOON_SONG);
-    const harmony = song.arrangements.main!.entries.find((e) => e.section.name === 'harmony')!.section;
-    expect(harmony.lead.some(Boolean)).toBe(true);
-    expect(harmony.lead2.some(Boolean)).toBe(true);
+  it('gives Earth and the Moon twin harmony leads and a single-note intro', () => {
+    for (const def of [EARTH_SONG, MOON_SONG]) {
+      const song = compileSong(def);
+      const section = (name: string) => song.arrangements.main!.entries.find((e) => e.section.name === name)!.section;
+      expect(section('harmony').lead.some(Boolean), def.name).toBe(true);
+      expect(section('harmony').lead2.some(Boolean), def.name).toBe(true);
+      expect(section('intro').guitar.filter(Boolean).every((n) => n!.voicing === 'single'), def.name).toBe(true);
+    }
   });
 
   it('rejects a harmony track with the wrong length', () => {

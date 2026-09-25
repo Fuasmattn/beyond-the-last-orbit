@@ -100,6 +100,9 @@ export const STAGE = {
   bossParTime: 60,
   timeBonusPerSec: 50,
   perfectBeatPct: 0.7,
+  /** Rogue runs: accuracy weight of the stage bonus and accuracy needed for PERFECT. */
+  rogueAccuracyBonus: 2000,
+  roguePerfectAccuracy: 0.7,
 } as const;
 
 export const WARP = { time: 3, skipAfter: 0.5 } as const;
@@ -202,6 +205,9 @@ export const RHYTHM = {
   multStep: 0.5,
   maxMult: 4,
 } as const;
+
+/** Rogue runs: enemy bullets passing this close to the ship without hitting score a graze. */
+export const GRAZE = { margin: 6, points: 10 } as const;
 
 export const COMBO = {
   window: 1,

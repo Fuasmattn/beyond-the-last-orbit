@@ -1,5 +1,6 @@
 import { BOMB, ENEMY, FIELD_H } from '../data/balance';
 import { allocId } from './ids';
+import { dropStreakLevel } from './scoring';
 import type { Bullet, SimState } from './types';
 
 export function moveBullets(state: SimState, dt: number): void {
@@ -7,9 +8,14 @@ export function moveBullets(state: SimState, dt: number): void {
     b.x += b.vx * dt;
     b.y += b.vy * dt;
   }
-  state.bullets = state.bullets.filter(
-    (b) => b.y + b.h > 0 && b.y < FIELD_H && b.x + b.w > 0 && b.x < state.fieldW,
-  );
+  const inField = (b: Bullet) => b.y + b.h > 0 && b.y < FIELD_H && b.x + b.w > 0 && b.x < state.fieldW;
+  if (state.mode === 'rogue' && state.phase === 'playing') {
+    // A primary bolt that leaves the field without hitting anything breaks the streak by a level.
+    for (const b of state.bullets) {
+      if (b.owner === 'player' && !b.extra && !b.pierced?.length && !inField(b)) dropStreakLevel(state);
+    }
+  }
+  state.bullets = state.bullets.filter(inField);
 }
 
 /** Spawns an enemy bullet horizontally centered on `cx`; returns it for tweaking. */

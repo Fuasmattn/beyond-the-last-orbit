@@ -1,10 +1,10 @@
-import { ENEMY, POINTS } from '../data/balance';
+import { ENEMY, GRAZE, POINTS } from '../data/balance';
 import { hitBoss } from './boss';
 import { overlaps } from './geometry';
 import { hitPlayer } from './player';
-import { recordHit, registerKill } from './scoring';
+import { recordHit, registerGraze, registerKill } from './scoring';
 import { spawnMini } from './specials';
-import type { SimEvent, SimState } from './types';
+import type { Box, SimEvent, SimState } from './types';
 
 export { overlaps } from './geometry';
 
@@ -55,6 +55,8 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
     }
   }
 
+  if (state.mode === 'rogue' && state.player.invuln <= 0 && state.phase === 'playing') checkGrazes(state, spent, events);
+
   if (state.player.invuln <= 0) {
     for (const e of state.enemies) {
       if ((e.dive || e.free) && e.hp > 0 && overlaps(e, state.player)) {
@@ -68,4 +70,17 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
 
   state.enemies = state.enemies.filter((e) => e.hp > 0);
   if (spent.size > 0) state.bullets = state.bullets.filter((b) => !spent.has(b.id));
+}
+
+/** Enemy bullets inside the graze margin around the ship (but not touching it) score once each. */
+function checkGrazes(state: SimState, spent: ReadonlySet<number>, events: SimEvent[]): void {
+  const p = state.player;
+  const m = GRAZE.margin;
+  const zone: Box = { x: p.x - m, y: p.y - m, w: p.w + m * 2, h: p.h + m * 2 };
+  for (const b of state.bullets) {
+    if (b.owner !== 'enemy' || b.grazed || spent.has(b.id) || !overlaps(b, zone)) continue;
+    b.grazed = true;
+    const points = registerGraze(state);
+    events.push({ type: 'graze', x: b.x + b.w / 2, y: b.y + b.h / 2, points });
+  }
 }

@@ -10,7 +10,7 @@ import { NO_INPUT, type Bullet, type SimEvent, type SimState } from '../../src/s
 
 const fire = { ...NO_INPUT, firePressed: true };
 
-function withShip(over: Partial<ReturnType<typeof baseShip>>, lives = PLAYER.startLives): SimState {
+function withShip(over: Partial<ReturnType<typeof baseShip>>, lives: number = PLAYER.startLives): SimState {
   return createInitialState(1, undefined, { ...defaultRunOptions('rogue'), ship: { ...baseShip(), ...over }, lives });
 }
 

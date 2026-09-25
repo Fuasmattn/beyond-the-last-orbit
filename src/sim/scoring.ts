@@ -1,4 +1,4 @@
-import { COMBO, RHYTHM } from '../data/balance';
+import { COMBO, GRAZE, RHYTHM } from '../data/balance';
 import type { Bullet, SimState } from './types';
 
 const MAX_STREAK = ((RHYTHM.maxMult - 1) / RHYTHM.multStep) * RHYTHM.shotsPerStep;
@@ -15,10 +15,25 @@ export function applyShotRhythm(state: SimState, onBeat: boolean | null): void {
     r.streak = Math.min(MAX_STREAK, r.streak + 1);
     state.stats.onBeatShots++;
     state.stageStats.onBeatShots++;
+    r.mult = rhythmMultForStreak(r.streak);
   } else {
-    const level = Math.floor(r.streak / RHYTHM.shotsPerStep);
-    r.streak = Math.max(0, (level - 1) * RHYTHM.shotsPerStep);
+    dropStreakLevel(state);
   }
+}
+
+/** Falls back to the start of the previous multiplier level. */
+export function dropStreakLevel(state: SimState): void {
+  const r = state.rhythm;
+  const level = Math.floor(r.streak / RHYTHM.shotsPerStep);
+  r.streak = Math.max(0, (level - 1) * RHYTHM.shotsPerStep);
+  r.mult = rhythmMultForStreak(r.streak);
+}
+
+/** Rogue runs: hits and grazes build the multiplier instead of beat timing. */
+export function bumpStreak(state: SimState): void {
+  if (state.mode !== 'rogue') return;
+  const r = state.rhythm;
+  r.streak = Math.min(MAX_STREAK, r.streak + 1);
   r.mult = rhythmMultForStreak(r.streak);
 }
 
@@ -32,8 +47,9 @@ export function recordShot(state: SimState): void {
   state.stageStats.shots++;
 }
 
-/** Counts a player bolt's hit for accuracy: once per primary bolt (side bolts and repeat pierce hits are free). */
+/** Every hit builds the rogue streak. Counts a player bolt's hit for accuracy: once per primary bolt (side bolts and repeat pierce hits are free). */
 export function recordHit(state: SimState, bullet: Bullet): void {
+  bumpStreak(state);
   if (bullet.extra || (bullet.pierced && bullet.pierced.length > 0)) return;
   state.stats.hits++;
   state.stageStats.hits++;
@@ -57,4 +73,13 @@ export function updateCombo(state: SimState, dt: number): void {
   if (c.timer <= 0) return;
   c.timer = Math.max(0, c.timer - dt);
   if (c.timer === 0) c.chain = 0;
+}
+
+/** Rogue runs: an enemy bullet skimming past the ship scores and feeds the streak. */
+export function registerGraze(state: SimState): number {
+  bumpStreak(state);
+  const points = Math.round(GRAZE.points * state.rhythm.mult * state.ship.scoreMul);
+  state.score += points;
+  state.stageStats.grazes++;
+  return points;
 }

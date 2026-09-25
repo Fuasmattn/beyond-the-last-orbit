@@ -1,7 +1,7 @@
 import { BEAT_TRACK, FIELD_H, HITSTOP, PLAYER, PLAYER_ZONE_TOP } from '../data/balance';
 import { allocId } from './ids';
 import { clamp } from './math';
-import { applyShotRhythm, recordShot, resetRhythm } from './scoring';
+import { applyShotRhythm, dropStreakLevel, recordShot, resetRhythm } from './scoring';
 import type { InputFrame, SimEvent, SimState } from './types';
 
 export function updatePlayer(
@@ -82,7 +82,8 @@ export function hitPlayer(state: SimState, events: SimEvent[]): void {
   }
   p.lives--;
   p.invuln = PLAYER.invulnTime;
-  resetRhythm(state);
+  if (state.mode === 'rogue') dropStreakLevel(state);
+  else resetRhythm(state);
   state.stageStats.hitsTaken++;
   state.hitStop = HITSTOP.playerHit;
   state.bullets = state.bullets.filter((b) => b.owner === 'player');

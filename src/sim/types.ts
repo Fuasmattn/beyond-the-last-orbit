@@ -173,6 +173,7 @@ export interface StageStats {
   hits: number;
   onBeatShots: number;
   hitsTaken: number;
+  grazes: number;
   time: number;
 }
 
@@ -229,6 +230,7 @@ export type SimEvent =
   | { type: 'enemyKilled'; id: number; kind: EnemyKind; x: number; y: number; points: number }
   | { type: 'enemyShot'; x: number; y: number }
   | { type: 'playerHit'; x: number; y: number; livesLeft: number }
+  | { type: 'graze'; x: number; y: number; points: number }
   | { type: 'shieldHit'; x: number; y: number; shieldLeft: number }
   | { type: 'formationInvaded' }
   | { type: 'split'; id: number; x: number; y: number }

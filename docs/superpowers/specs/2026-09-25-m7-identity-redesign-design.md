@@ -1,7 +1,7 @@
 # M7 — Identity Redesign (fullscreen, rhythm formations, neon vector, beat track)
 
 Date: 2026-09-25
-Status: Approved (in chat)
+Status: Implemented
 
 ## Why
 
@@ -66,6 +66,14 @@ Replaces `updateFormation` march logic. Divers, specials, splitters, phasers, bo
 
 - Unit: `computeLayout` widths/clamps; shapes return `count` distinct in-bounds slots for widths 140/240/600; formation morph/advance cadence vs beats; entry completes; width adoption at stage start; bosses in-bounds for widths 180/600; existing tests updated for `fieldW`.
 - Manual (preview): portrait 375×812, desktop 1280×800; play stage 1, boss.
+
+## Deviations during implementation
+
+- Min width 140 (not 180) so common phones (≈148) fill the screen.
+- Shapes: `bowl` and `twin` replaced by `stagger` and `tilt` (grid-safe at 140 px).
+- Beat track 20 px tall; grade shown left of the gate, multiplier + streak pips right; lives moved to the top-left.
+- Menus keep a fixed 240×320 design frame, centered and scaled by the app over a shared synthwave backdrop.
+- Mid-stage resize: sim keeps its width until the next stage (no rescale); view follows the viewport.
 
 ## Milestones
 

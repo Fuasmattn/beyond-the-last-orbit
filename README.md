@@ -1,6 +1,8 @@
 # Space Alliance
 
-Retro arcade shooter in the style of Space Invaders with a procedurally synthesized 70s/80s heavy-metal soundtrack. Shots fired on the beat build a score multiplier (up to x4); shots off the beat make the music go sour.
+Neon arcade rhythm shooter with a procedurally synthesized 70s/80s heavy-metal soundtrack. Enemy formations fly in, sway on every beat and morph into new shapes every few bars. Shots fired on the beat build a score multiplier (up to x4); shots off the beat make the music go sour. The beat track along the bottom shows markers converging on the beat and grades every shot PERFECT / GOOD / OFF.
+
+The playfield fills the whole window: height is fixed, width follows the screen (portrait phone to ultra-wide).
 
 Three worlds (Near Earth Orbit, Moon, Mars) × 5 stages, a boss on every fifth stage, then an endless harder loop. Credits earned per run buy cosmetic ship skins and laser styles.
 

@@ -3,7 +3,6 @@ import { MENU_W } from '../data/balance';
 import { formatHighscoreLine } from '../view/highscoreTable';
 import { MenuList } from '../view/menuList';
 import { centerText, PixelText } from '../view/pixelText';
-import { Starfield } from '../view/starfield';
 import type { FrameInput, Scene, SceneContext } from './scene';
 import { sceneBackground } from './ui';
 
@@ -14,20 +13,26 @@ const ITEMS = ['START GAME', 'SHOP', 'SETTINGS'] as const;
 
 export class TitleScene implements Scene {
   readonly root = new Container();
-  private readonly starfield = new Starfield();
   private readonly tagline: PixelText;
   private readonly notice: PixelText;
   private readonly credits: PixelText;
   private readonly tableHeader: PixelText;
   private readonly table: PixelText[] = [];
   private readonly menu: MenuList;
+  private readonly logo: PixelText[];
+  private logoX = 0;
   private t = 0;
 
   constructor(private readonly ctx: SceneContext) {
     const g = ctx.textures.glyphs;
-    const logo = new PixelText(g, 'SPACE ALLIANCE', 0xffe14a);
-    logo.scale.set(2);
-    centerText(logo, 60);
+    // Chromatic-split neon logo: cyan and pink ghosts drift around a white core.
+    this.logo = ([0x4af2ff, 0xff3d9a, 0xffffff] as const).map((color) => {
+      const t = new PixelText(g, 'SPACE ALLIANCE', color);
+      t.scale.set(3);
+      centerText(t, 48);
+      return t;
+    });
+    this.logoX = this.logo[2]!.x;
     this.tagline = new PixelText(g, 'DEFEND THE ORBIT. KEEP THE BEAT.', 0x4af2ff);
     centerText(this.tagline, 86);
     this.credits = new PixelText(g, '', 0x7dff6b);
@@ -45,8 +50,7 @@ export class TitleScene implements Scene {
 
     this.root.addChild(
       sceneBackground(),
-      this.starfield,
-      logo,
+      ...this.logo,
       this.tagline,
       this.tableHeader,
       ...this.table,
@@ -78,7 +82,11 @@ export class TitleScene implements Scene {
   }
 
   render(elapsed: number): void {
-    this.starfield.update(elapsed);
+    const [cyan, pink] = this.logo;
+    const split = 1 + Math.sin(this.t * 2.2) * 0.6;
+    cyan!.x = this.logoX - split;
+    pink!.x = this.logoX + split;
+    cyan!.alpha = pink!.alpha = 0.75;
     const showTable = this.table.length > 0 && Math.floor(this.t / PAGE_TIME) % 2 === 1;
     this.tableHeader.visible = showTable;
     for (const t of this.table) t.visible = showTable;

@@ -1,3 +1,4 @@
+import type { ShotJudgement } from '../audio/rhythmJudge';
 import type { InputFrame } from '../sim/types';
 import type { FireJudge, InputSource, MenuAction } from './inputFrame';
 
@@ -27,7 +28,7 @@ const GAME_KEYS = new Set([...LEFT, ...RIGHT, ...UP, ...DOWN, FIRE, ...PAUSE, 'E
 export class KeyboardInput implements InputSource {
   private readonly held = new Set<string>();
   private firePending = false;
-  private fireOnBeat: boolean | null = null;
+  private fireJudgement: ShotJudgement | null = null;
   private pausePending = false;
   private menu: MenuAction[] = [];
 
@@ -41,7 +42,7 @@ export class KeyboardInput implements InputSource {
       if (!e.repeat) {
         if (e.code === FIRE && !this.firePending) {
           this.firePending = true;
-          this.fireOnBeat = this.judgeFire(e.timeStamp);
+          this.fireJudgement = this.judgeFire(e.timeStamp);
         }
         if (PAUSE.includes(e.code)) this.pausePending = true;
       }
@@ -60,11 +61,12 @@ export class KeyboardInput implements InputSource {
       dragX: 0,
       dragY: 0,
       firePressed: this.firePending,
-      fireOnBeat: this.firePending ? this.fireOnBeat : null,
+      fireOnBeat: this.firePending ? (this.fireJudgement?.onBeat ?? null) : null,
+      firePerfect: this.firePending && this.fireJudgement?.perfect === true,
       beat: null,
     };
     this.firePending = false;
-    this.fireOnBeat = null;
+    this.fireJudgement = null;
     return frame;
   }
 

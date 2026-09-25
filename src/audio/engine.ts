@@ -1,7 +1,7 @@
 import { SOUR } from '../data/balance';
 import { BeatClock } from './beatClock';
 import { AudioClockSync } from './clockSync';
-import { judgeShot } from './rhythmJudge';
+import { gradeShot, type ShotJudgement } from './rhythmJudge';
 import { Sequencer } from './sequencer';
 import { Sfx } from './sfx';
 import type { CompiledSong } from './song';
@@ -171,8 +171,8 @@ export class AudioEngine {
   }
 
   /** `perfMs`: the press event's timestamp, so handler delay does not count against the player. */
-  judgeFire(offsetMs = 0, perfMs?: number): boolean | null {
-    return judgeShot(this.playing?.clock ?? null, this.heardTime(perfMs), offsetMs);
+  judgeFire(offsetMs = 0, perfMs?: number): ShotJudgement | null {
+    return gradeShot(this.playing?.clock ?? null, this.heardTime(perfMs), offsetMs);
   }
 
   private tick(): void {

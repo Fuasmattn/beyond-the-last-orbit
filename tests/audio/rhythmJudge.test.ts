@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BeatClock } from '../../src/audio/beatClock';
-import { judgeShot } from '../../src/audio/rhythmJudge';
+import { gradeShot, judgeShot } from '../../src/audio/rhythmJudge';
 import { RHYTHM } from '../../src/data/balance';
 
 describe('judgeShot', () => {
@@ -27,6 +27,12 @@ describe('judgeShot', () => {
     const fast = new BeatClock(240, 0); // 250 ms beats → ±62.5 ms
     expect(judgeShot(fast, 0.25 + 0.06)).toBe(true);
     expect(judgeShot(fast, 0.25 + 0.07)).toBe(false);
+  });
+
+  it('grades PERFECT inside the tighter window', () => {
+    expect(gradeShot(clock, 1 + RHYTHM.perfectSec - 0.001)).toEqual({ onBeat: true, perfect: true });
+    expect(gradeShot(clock, 1 + RHYTHM.perfectSec + 0.01)).toEqual({ onBeat: true, perfect: false });
+    expect(gradeShot(null, 1)).toBeNull();
   });
 
   it('rejects shots before the song starts', () => {

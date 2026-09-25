@@ -10,13 +10,14 @@ function key(target: EventTarget, type: 'keydown' | 'keyup', code: string, repea
 describe('KeyboardInput', () => {
   it('judges the fire press at keydown time', () => {
     const target = new EventTarget();
-    let verdict: boolean | null = true;
+    let verdict = { onBeat: true, perfect: true };
     const kb = new KeyboardInput(target, () => verdict);
     key(target, 'keydown', 'Space');
-    verdict = false;
+    verdict = { onBeat: false, perfect: false };
     const f = kb.poll();
     expect(f.firePressed).toBe(true);
     expect(f.fireOnBeat).toBe(true);
+    expect(f.firePerfect).toBe(true);
     expect(kb.poll().firePressed).toBe(false);
   });
 

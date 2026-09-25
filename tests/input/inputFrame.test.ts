@@ -9,7 +9,7 @@ describe('mergeInputs', () => {
       { ...NO_INPUT, moveX: 1, dragX: 3, firePressed: true, fireOnBeat: true },
     ]);
     expect(merged).toEqual({
-      moveX: 1, moveY: 0, dragX: 5, dragY: 0, firePressed: true, fireOnBeat: true, beat: null,
+      moveX: 1, moveY: 0, dragX: 5, dragY: 0, firePressed: true, fireOnBeat: true, firePerfect: false, beat: null,
     });
   });
 

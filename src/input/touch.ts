@@ -1,3 +1,4 @@
+import type { ShotJudgement } from '../audio/rhythmJudge';
 import type { Layout } from '../app/layout';
 import { BEAT_TRACK, FIELD_H } from '../data/balance';
 import type { InputFrame } from '../sim/types';
@@ -25,7 +26,7 @@ export class TouchInput implements InputSource {
   private dx = 0;
   private dy = 0;
   private firePending = false;
-  private fireOnBeat: boolean | null = null;
+  private fireJudgement: ShotJudgement | null = null;
   private taps: Tap[] = [];
 
   constructor(
@@ -42,7 +43,7 @@ export class TouchInput implements InputSource {
       if (isInFireButton(lx, ly, l.fieldW)) {
         if (!this.firePending) {
           this.firePending = true;
-          this.fireOnBeat = this.judgeFire(e.timeStamp);
+          this.fireJudgement = this.judgeFire(e.timeStamp);
         }
         return;
       }
@@ -74,10 +75,11 @@ export class TouchInput implements InputSource {
       dragX: this.dx,
       dragY: this.dy,
       firePressed: this.firePending,
-      fireOnBeat: this.firePending ? this.fireOnBeat : null,
+      fireOnBeat: this.firePending ? (this.fireJudgement?.onBeat ?? null) : null,
+      firePerfect: this.firePending && this.fireJudgement?.perfect === true,
       beat: null,
     };
-    this.fireOnBeat = null;
+    this.fireJudgement = null;
     this.dx = 0;
     this.dy = 0;
     this.firePending = false;

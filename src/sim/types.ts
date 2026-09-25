@@ -318,6 +318,8 @@ export interface InputFrame {
   firePressed: boolean;
   /** Rhythm judgement for the press; null when no audio / no press. */
   fireOnBeat: boolean | null;
+  /** Press landed within the PERFECT window (implies fireOnBeat). */
+  firePerfect: boolean;
   /** Current beat position from the audio clock; null → sim-time fallback. */
   beat: number | null;
 }
@@ -329,5 +331,6 @@ export const NO_INPUT: Readonly<InputFrame> = {
   dragY: 0,
   firePressed: false,
   fireOnBeat: null,
+  firePerfect: false,
   beat: null,
 };

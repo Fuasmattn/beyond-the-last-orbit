@@ -1,3 +1,4 @@
+import type { ShotJudgement } from '../audio/rhythmJudge';
 import { clamp } from '../sim/math';
 import type { InputFrame } from '../sim/types';
 
@@ -7,7 +8,7 @@ export interface InputSource {
 }
 
 /** Called when fire is pressed with the event's timestamp; returns rhythm verdict or null (no audio). */
-export type FireJudge = (timeStamp?: number) => boolean | null;
+export type FireJudge = (timeStamp?: number) => ShotJudgement | null;
 
 export type MenuAction = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back';
 
@@ -24,6 +25,7 @@ export function mergeInputs(frames: readonly InputFrame[]): InputFrame {
   let dragY = 0;
   let firePressed = false;
   let fireOnBeat: boolean | null = null;
+  let firePerfect = false;
   let beat: number | null = null;
   for (const f of frames) {
     moveX += f.moveX;
@@ -33,6 +35,7 @@ export function mergeInputs(frames: readonly InputFrame[]): InputFrame {
     if (f.firePressed && !firePressed) {
       firePressed = true;
       fireOnBeat = f.fireOnBeat;
+      firePerfect = f.firePerfect;
     }
     if (beat === null && f.beat !== null) beat = f.beat;
   }
@@ -43,6 +46,7 @@ export function mergeInputs(frames: readonly InputFrame[]): InputFrame {
     dragY,
     firePressed,
     fireOnBeat,
+    firePerfect,
     beat,
   };
 }

@@ -3,6 +3,49 @@ import type { ShapeKind } from './shapes';
 /** `rhythm`: linear run scored on the beat. `rogue`: route map, drafted upgrades, streak scoring. */
 export type RunMode = 'rhythm' | 'rogue';
 
+/** Rogue route map node types. */
+export type NodeKind = 'battle' | 'elite' | 'cache' | 'repair';
+
+export type BoonId =
+  | 'twin'
+  | 'spread'
+  | 'pierce'
+  | 'overclock'
+  | 'heavy'
+  | 'deflector'
+  | 'bounty'
+  | 'afterburner'
+  | 'nanorepair';
+
+export interface RouteNode {
+  lane: number;
+  kind: NodeKind;
+  /** Lanes of the connected nodes in the next row. */
+  next: number[];
+}
+
+/** One world's branching map: `rows[i]` holds the choices for stage i + 2. */
+export interface RouteMap {
+  rows: RouteNode[][];
+}
+
+export interface RogueState {
+  /** Separate stream for map and draft rolls, so route choices don't reshuffle combat. */
+  rng: { seed: number };
+  map: RouteMap;
+  /** Lane picked in each map row so far this world. */
+  path: number[];
+  /** Kind of the current or last-entered node (stage 1 counts as a battle). */
+  node: NodeKind;
+  /** Drafted upgrade stacks. */
+  boons: Partial<Record<BoonId, number>>;
+  /** Upgrades on offer while drafting. */
+  offer: BoonId[];
+  /** A draft is owed after the stage-clear screen (elite or boss beaten). */
+  draftPending: boolean;
+  rerolls: number;
+}
+
 export type EnemyKind = 'grunt' | 'gunner' | 'diver' | 'shield' | 'splitter' | 'phaser' | 'bomber' | 'mini';
 export type BossKind = 'warden' | 'hive' | 'dreadnought';
 
@@ -166,6 +209,8 @@ export interface Difficulty {
   cols: number;
   hpBonus: number;
   bossHpScale: number;
+  /** Rogue elite stage: denser fire, bullet patterns, bonus score. */
+  elite: boolean;
 }
 
 export interface StageStats {
@@ -186,7 +231,8 @@ export interface StageResult {
   perfect: boolean;
 }
 
-export type Phase = 'stageIntro' | 'playing' | 'bossDying' | 'stageClear' | 'warp' | 'gameOver';
+/** `route` / `draft`: rogue runs wait for the player to pick a map node / an upgrade. */
+export type Phase = 'stageIntro' | 'playing' | 'bossDying' | 'stageClear' | 'route' | 'draft' | 'warp' | 'gameOver';
 
 export interface SimState {
   mode: RunMode;
@@ -222,6 +268,8 @@ export interface SimState {
   stageStats: StageStats;
   result: StageResult | null;
   run: { bossesKilled: number; perfectStages: number; stagesCleared: number };
+  /** Rogue runs only. */
+  rogue: RogueState | null;
 }
 
 export type SimEvent =
@@ -230,6 +278,11 @@ export type SimEvent =
   | { type: 'enemyKilled'; id: number; kind: EnemyKind; x: number; y: number; points: number }
   | { type: 'enemyShot'; x: number; y: number }
   | { type: 'playerHit'; x: number; y: number; livesLeft: number }
+  | { type: 'routeOpen' }
+  | { type: 'nodeChosen'; kind: NodeKind }
+  | { type: 'draftOpen' }
+  | { type: 'boonTaken'; id: BoonId | null }
+  | { type: 'repaired'; lives: number; shield: number }
   | { type: 'graze'; x: number; y: number; points: number }
   | { type: 'shieldHit'; x: number; y: number; shieldLeft: number }
   | { type: 'formationInvaded' }

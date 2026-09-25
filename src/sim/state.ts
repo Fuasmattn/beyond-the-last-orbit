@@ -1,5 +1,6 @@
 import { BEAT_TRACK, FIELD_H, FIELD_W_DEFAULT, PLAYER } from '../data/balance';
 import { difficultyFor } from './difficulty';
+import { createRogueState } from './route';
 import { defaultRunOptions, type RunOptions } from './ship';
 import { emptyStageStats, startStage } from './stageFlow';
 import type { SimState } from './types';
@@ -52,6 +53,7 @@ export function createInitialState(
     stageStats: emptyStageStats(),
     result: null,
     run: { bossesKilled: 0, perfectStages: 0, stagesCleared: 0 },
+    rogue: opts.mode === 'rogue' ? createRogueState(seed, opts.rerolls, 0) : null,
   };
   startStage(state, []);
   return state;

@@ -4,7 +4,7 @@ import { updateBoss } from './boss';
 import { moveBullets } from './bullets';
 import { resolveCollisions } from './collision';
 import { updateDives } from './dive';
-import { updateEnemyFire } from './enemyFire';
+import { updateEliteVolleys, updateEnemyFire } from './enemyFire';
 import { formationBottom, spawnFormation, updateFormation } from './formation';
 import { hitPlayer, updatePlayer } from './player';
 import { updateCombo } from './scoring';
@@ -43,6 +43,13 @@ export function step(state: SimState, input: InputFrame, dt: number = SIM_DT): S
       if (state.phaseTimer <= 0) advanceStage(state, events);
       return events;
 
+    case 'route':
+    case 'draft':
+      // Waiting for the player's pick (chooseNode / chooseBoon); the ship can still drift around.
+      updatePlayer(state, noFire, dt, events);
+      state.phaseTimer += dt;
+      return events;
+
     case 'warp': {
       updatePlayer(state, noFire, dt, events);
       state.phaseTimer -= dt;
@@ -78,6 +85,7 @@ function playing(state: SimState, input: InputFrame, dt: number, beats: number, 
     updateFormation(state, dt, beats);
     updateDives(state, dt, events);
     updateEnemyFire(state, dt, events);
+    if (state.diff.elite) updateEliteVolleys(state, beats, events);
   }
   updateSpecials(state, dt, events);
   moveBullets(state, dt);

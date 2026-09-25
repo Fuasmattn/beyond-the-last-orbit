@@ -1,4 +1,4 @@
-import { COMBO, GRAZE, RHYTHM } from '../data/balance';
+import { COMBO, ELITE, GRAZE, RHYTHM } from '../data/balance';
 import type { Bullet, SimState } from './types';
 
 const MAX_STREAK = ((RHYTHM.maxMult - 1) / RHYTHM.multStep) * RHYTHM.shotsPerStep;
@@ -63,7 +63,8 @@ export function registerKill(state: SimState, base: number, bulletMult: number):
   const c = state.combo;
   c.chain = c.timer > 0 ? Math.min(COMBO.maxChain, c.chain + 1) : 0;
   c.timer = COMBO.window;
-  const points = Math.round(base * bulletMult * comboMult(state) * state.ship.scoreMul);
+  const elite = state.diff.elite ? ELITE.scoreMul : 1;
+  const points = Math.round(base * bulletMult * comboMult(state) * state.ship.scoreMul * elite);
   state.score += points;
   return points;
 }

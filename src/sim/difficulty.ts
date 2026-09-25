@@ -1,4 +1,4 @@
-import { DIFFICULTY, STAGE } from '../data/balance';
+import { DIFFICULTY, ELITE, STAGE } from '../data/balance';
 import type { Difficulty, EnemyKind } from './types';
 
 export function difficultyScalar(world: number, stage: number, loop: number): number {
@@ -22,7 +22,14 @@ export function difficultyFor(world: number, stage: number, loop: number): Diffi
     cols: 8 + Math.min(2, Math.floor(d / 5)),
     hpBonus: loop >= 1 ? 1 : 0,
     bossHpScale: 1 + loop * 0.5,
+    elite: false,
   };
+}
+
+/** Rogue elite stage: the formation of a stage `ELITE.difficultyBoost` later, tougher and shooting more. */
+export function eliteDifficulty(world: number, stage: number, loop: number): Difficulty {
+  const base = difficultyFor(world, stage + ELITE.difficultyBoost, loop);
+  return { ...base, fireRate: base.fireRate * ELITE.fireRateMul, hpBonus: base.hpBonus + 1, elite: true };
 }
 
 /** Enemy type per formation row; new types appear as difficulty rises. */

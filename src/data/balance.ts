@@ -206,6 +206,30 @@ export const RHYTHM = {
   maxMult: 4,
 } as const;
 
+/** Rogue elite stages. */
+export const ELITE = {
+  difficultyBoost: 3,
+  fireRateMul: 1.3,
+  scoreMul: 1.5,
+  /** Gunners fire aimed bursts of this many bullets, `burstSpread` rad apart. */
+  burstCount: 3,
+  burstSpread: 0.22,
+  /** Every `ringEvery` beats a random formation enemy fires a slow ring. */
+  ringEvery: 4,
+  ringCount: 10,
+  ringSpeed: 55,
+} as const;
+
+/** Rogue route map: node weights for the non-battle slots (elite gains per world). */
+export const ROUTE = {
+  lanes: 3,
+  weights: { elite: 30, cache: 30, repair: 35 },
+  eliteWeightPerWorld: 10,
+  /** Seconds before route/draft overlays accept input, so fire-mashing can't pick by accident. */
+  inputDelay: 0.6,
+  draftSize: 3,
+} as const;
+
 /** Rogue runs: enemy bullets passing this close to the ship without hitting score a graze. */
 export const GRAZE = { margin: 6, points: 10 } as const;
 

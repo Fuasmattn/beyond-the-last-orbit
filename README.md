@@ -47,6 +47,7 @@ Calibrate your audio/input latency under **Settings → Calibrate timing** (impo
 ## Credits
 
 - Drums: [DrumGizmo MuldjordKit](https://github.com/sfzinstruments/DrumGizmo.MuldjordKit) by Lars Muldjord, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — mixed down to stereo hits.
+- Guitar DI notes: [FreePats Electric Guitar FSBS (direct)](https://github.com/freepats/electric-guitar-FSBS-direct), CC0 — played through the game's own amp model.
 - Guitar cabinet impulse responses: [Jester's Brutal Pack](https://www.jester-dyne-productions.com/brutal-ir-pack/) by Jester Dyne Productions, CC0.
 
 Details in `public/audio/CREDITS.md`.

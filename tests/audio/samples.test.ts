@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CAB_FILES, DRUM_FILES, SampleBank } from '../../src/audio/samples';
+import { CAB_FILES, DI_NOTES, DI_TAKES, DRUM_FILES, SampleBank } from '../../src/audio/samples';
 
 /** Fake context whose "decoded" buffers just remember their URL. */
 const fakeCtx = {
-  decodeAudioData: async (data: ArrayBuffer) => ({ url: new TextDecoder().decode(data) }) as unknown as AudioBuffer,
+  decodeAudioData: async (data: ArrayBuffer) => {
+    const url = new TextDecoder().decode(data);
+    return { url, sampleRate: 44100, getChannelData: () => Object.assign(new Float32Array(4), { url }) } as unknown as AudioBuffer;
+  },
 } as unknown as BaseAudioContext;
 
 function mockFetch(fail: (url: string) => boolean = () => false): string[] {
@@ -26,7 +29,8 @@ describe('SampleBank', () => {
     const urls = mockFetch();
     await new SampleBank().load(fakeCtx, '/base/');
     const drums = Object.values(DRUM_FILES).reduce((n, c) => n + c.accent + c.normal, 0);
-    expect(urls).toHaveLength(drums + CAB_FILES.length);
+    expect(urls).toHaveLength(drums + CAB_FILES.length + DI_NOTES.length * DI_TAKES);
+    expect(urls).toContain('/base/audio/guitar/di-36-2.flac');
     expect(urls).toContain('/base/audio/drums/kick-a1.flac');
     expect(urls).toContain('/base/audio/cab/v30-sm57.flac');
   });
@@ -39,6 +43,18 @@ describe('SampleBank', () => {
     expect(urlOf(bank.drum('snare', 1, () => 0))).toMatch(/snare-n/);
     expect(urlOf(bank.drum('china', 1, () => 0))).toMatch(/china-a/);
     expect(bank.hasNormal('china')).toBe(false);
+  });
+
+  it('maps guitar notes to the nearest recording within a few semitones, per take', async () => {
+    mockFetch();
+    const bank = new SampleBank();
+    await bank.load(fakeCtx, '/');
+    expect(bank.hasGuitar).toBe(true);
+    const s = bank.guitarString(35, 1)!;
+    expect(s.midi).toBe(36);
+    expect((s.data as unknown as { url: string }).url).toMatch(/di-36-2/);
+    expect(bank.guitarString(43, 0)!.midi).toBe(41);
+    expect(bank.guitarString(20, 0)).toBeNull();
   });
 
   it('skips missing files and returns null for sounds that never loaded', async () => {

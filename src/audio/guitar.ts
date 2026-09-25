@@ -4,8 +4,20 @@
  * graph only adds the speaker-cabinet EQ and envelopes. No imports so it can run in plain Node.
  */
 
+/** A recorded DI note: mono samples, their sample rate and the MIDI pitch they were played at. */
+export interface RecordedString {
+  data: Float32Array;
+  sampleRate: number;
+  midi: number;
+}
+
+/** Looks up a recording for `midi` (take = double-tracking variant); null → synthesize the string. */
+export type StringSource = (midi: number, take: number) => RecordedString | null;
+
 export interface GuitarNoteOptions {
   sampleRate: number;
+  /** Recorded strings to use instead of Karplus-Strong synthesis. */
+  source?: StringSource | null;
   /** Palm-muted chug instead of a ringing chord. */
   mute: boolean;
   /** Take variation (different pick noise and tuning) for double-tracked left/right guitars. */
@@ -17,6 +29,7 @@ export interface GuitarNoteOptions {
 
 export interface LeadNoteOptions {
   sampleRate: number;
+  source?: StringSource | null;
   take: number;
   seconds: number;
 }
@@ -28,6 +41,8 @@ const OPEN_T60 = 3.5;
 const MUTE_T60 = 0.14;
 const LEAD_T60 = 9;
 const FADE_SEC = 0.08;
+/** Decay time constant of a palm-muted recorded string. */
+const MUTE_TAU = 0.07;
 
 function hz(midi: number): number {
   return 440 * 2 ** ((midi - 69) / 12);
@@ -88,6 +103,26 @@ export function pluck(
   for (let t = 0; t < len; t++) out[offset + t]! += gain * y[t]!;
 }
 
+/**
+ * Adds a recorded string into `out` at `offset`, pitched from its recorded note to `freq` by
+ * resampling (linear interpolation; recordings sit within a few semitones of every target).
+ */
+export function addRecorded(out: Float32Array, sampleRate: number, freq: number, offset: number, gain: number, rec: RecordedString): void {
+  const step = (freq / hz(rec.midi)) * (rec.sampleRate / sampleRate);
+  const data = rec.data;
+  for (let t = offset, pos = 0; t < out.length; t++, pos += step) {
+    const i = Math.floor(pos);
+    if (i + 1 >= data.length) break;
+    const fr = pos - i;
+    out[t]! += gain * (data[i]! * (1 - fr) + data[i + 1]! * fr);
+  }
+}
+
+/** Palm mute on a recorded string: the hand stops the ring within a fraction of a second. */
+function dampen(x: Float32Array, sampleRate: number, tau: number): void {
+  for (let i = 0; i < x.length; i++) x[i] = x[i]! * Math.exp(-i / (tau * sampleRate));
+}
+
 /** One-pole high-pass, in place. */
 function highpass(x: Float32Array, sampleRate: number, cutoff: number): void {
   const rc = 1 / (2 * Math.PI * cutoff);
@@ -141,9 +176,16 @@ export function renderPowerChord(midi: number, o: GuitarNoteOptions): Float32Arr
   const random = rng(midi * 7919 + o.take * 104729 + (o.mute ? 1 : 0) + voicing.length * 13);
   // Each take is tuned a hair differently so the two tracks beat against each other.
   const detune = 2 ** ((o.take % 2 === 0 ? -4 : 4) / 1200);
+  let recorded = false;
   VOICINGS[voicing].forEach((interval, s) => {
     const offset = Math.round(s * STRUM_SEC * o.sampleRate * (0.7 + 0.6 * random()));
     const gain = interval === 12 ? 0.6 : 1;
+    const rec = o.source?.(midi + interval, o.take) ?? null;
+    if (rec) {
+      addRecorded(out, o.sampleRate, hz(midi + interval) * detune, offset, gain, rec);
+      recorded = true;
+      return;
+    }
     pluck(
       out,
       o.sampleRate,
@@ -155,7 +197,8 @@ export function renderPowerChord(midi: number, o: GuitarNoteOptions): Float32Arr
       random,
     );
   });
-  // Palm mutes: the heel of the hand also darkens the strings before the amp.
+  // Palm mutes: the heel of the hand darkens the strings before the amp (and stops recorded ones ringing).
+  if (o.mute && recorded) dampen(out, o.sampleRate, MUTE_TAU);
   if (o.mute) lowpass(out, o.sampleRate, 1400);
   drive(out, o.sampleRate, o.mute ? 22 : 30, 2.5, 0.9);
   return out;
@@ -165,7 +208,9 @@ export function renderPowerChord(midi: number, o: GuitarNoteOptions): Float32Arr
 export function renderLeadNote(midi: number, o: LeadNoteOptions): Float32Array<ArrayBuffer> {
   const out = new Float32Array(Math.max(1, Math.round(o.seconds * o.sampleRate)));
   const random = rng(midi * 31337 + o.take * 7);
-  pluck(out, o.sampleRate, hz(midi), 0, 1, 0.8, LEAD_T60, random);
+  const rec = o.source?.(midi, o.take) ?? null;
+  if (rec) addRecorded(out, o.sampleRate, hz(midi), 0, 1, rec);
+  else pluck(out, o.sampleRate, hz(midi), 0, 1, 0.8, LEAD_T60, random);
   drive(out, o.sampleRate, 45, 3, 0.9);
   return out;
 }

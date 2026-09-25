@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pluck, renderLeadNote, renderPowerChord } from '../../src/audio/guitar';
+import { addRecorded, pluck, renderLeadNote, renderPowerChord } from '../../src/audio/guitar';
 
 const SR = 44100;
 
@@ -65,5 +65,26 @@ describe('renderLeadNote', () => {
   it('sustains through the note', () => {
     const lead = renderLeadNote(64, { sampleRate: SR, take: 0, seconds: 1.5 });
     expect(rms(lead, Math.round(1.0 * SR), Math.round(1.2 * SR))).toBeGreaterThan(0.2);
+  });
+});
+
+describe('recorded strings', () => {
+  // A 110 Hz sine "recording" played at A2 (midi 45).
+  const rec = { data: Float32Array.from({ length: SR }, (_, i) => Math.sin((2 * Math.PI * 110 * i) / SR)), sampleRate: SR, midi: 45 };
+
+  it('resamples a recording to the target pitch', () => {
+    const out = new Float32Array(SR / 2);
+    addRecorded(out, SR, 110 * 2 ** (2 / 12), 0, 1, rec);
+    const p = period(out, 300, 500);
+    expect(Math.abs(SR / p - 110 * 2 ** (2 / 12)) / 123.5).toBeLessThan(0.01);
+  });
+
+  it('renders chords from recordings and damps palm mutes', () => {
+    const source = () => rec;
+    const open = renderPowerChord(45, { sampleRate: SR, mute: false, take: 0, seconds: 1, source });
+    const mute = renderPowerChord(45, { sampleRate: SR, mute: true, take: 0, seconds: 1, source });
+    const late = (x: Float32Array) => rms(x, Math.round(0.4 * SR), Math.round(0.5 * SR));
+    expect(open.every((v) => Number.isFinite(v))).toBe(true);
+    expect(late(mute)).toBeLessThan(late(open) / 4);
   });
 });

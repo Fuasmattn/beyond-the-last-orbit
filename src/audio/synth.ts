@@ -197,6 +197,8 @@ const AMP_GUITAR_LEVEL = 0.34;
 const AMP_LEAD_LEVEL = 0.13;
 const VIBRATO_DEPTH = 0.009;
 const CHOKE_SEC = 0.02;
+/** Level of notes rendered from recorded DI strings relative to synthesized ones. */
+const DI_LEVEL = 0.63;
 /** Pre-render budget: one note per tick keeps each tick under ~5 ms. */
 const WARM_INTERVAL_MS = 12;
 
@@ -217,14 +219,22 @@ function cachedNote(ctx: BaseAudioContext, key: string, render: () => Float32Arr
 }
 
 /** Plays a rendered buffer from `t` for `dur` seconds, choking it at the end. */
-function playNote(ctx: BaseAudioContext, buf: AudioBuffer, t: number, dur: number, dest: AudioNode, detune: number): AudioBufferSourceNode {
+function playNote(
+  ctx: BaseAudioContext,
+  buf: AudioBuffer,
+  t: number,
+  dur: number,
+  dest: AudioNode,
+  detune: number,
+  level = 1,
+): AudioBufferSourceNode {
   const src = ctx.createBufferSource();
   src.buffer = buf;
   src.detune.value = detune;
   const env = ctx.createGain();
   const end = t + Math.min(dur, buf.duration);
-  env.gain.setValueAtTime(1, t);
-  env.gain.setValueAtTime(1, Math.max(t, end - CHOKE_SEC));
+  env.gain.setValueAtTime(level, t);
+  env.gain.setValueAtTime(level, Math.max(t, end - CHOKE_SEC));
   env.gain.linearRampToValueAtTime(0, end);
   src.connect(env).connect(dest);
   src.start(t);
@@ -297,18 +307,26 @@ export function createRig(
     src.stop(t + length);
   };
 
+  // Recorded DI strings once loaded; the cache key keeps them apart from synthesized renders.
+  const source = bank?.hasGuitar ? (midi: number, take: number) => bank.guitarString(midi, take) : null;
+  const src = source ? 'di' : 'ks';
+  // Real strings sustain denser into the amp than synthesized ones; keep the guitar/drum balance.
+  const noteLevel = source ? DI_LEVEL : 1;
   const chordBuffer = (midi: number, mute: boolean, voicing: Voicing, take: number) =>
-    cachedNote(ctx, `chord:${midi}:${mute ? 'm' : 'o'}:${voicing}:${take}`, () =>
+    cachedNote(ctx, `chord:${src}:${midi}:${mute ? 'm' : 'o'}:${voicing}:${take}`, () =>
       renderPowerChord(midi, {
         sampleRate: ctx.sampleRate,
         mute,
         take,
         seconds: mute ? CHORD_SEC.mute : CHORD_SEC.open,
         voicing,
+        source,
       }),
     );
   const leadBuffer = (midi: number) =>
-    cachedNote(ctx, `lead:${midi}`, () => renderLeadNote(midi, { sampleRate: ctx.sampleRate, take: 0, seconds: LEAD_SEC }));
+    cachedNote(ctx, `lead:${src}:${midi}`, () =>
+      renderLeadNote(midi, { sampleRate: ctx.sampleRate, take: 0, seconds: LEAD_SEC, source }),
+    );
 
   return {
     prewarm(notes) {
@@ -327,7 +345,7 @@ export function createRig(
 
     guitar(t, midi, dur, mute, detune = 0, voicing = 'power') {
       if (tone === 'amp') {
-        cabs.forEach((cab, take) => playNote(ctx, chordBuffer(midi, mute, voicing, take), t, dur, cab, detune));
+        cabs.forEach((cab, take) => playNote(ctx, chordBuffer(midi, mute, voicing, take), t, dur, cab, detune, noteLevel));
         return;
       }
       amps.forEach((amp, side) => {
@@ -367,7 +385,7 @@ export function createRig(
         const panner = ctx.createStereoPanner();
         panner.pan.value = pan;
         panner.connect(leadCab);
-        const src = playNote(ctx, buf, t, dur, panner, detune);
+        const src = playNote(ctx, buf, t, dur, panner, detune, noteLevel);
         // Finger vibrato: eases in after the pick, like the synth lead.
         const vibrato = ctx.createOscillator();
         vibrato.frequency.value = 5.5;

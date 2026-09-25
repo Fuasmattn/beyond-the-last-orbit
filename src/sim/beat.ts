@@ -1,11 +1,11 @@
-import { worldAt } from '../data/worlds';
+import { bpmFor } from '../data/worlds';
 import type { SimState } from './types';
 
 const MAX_BEATS_PER_STEP = 4;
 
-/** Beat position from the audio clock when available, else from sim time and the world BPM. */
+/** Beat position from the audio clock when available, else from sim time and the world/loop BPM. */
 export function currentBeat(state: SimState, external: number | null): number {
-  return external ?? (state.time * worldAt(state.world).bpm) / 60;
+  return external ?? (state.time * bpmFor(state.world, state.loop)) / 60;
 }
 
 /**

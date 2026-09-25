@@ -51,7 +51,8 @@ export interface SceneContext {
   readonly metronome: CompiledSong;
   /** One-shot message for the title screen (e.g. save reset). */
   notice: string | null;
-  songForWorld(world: number): CompiledSong;
+  /** The world's song at its loop tempo. */
+  songForWorld(world: number, loop: number): CompiledSong;
   /** Beat delta (s) captured at the most recent fire press, consumed on read. */
   takePressDelta(): number | null;
   /** Push settings (volumes) to the audio engine. */

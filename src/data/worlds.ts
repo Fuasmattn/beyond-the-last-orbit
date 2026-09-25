@@ -24,3 +24,11 @@ export function worldAt(index: number): WorldDef {
   if (!w) throw new Error(`no world at index ${index}`);
   return w;
 }
+
+/** Each endless loop plays every world's song this much faster. */
+export const LOOP_BPM_STEP = 5;
+
+/** Tempo for a world on a given loop; the single source for the music clock and the sim beat. */
+export function bpmFor(world: number, loop: number): number {
+  return worldAt(world).bpm + loop * LOOP_BPM_STEP;
+}

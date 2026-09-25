@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { worldAt } from '../../src/data/worlds';
-import { beatsCrossed } from '../../src/sim/beat';
+import { bpmFor, worldAt } from '../../src/data/worlds';
+import { beatsCrossed, currentBeat } from '../../src/sim/beat';
 import { createInitialState } from '../../src/sim/state';
 
 describe('beatsCrossed', () => {
@@ -41,5 +41,20 @@ describe('beatsCrossed', () => {
     beatsCrossed(s, null);
     s.time = 60 / worldAt(0).bpm + 0.001;
     expect(beatsCrossed(s, null)).toBe(1);
+  });
+});
+
+describe('bpmFor', () => {
+  it('uses the world tempo on the first loop and speeds up 5 BPM per loop', () => {
+    expect(bpmFor(0, 0)).toBe(worldAt(0).bpm);
+    expect(bpmFor(2, 1)).toBe(worldAt(2).bpm + 5);
+    expect(bpmFor(1, 3)).toBe(worldAt(1).bpm + 15);
+  });
+
+  it('drives the sim-time beat fallback', () => {
+    const s = createInitialState(1);
+    s.loop = 2;
+    s.time = 60;
+    expect(currentBeat(s, null)).toBeCloseTo(bpmFor(0, 2));
   });
 });

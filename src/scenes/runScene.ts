@@ -31,7 +31,7 @@ export class RunScene implements Scene {
     this.hud = new Hud(ctx.textures.glyphs);
     this.root.addChild(this.renderer.root, this.hud);
     ctx.audio?.sfx.start();
-    ctx.audio?.startSong(ctx.songForWorld(this.state.world));
+    ctx.audio?.startSong(ctx.songForWorld(this.state.world, this.state.loop));
   }
 
   onHidden(): void {
@@ -154,7 +154,7 @@ export class RunScene implements Scene {
           break;
         case 'warpStart':
           audio.sfx.warp();
-          audio.startSong(this.ctx.songForWorld(e.world));
+          audio.startSong(this.ctx.songForWorld(e.world, e.loop));
           break;
         case 'gameOver':
           audio.stopSong();

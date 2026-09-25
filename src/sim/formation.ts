@@ -1,5 +1,5 @@
 import { ENEMY, FORMATION, PLAYER_ZONE_TOP } from '../data/balance';
-import { worldAt } from '../data/worlds';
+import { bpmFor, worldAt } from '../data/worlds';
 import { enemyHp, kindForRow } from './difficulty';
 import { allocId } from './ids';
 import { smoothstep } from './math';
@@ -117,7 +117,7 @@ export function updateFormation(state: SimState, dt: number, beats: number): voi
     f.shapeIdx = (f.shapeIdx + 1) % f.shapes.length;
     f.morph = 0;
   }
-  f.morph = Math.min(1, f.morph + (dt * worldAt(state.world).bpm) / 60 / FORMATION.morphBeats);
+  f.morph = Math.min(1, f.morph + (dt * bpmFor(state.world, state.loop)) / 60 / FORMATION.morphBeats);
 
   const half = shapeWidth(f.cols, state.fieldW) / 2;
   const amp = Math.max(0, Math.min(state.diff.swayAmp, state.fieldW / 2 - half - ENEMY.w / 2 - FORMATION.edgeMargin));

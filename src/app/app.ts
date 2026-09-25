@@ -6,7 +6,7 @@ import { EARTH_SONG } from '../data/songs/earth';
 import { MARS_SONG } from '../data/songs/mars';
 import { METRONOME_SONG } from '../data/songs/metronome';
 import { MOON_SONG } from '../data/songs/moon';
-import { worldAt, type WorldId } from '../data/worlds';
+import { bpmFor, worldAt, type WorldId } from '../data/worlds';
 import { FrameMonitor } from '../fx/frameMonitor';
 import { mergeInputs, type Tap } from '../input/inputFrame';
 import { KeyboardInput } from '../input/keyboard';
@@ -90,7 +90,10 @@ export async function startApp(host: HTMLElement): Promise<void> {
     moon: compileSong(MOON_SONG),
     mars: compileSong(MARS_SONG),
   };
-  const songForWorld = (world: number) => songs[worldAt(world).id];
+  const songForWorld = (world: number, loop: number): CompiledSong => ({
+    ...songs[worldAt(world).id],
+    bpm: bpmFor(world, loop),
+  });
 
 
   const textures = loadTextures();

@@ -1,10 +1,11 @@
 import { Container, Graphics } from 'pixi.js';
-import { CALIBRATION, FIELD_W } from '../data/balance';
+import { CALIBRATION } from '../data/balance';
 import { computeLatencyOffset } from '../meta/calibration';
 import { beatPulse } from '../view/beatPulse';
 import { centerText, PixelText } from '../view/pixelText';
 import type { FrameInput, Scene, SceneContext } from './scene';
 import { sceneBackground } from './ui';
+import { viewport } from '../app/viewport';
 
 const RESULT_TIME = 2.5;
 
@@ -29,7 +30,7 @@ export class CalibrationScene implements Scene {
     const esc = new PixelText(g, ctx.isTouch ? '' : 'ESC TO CANCEL', 0x777777);
     centerText(esc, 290);
     this.status = new PixelText(g, ctx.audio ? '' : 'NO AUDIO', 0xff3b5c);
-    this.ring.position.set(FIELD_W / 2, 150);
+    this.ring.position.set(viewport.w / 2, 150);
     this.root.addChild(sceneBackground(), title, how, this.ring, this.dots, this.status, esc);
     ctx.audio?.startSong(ctx.metronome);
   }
@@ -70,7 +71,7 @@ export class CalibrationScene implements Scene {
       .stroke({ color: 0x4af2ff, width: 2, alpha: 0.4 + pulse * 0.6 });
     this.dots.clear();
     for (let i = 0; i < CALIBRATION.taps; i++) {
-      const x = FIELD_W / 2 - (CALIBRATION.taps - 1) * 6 + i * 12;
+      const x = viewport.w / 2 - (CALIBRATION.taps - 1) * 6 + i * 12;
       this.dots.circle(x, 200, 3).fill(i < this.deltas.length ? 0xffe14a : 0x333a55);
     }
     centerText(this.status, 230);

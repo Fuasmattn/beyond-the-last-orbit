@@ -1,9 +1,10 @@
 import { Container, Graphics, type Texture } from 'pixi.js';
-import { FIELD_H, FIELD_W, RHYTHM, STAGE } from '../data/balance';
+import { FIELD_H, RHYTHM, STAGE } from '../data/balance';
 import { worldAt } from '../data/worlds';
 import type { SimEvent, SimState } from '../sim/types';
 import { beatPulse } from './beatPulse';
 import { centerText, PixelText } from './pixelText';
+import { viewport } from '../app/viewport';
 
 const MULT_COLORS: readonly [number, number][] = [
   [4, 0xffe14a],
@@ -89,7 +90,7 @@ export class Hud extends Container {
     this.score.setText(`SCORE ${state.score}`);
     const label = `${state.world + 1}-${state.stage}`;
     this.stage.setText(state.loop > 0 ? `L${state.loop + 1} ${label}` : `STAGE ${label}`);
-    this.stage.x = FIELD_W - 4 - this.stage.pixelWidth;
+    this.stage.x = viewport.w - 4 - this.stage.pixelWidth;
     this.lives.setText(`SHIPS ${Math.max(0, state.player.lives)}`);
     this.updateRhythm(state, beat, audioOk);
     this.updateBossBar(state);

@@ -1,4 +1,4 @@
-import { DIVE, FIELD_W } from '../data/balance';
+import { DIVE } from '../data/balance';
 import { aimVelocity, spawnEnemyBullet } from './bullets';
 import { inFormation, slotPosition } from './formation';
 import { clamp } from './math';
@@ -33,7 +33,7 @@ export function updateDives(state: SimState, dt: number, events: SimEvent[]): vo
         duration: DIVE.duration,
         startX: e.x,
         startY: e.y,
-        targetX: clamp(p.x + p.w / 2 - e.w / 2, 0, FIELD_W - e.w),
+        targetX: clamp(p.x + p.w / 2 - e.w / 2, 0, state.fieldW - e.w),
         dir: nextRandom(state.rng) < 0.5 ? -1 : 1,
         fired: false,
       };

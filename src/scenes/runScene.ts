@@ -1,4 +1,5 @@
 import { Container } from 'pixi.js';
+import { viewport } from '../app/viewport';
 import { Sourness } from '../audio/sourness';
 import { equippedLaser, equippedSkin } from '../data/cosmetics';
 import { createInitialState } from '../sim/state';
@@ -24,7 +25,7 @@ export class RunScene implements Scene {
   private readonly sour = new Sourness();
 
   constructor(private readonly ctx: SceneContext) {
-    this.state = createInitialState(newSeed());
+    this.state = createInitialState(newSeed(), viewport.w);
     this.renderer = new GameRenderer(ctx.textures, { skin: equippedSkin(ctx.save), laser: equippedLaser(ctx.save) });
     this.hud = new Hud(ctx.textures.glyphs);
     this.root.addChild(this.renderer.root, this.hud);
@@ -57,6 +58,7 @@ export class RunScene implements Scene {
       }
       return;
     }
+    s.nextFieldW = viewport.w;
     const events = step(s, input.sim);
     this.hud.notify(events);
     this.renderer.notify(events);

@@ -2,13 +2,18 @@ import type { Layout } from '../app/layout';
 import type { InputFrame } from '../sim/types';
 import type { FireJudge, InputSource, Tap } from './inputFrame';
 
-/** Fire button in logical playfield coords. */
-export const FIRE_BUTTON = { x: 204, y: 284, r: 26 } as const;
+const FIRE_RADIUS = 26;
 const FIRE_SLOP = 10;
+
+/** Fire button in logical playfield coords: bottom right, just above the beat track. */
+export function fireButton(fieldW: number): { x: number; y: number; r: number } {
+  return { x: fieldW - 36, y: 272, r: FIRE_RADIUS };
+}
 const DRAG_SENSITIVITY = 1.25;
 
-export function isInFireButton(lx: number, ly: number): boolean {
-  return Math.hypot(lx - FIRE_BUTTON.x, ly - FIRE_BUTTON.y) <= FIRE_BUTTON.r + FIRE_SLOP;
+export function isInFireButton(lx: number, ly: number, fieldW: number): boolean {
+  const b = fireButton(fieldW);
+  return Math.hypot(lx - b.x, ly - b.y) <= b.r + FIRE_SLOP;
 }
 
 /** Relative drag anywhere moves the ship; fire button taps shoot. Multi-touch. Every press is also a menu tap. */
@@ -33,7 +38,7 @@ export class TouchInput implements InputSource {
       const ly = (e.clientY - l.offsetY) / l.scale;
       this.taps.push({ x: lx, y: ly });
       if (e.pointerType === 'mouse') return;
-      if (isInFireButton(lx, ly)) {
+      if (isInFireButton(lx, ly, l.fieldW)) {
         if (!this.firePending) {
           this.firePending = true;
           this.fireOnBeat = this.judgeFire();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FIELD_H, FIELD_W, PLAYER, PLAYER_ZONE_TOP, SIM_DT } from '../../src/data/balance';
+import { BEAT_TRACK, FIELD_H, PLAYER, PLAYER_ZONE_TOP, SIM_DT } from '../../src/data/balance';
 import { hitPlayer, updatePlayer } from '../../src/sim/player';
 import { createInitialState } from '../../src/sim/state';
 import { NO_INPUT, type InputFrame, type SimEvent } from '../../src/sim/types';
@@ -22,14 +22,14 @@ describe('player movement', () => {
     const { s } = run(300, input({ moveX: -1 }));
     expect(s.player.x).toBe(0);
     const r = run(300, input({ moveX: 1 }));
-    expect(r.s.player.x).toBe(FIELD_W - PLAYER.w);
+    expect(r.s.player.x).toBe(r.s.fieldW - PLAYER.w);
   });
 
   it('limits vertical movement to the player zone', () => {
     const { s } = run(300, input({ moveY: -1 }));
     expect(s.player.y).toBe(PLAYER_ZONE_TOP);
     const r = run(300, input({ moveY: 1 }));
-    expect(r.s.player.y).toBe(FIELD_H - PLAYER.h - PLAYER.bottomMargin);
+    expect(r.s.player.y).toBe(FIELD_H - BEAT_TRACK.h - PLAYER.h - PLAYER.bottomMargin);
   });
 
   it('applies drag displacement directly', () => {

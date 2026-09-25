@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Logical height `FIELD_H = 320`; width `clamp(round(320 × aspect), 180, 600)`.
+- Logical height `FIELD_H = 320`; width `clamp(round(320 × aspect), 140, 600)`.
 - Sim stays pure (no DOM/Pixi); deterministic under seeded RNG.
 - Hitboxes unchanged (`ENEMY.w/h`, `PLAYER.w/h`, boss boxes); cosmetics never touch sim.
 - Beat track height 16 logical px at the bottom; PERFECT ≤ 35 ms, GOOD ≤ 70 ms.
@@ -23,7 +23,7 @@
 ### Task 1: Adaptive layout + `fieldW` in sim (M7a)
 
 **Files:**
-- Modify: `src/data/balance.ts` (remove `FIELD_W`, add `FIELD_W_MIN = 180`, `FIELD_W_MAX = 600`, `FIELD_W_DEFAULT = 240`, `BEAT_TRACK = { h: 16 }`)
+- Modify: `src/data/balance.ts` (remove `FIELD_W`, add `FIELD_W_MIN = 140`, `FIELD_W_MAX = 600`, `FIELD_W_DEFAULT = 240`, `BEAT_TRACK = { h: 16 }`)
 - Modify: `src/sim/types.ts` (`SimState.fieldW`, `SimState.nextFieldW`)
 - Modify: `src/sim/state.ts` (`createInitialState(seed, fieldW = FIELD_W_DEFAULT)`)
 - Modify: `src/sim/stageFlow.ts` (`startStage` adopts `nextFieldW`, clamps player)
@@ -104,7 +104,7 @@ Shape math (`u = cols > 1 ? (2 * col) / (cols - 1) - 1 : 0`, `half = width / 2`,
 
 `shapeWidth(cols, fieldW) = min((cols-1) * ENEMY.spacingX * clamp(fieldW/240, 1, 1.5), fieldW - 2*(FORMATION.edgeMargin + ENEMY.w))`.
 
-- [ ] Step 1: tests — for each kind, widths 180/240/600, rows 5 × cols 8/9/10: all slots distinct with no overlapping boxes (`|Δx| ≥ ENEMY.w || |Δy| ≥ ENEMY.h`), `dy ≥ 0`, `|dx| + ENEMY.w/2 ≤ fieldW/2 - edgeMargin`; `stageShapes` returns ≥ 2 kinds for every (world 0–2, stage 1–4).
+- [ ] Step 1: tests — for each kind, widths 140/240/600, rows 5 × cols 8/9/10: all slots distinct with no overlapping boxes (`|Δx| ≥ ENEMY.w || |Δy| ≥ ENEMY.h`), `dy ≥ 0`, `|dx| + ENEMY.w/2 ≤ fieldW/2 - edgeMargin`; `stageShapes` returns ≥ 2 kinds for every (world 0–2, stage 1–4).
 - [ ] Step 2: run → FAIL; Step 3: implement; Step 4: run → PASS (tune factors if overlaps fail)
 - [ ] Step 5: commit `feat(sim): formation shape library`
 
@@ -127,7 +127,7 @@ Behavior:
 - `step.ts`: pass `beats` to `updateFormation`; also run `updateFormation` during `stageIntro` when no boss (entries fly in during the intro).
 - enemyFire shooters: bottom-most per x-bucket `Math.round((e.x + e.w/2) / ENEMY.spacingX)` plus all gunners.
 
-- [ ] Step 1: tests — spawns rows×cols enemies all with `entry`; after 6 s of steps with beats every 0.43 s all entries done and enemies at slots; sway flips on beat; advance after 16 beats moves `y` by `advanceStep` and bumps `shapeIdx`; fewer survivors → advance after 8 beats; slots stay in bounds at fieldW 180 & 600; entering enemies do not shoot; formationBottom ignores entering enemies.
+- [ ] Step 1: tests — spawns rows×cols enemies all with `entry`; after 6 s of steps with beats every 0.43 s all entries done and enemies at slots; sway flips on beat; advance after 16 beats moves `y` by `advanceStep` and bumps `shapeIdx`; fewer survivors → advance after 8 beats; slots stay in bounds at fieldW 140 & 600; entering enemies do not shoot; formationBottom ignores entering enemies.
 - [ ] Step 2: FAIL; Step 3: implement; Step 4: `npm test` PASS (update step/collision/specials tests that relied on march or `marchMin`)
 - [ ] Step 5: commit `feat(sim): beat-driven shape formations with fly-in entries`
 

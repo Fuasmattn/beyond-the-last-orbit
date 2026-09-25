@@ -1,7 +1,12 @@
-export const FIELD_W = 240;
+/** Logical playfield width limits; the actual width follows the viewport aspect. */
+export const FIELD_W_MIN = 140;
+export const FIELD_W_MAX = 600;
+export const FIELD_W_DEFAULT = 240;
 export const FIELD_H = 320;
 /** Top edge of the player movement zone (bottom 25 % of the field). */
 export const PLAYER_ZONE_TOP = 240;
+/** Rhythm strip along the bottom edge; the player stays above it. */
+export const BEAT_TRACK = { h: 16 } as const;
 export const SIM_DT = 1 / 60;
 export const MAX_STEPS_PER_FRAME = 5;
 

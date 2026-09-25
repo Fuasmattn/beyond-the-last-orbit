@@ -1,4 +1,4 @@
-import { FIELD_H, FIELD_W, HITSTOP, PLAYER, PLAYER_ZONE_TOP } from '../data/balance';
+import { BEAT_TRACK, FIELD_H, HITSTOP, PLAYER, PLAYER_ZONE_TOP } from '../data/balance';
 import { allocId } from './ids';
 import { clamp } from './math';
 import { applyShotRhythm, recordShot, resetRhythm } from './scoring';
@@ -14,8 +14,8 @@ export function updatePlayer(
   const approach = Math.min(1, PLAYER.response * dt);
   p.vx += (clamp(input.moveX, -1, 1) * PLAYER.maxSpeed - p.vx) * approach;
   p.vy += (clamp(input.moveY, -1, 1) * PLAYER.maxSpeed - p.vy) * approach;
-  p.x = clamp(p.x + p.vx * dt + input.dragX, 0, FIELD_W - p.w);
-  p.y = clamp(p.y + p.vy * dt + input.dragY, PLAYER_ZONE_TOP, FIELD_H - p.h - PLAYER.bottomMargin);
+  p.x = clamp(p.x + p.vx * dt + input.dragX, 0, state.fieldW - p.w);
+  p.y = clamp(p.y + p.vy * dt + input.dragY, PLAYER_ZONE_TOP, FIELD_H - BEAT_TRACK.h - p.h - PLAYER.bottomMargin);
   p.cooldown = Math.max(0, p.cooldown - dt);
   p.invuln = Math.max(0, p.invuln - dt);
 

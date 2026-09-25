@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ENEMY, FIELD_W, FORMATION } from '../../src/data/balance';
+import { ENEMY, FORMATION } from '../../src/data/balance';
 import {
   formationBottom,
   formationSpeed,
@@ -15,7 +15,7 @@ describe('formation', () => {
     expect(s.enemies).toHaveLength(ENEMY.rows * cols);
     expect(s.formation.total).toBe(ENEMY.rows * cols);
     const left = s.formation.x;
-    const right = FIELD_W - (left + formationWidth(cols));
+    const right = s.fieldW - (left + formationWidth(cols));
     expect(Math.abs(left - right)).toBeLessThanOrEqual(1);
   });
 
@@ -39,13 +39,13 @@ describe('formation', () => {
 
   it('reverses and drops when hitting the right edge', () => {
     const s = createInitialState(1);
-    s.formation.x = FIELD_W - formationWidth(s.diff.cols) - FORMATION.edgeMargin - 0.1;
+    s.formation.x = s.fieldW - formationWidth(s.diff.cols) - FORMATION.edgeMargin - 0.1;
     const y0 = s.formation.y;
     updateFormation(s, 0.5);
     expect(s.formation.dir).toBe(-1);
     expect(s.formation.y).toBe(y0 + FORMATION.dropStep);
     const maxRight = Math.max(...s.enemies.map((e) => e.x + e.w));
-    expect(maxRight).toBeLessThanOrEqual(FIELD_W - FORMATION.edgeMargin + 1e-9);
+    expect(maxRight).toBeLessThanOrEqual(s.fieldW - FORMATION.edgeMargin + 1e-9);
   });
 
   it('uses only surviving columns for edge detection', () => {

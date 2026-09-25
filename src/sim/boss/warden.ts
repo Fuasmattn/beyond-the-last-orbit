@@ -1,4 +1,4 @@
-import { FIELD_H, FIELD_W, TURRET_POINTS, WARDEN } from '../../data/balance';
+import { FIELD_H, TURRET_POINTS, WARDEN } from '../../data/balance';
 import { overlaps } from '../geometry';
 import { allocId } from '../ids';
 import { clamp } from '../math';
@@ -12,7 +12,7 @@ import { aimedShot, applyPhase, coreBox, destroyParts, killBoss, tickBoss } from
 /** ORBITAL WARDEN — satellite station with two turrets, a sweeping laser and spiral rings. */
 export function spawnWarden(state: SimState): void {
   const hp = Math.round(WARDEN.hp * state.diff.bossHpScale);
-  const x = (FIELD_W - WARDEN.w) / 2;
+  const x = (state.fieldW - WARDEN.w) / 2;
   const y = -WARDEN.h;
   state.boss = {
     kind: 'warden',
@@ -90,7 +90,7 @@ function onBeat(state: SimState, b: Boss, events: SimEvent[]): void {
 
 function startLaser(state: SimState, b: Boss, events: SimEvent[]): void {
   const p = state.player;
-  const x = clamp(p.x + p.w / 2, 8, FIELD_W - 8);
+  const x = clamp(p.x + p.w / 2, 8, state.fieldW - 8);
   b.laser = { state: 'warn', t: 0, x, dir: nextRandom(state.rng) < 0.5 ? -1 : 1 };
   events.push({ type: 'laserWarn', x });
 }
@@ -107,7 +107,7 @@ function updateLaser(state: SimState, b: Boss, dt: number, events: SimEvent[]): 
     }
     return;
   }
-  l.x = clamp(l.x + ((l.dir * WARDEN.laserSweep) / WARDEN.laserFire) * dt, 4, FIELD_W - 4);
+  l.x = clamp(l.x + ((l.dir * WARDEN.laserSweep) / WARDEN.laserFire) * dt, 4, state.fieldW - 4);
   if (state.player.invuln <= 0 && overlaps(laserBox(b, l), state.player)) hitPlayer(state, events);
   if (l.t >= WARDEN.laserFire) b.laser = null;
 }

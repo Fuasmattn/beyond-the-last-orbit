@@ -1,4 +1,4 @@
-import { BOMB, ENEMY, FIELD_H, FIELD_W } from '../data/balance';
+import { BOMB, ENEMY, FIELD_H } from '../data/balance';
 import { allocId } from './ids';
 import type { Bullet, SimState } from './types';
 
@@ -8,7 +8,7 @@ export function moveBullets(state: SimState, dt: number): void {
     b.y += b.vy * dt;
   }
   state.bullets = state.bullets.filter(
-    (b) => b.y + b.h > 0 && b.y < FIELD_H && b.x + b.w > 0 && b.x < FIELD_W,
+    (b) => b.y + b.h > 0 && b.y < FIELD_H && b.x + b.w > 0 && b.x < state.fieldW,
   );
 }
 

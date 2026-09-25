@@ -1,4 +1,4 @@
-import { DREAD, FIELD_W, TURRET_POINTS } from '../../data/balance';
+import { DREAD, TURRET_POINTS } from '../../data/balance';
 import { spawnBomb, spawnEnemyBullet } from '../bullets';
 import { overlaps } from '../geometry';
 import { allocId } from '../ids';
@@ -10,7 +10,7 @@ import { aimedShot, applyPhase, coreBox, killBoss, tickBoss } from './common';
 /** ARES DREADNOUGHT — battleship: bomb spreads, armored core, then beat-timed bullet curtains. */
 export function spawnDreadnought(state: SimState): void {
   const hp = Math.round(DREAD.hp * state.diff.bossHpScale);
-  const x = (FIELD_W - DREAD.w) / 2;
+  const x = (state.fieldW - DREAD.w) / 2;
   const y = -DREAD.h;
   state.boss = {
     kind: 'dreadnought',
@@ -51,8 +51,8 @@ export function dreadCore(b: Boss): Box {
 }
 
 /** Horizontal center of the curtain gap for a given beat count. */
-export function curtainGapX(beatCount: number): number {
-  return FIELD_W / 2 + Math.sin(beatCount * 0.4) * 80;
+export function curtainGapX(beatCount: number, fieldW: number): number {
+  return fieldW / 2 + Math.sin(beatCount * 0.4) * Math.min(80, fieldW / 2 - 30);
 }
 
 export function updateDreadnought(state: SimState, dt: number, beats: number, events: SimEvent[]): void {
@@ -66,9 +66,9 @@ function dropBombs(state: SimState, b: Boss): void {
 }
 
 function curtain(state: SimState, b: Boss, wide: boolean): void {
-  const gapX = curtainGapX(b.beatCount);
+  const gapX = curtainGapX(b.beatCount, state.fieldW);
   const half = wide ? DREAD.gapWide : DREAD.gapNarrow;
-  for (let x = 6; x < FIELD_W; x += DREAD.curtainStep) {
+  for (let x = 6; x < state.fieldW; x += DREAD.curtainStep) {
     if (Math.abs(x - gapX) < half) continue;
     spawnEnemyBullet(state, x, b.y + b.h, 0, DREAD.curtainSpeed);
   }

@@ -1,6 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
-import { FIELD_W } from '../data/balance';
 import type { WorldId } from '../data/worlds';
+import { viewport } from '../app/viewport';
 
 export interface Backdrop {
   readonly root: Container;
@@ -38,8 +38,8 @@ function earth(): Backdrop {
   const satB = new Graphics().rect(0, 0, 3, 1).fill(0x7fa8ff);
   satB.position.set(180, 215);
   root.addChild(planet, sunrise, satA, satB);
-  const moveA = drifter(satA, 6, FIELD_W);
-  const moveB = drifter(satB, -4, FIELD_W);
+  const moveA = drifter(satA, 6, viewport.w);
+  const moveB = drifter(satB, -4, viewport.w);
   return {
     root,
     update(dt) {
@@ -53,7 +53,7 @@ function earth(): Backdrop {
 function moon(): Backdrop {
   const root = new Container();
   const earthDot = new Graphics().circle(206, 44, 9).fill(0x1d4fa3).ellipse(203, 42, 4, 2).fill(0x2f8f4e);
-  const ground = new Graphics().rect(0, 292, FIELD_W, 28).fill(0x2e3138).rect(0, 292, FIELD_W, 1).fill(0x6b7080);
+  const ground = new Graphics().rect(0, 292, viewport.w, 28).fill(0x2e3138).rect(0, 292, viewport.w, 1).fill(0x6b7080);
   const craters = new Container();
   for (let copy = 0; copy < 2; copy++) {
     const g = new Graphics();
@@ -66,7 +66,7 @@ function moon(): Backdrop {
     ] as const) {
       g.ellipse(x, y, r, r * 0.45).fill(0x1d1f24);
     }
-    g.x = copy * FIELD_W;
+    g.x = copy * viewport.w;
     craters.addChild(g);
   }
   root.addChild(earthDot, ground, craters);
@@ -75,7 +75,7 @@ function moon(): Backdrop {
     root,
     update(dt) {
       craters.x -= 10 * dt;
-      if (craters.x <= -FIELD_W) craters.x += FIELD_W;
+      if (craters.x <= -viewport.w) craters.x += viewport.w;
     },
   };
 }
@@ -95,7 +95,7 @@ function mars(): Backdrop {
   const phobos = new Graphics().ellipse(0, 0, 5, 3).fill(0x8c8077).ellipse(-1, -1, 1, 1).fill(0x5c524b);
   phobos.position.set(-20, 70);
   root.addChild(planet, storms, phobos);
-  const movePhobos = drifter(phobos, 5, FIELD_W);
+  const movePhobos = drifter(phobos, 5, viewport.w);
   let t = 0;
   return {
     root,

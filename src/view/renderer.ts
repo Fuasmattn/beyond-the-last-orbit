@@ -1,5 +1,5 @@
 import { Container, Sprite, Texture } from 'pixi.js';
-import { FIELD_H, FIELD_W, STAGE, WARP } from '../data/balance';
+import { FIELD_H, STAGE, WARP } from '../data/balance';
 import type { LaserDef, SkinDef } from '../data/cosmetics';
 import { worldAt, type WorldId } from '../data/worlds';
 import { laserBox } from '../sim/boss/warden';
@@ -12,6 +12,7 @@ import { Effects } from './effects';
 import { createLaserView, type LaserView } from './laserView';
 import { Starfield } from './starfield';
 import type { GameTextures } from './textures';
+import { viewport } from '../app/viewport';
 
 const ENEMY_BULLET_COLOR = 0xffa040;
 const BOMB_COLOR = 0xff5a2a;
@@ -109,7 +110,6 @@ export class GameRenderer {
     private readonly tex: GameTextures,
     private readonly cosmetics: Cosmetics,
   ) {
-    this.backdrop.width = FIELD_W;
     this.backdrop.height = FIELD_H;
     const shipTex = tex.skins.get(cosmetics.skin.id) ?? Texture.WHITE;
     this.player = new Sprite(shipTex);
@@ -147,6 +147,7 @@ export class GameRenderer {
 
   render(state: SimState, dt: number, beat: number | null): void {
     const pulse = beatPulse(beat);
+    this.backdrop.width = viewport.w;
     const warp = state.phase === 'warp';
     const warpProgress = warp ? 1 - state.phaseTimer / WARP.time : 0;
     this.backdrop.tint = lerpColor(BACKDROP_BASE, BACKDROP_PULSE, pulse * 0.6);

@@ -1,5 +1,6 @@
 import { Graphics } from 'pixi.js';
-import { FIRE_BUTTON } from '../input/touch';
+import { viewport } from '../app/viewport';
+import { fireButton } from '../input/touch';
 
 const PRESS_TIME = 0.12;
 
@@ -13,7 +14,7 @@ export class FireButtonView extends Graphics {
 
   update(dt: number, pulse: number): void {
     this.pressed = Math.max(0, this.pressed - dt);
-    const { x, y, r } = FIRE_BUTTON;
+    const { x, y, r } = fireButton(viewport.w);
     this.clear()
       .circle(x, y, r)
       .fill({ color: 0xff3b5c, alpha: this.pressed > 0 ? 0.55 : 0.2 })

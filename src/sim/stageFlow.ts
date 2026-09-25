@@ -3,6 +3,7 @@ import { WORLDS } from '../data/worlds';
 import { spawnBoss } from './boss';
 import { difficultyFor } from './difficulty';
 import { spawnFormation } from './formation';
+import { clamp } from './math';
 import type { SimEvent, SimState, StageResult, StageStats } from './types';
 
 export function emptyStageStats(): StageStats {
@@ -15,6 +16,8 @@ export function isBossStage(stage: number): boolean {
 
 export function startStage(state: SimState, events: SimEvent[]): void {
   const boss = isBossStage(state.stage);
+  state.fieldW = state.nextFieldW;
+  state.player.x = clamp(state.player.x, 0, state.fieldW - state.player.w);
   state.diff = difficultyFor(state.world, state.stage, state.loop);
   state.bullets = [];
   state.enemies = [];

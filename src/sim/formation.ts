@@ -1,4 +1,4 @@
-import { ENEMY, FIELD_W, FORMATION } from '../data/balance';
+import { ENEMY, FORMATION } from '../data/balance';
 import { worldAt } from '../data/worlds';
 import { enemyHp, kindForRow } from './difficulty';
 import { allocId } from './ids';
@@ -16,7 +16,7 @@ export function formationWidth(cols: number): number {
 export function spawnFormation(state: SimState): void {
   const { cols, d } = state.diff;
   const special = worldAt(state.world).special;
-  const x = Math.round((FIELD_W - formationWidth(cols)) / 2);
+  const x = Math.round((state.fieldW - formationWidth(cols)) / 2);
   const y = ENEMY.startY;
   state.formation = { x, y, dir: 1, total: ENEMY.rows * cols };
   state.enemies = [];
@@ -76,7 +76,7 @@ export function updateFormation(state: SimState, dt: number): void {
 
   const left = f.x + minCol * ENEMY.spacingX;
   const right = f.x + maxCol * ENEMY.spacingX + ENEMY.w;
-  const rightLimit = FIELD_W - FORMATION.edgeMargin;
+  const rightLimit = state.fieldW - FORMATION.edgeMargin;
 
   if (f.dir === 1 && right > rightLimit) {
     f.x -= right - rightLimit;

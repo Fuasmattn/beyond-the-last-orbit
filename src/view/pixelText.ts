@@ -1,6 +1,6 @@
 import { Container, Sprite, type Texture } from 'pixi.js';
-import { FIELD_W } from '../data/balance';
 import { GLYPH_ADVANCE, textWidth } from '../data/font';
+import { viewport } from '../app/viewport';
 
 export class PixelText extends Container {
   private current = '';
@@ -44,5 +44,5 @@ export class PixelText extends Container {
 
 /** Horizontally centers `t` on the playfield at row `y`. */
 export function centerText(t: PixelText, y: number): void {
-  t.position.set(Math.round((FIELD_W - t.pixelWidth) / 2), y);
+  t.position.set(Math.round((viewport.w - t.pixelWidth) / 2), y);
 }

@@ -1,7 +1,7 @@
 import { Application, Container, Graphics, TextureSource } from 'pixi.js';
 import { AudioEngine } from '../audio/engine';
 import { compileSong, type CompiledSong } from '../audio/song';
-import { FIELD_H, FIELD_W, FX, MAX_STEPS_PER_FRAME, SIM_DT } from '../data/balance';
+import { FIELD_H, FX, MAX_STEPS_PER_FRAME, SIM_DT } from '../data/balance';
 import { EARTH_SONG } from '../data/songs/earth';
 import { MARS_SONG } from '../data/songs/mars';
 import { METRONOME_SONG } from '../data/songs/metronome';
@@ -20,12 +20,12 @@ import { SettingsScene } from '../scenes/settingsScene';
 import { ShopScene } from '../scenes/shopScene';
 import { TitleScene } from '../scenes/titleScene';
 import { beatPulse } from '../view/beatPulse';
-import { Bezel } from '../view/bezel';
 import { FireButtonView } from '../view/fireButton';
 import { PostFx } from '../view/postfx';
 import { loadTextures } from '../view/textures';
 import { FixedLoop } from './fixedLoop';
 import { computeLayout, type Layout } from './layout';
+import { viewport } from './viewport';
 
 function browserStore(): KeyValueStore {
   try {
@@ -74,26 +74,30 @@ export async function startApp(host: HTMLElement): Promise<void> {
   const textures = loadTextures();
   const game = new Container();
   const sceneLayer = new Container();
-  // Clip everything (planets, streaks, off-field bullets) to the 3:4 playfield.
-  const fieldMask = new Graphics().rect(0, 0, FIELD_W, FIELD_H).fill(0xffffff);
+  // Clip everything (planets, streaks, off-field bullets) to the playfield.
+  const fieldMask = new Graphics();
   game.addChild(sceneLayer, fieldMask);
   sceneLayer.mask = fieldMask;
 
   const isTouch = window.matchMedia('(pointer: coarse)').matches;
   const fireButton = isTouch ? new FireButtonView() : null;
   if (fireButton) game.addChild(fireButton);
-  const bezel = new Bezel();
-  app.stage.addChild(bezel, game);
+  app.stage.addChild(game);
   const postFx = new PostFx(game, window.devicePixelRatio || 1);
   app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-  let layout: Layout = computeLayout(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1);
+  let layout: Layout = computeLayout(window.innerWidth, window.innerHeight);
+  // Menus lay themselves out once; rebuild them when the field width changes. Runs adopt it at the next stage.
+  let rebuildMenu: (() => void) | null = null;
   const applyLayout = () => {
-    layout = computeLayout(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1);
+    layout = computeLayout(window.innerWidth, window.innerHeight);
+    const widthChanged = layout.fieldW !== viewport.w;
+    viewport.w = layout.fieldW;
     game.scale.set(layout.scale);
     game.position.set(layout.offsetX, layout.offsetY);
-    bezel.draw(layout, window.innerWidth, window.innerHeight);
+    fieldMask.clear().rect(0, 0, layout.fieldW, FIELD_H).fill(0xffffff);
     postFx.setScale(layout.scale);
+    if (widthChanged) rebuildMenu?.();
   };
   applyLayout();
   window.addEventListener('resize', applyLayout);
@@ -138,6 +142,11 @@ export async function startApp(host: HTMLElement): Promise<void> {
     },
   };
   ctx.applySettings();
+  rebuildMenu = () => {
+    if (scene instanceof TitleScene) ctx.goto(ctx.scenes.title());
+    else if (scene instanceof ShopScene) ctx.goto(ctx.scenes.shop());
+    else if (scene instanceof SettingsScene) ctx.goto(ctx.scenes.settings());
+  };
   scene = ctx.scenes.title();
   sceneLayer.addChild(scene.root);
 
@@ -181,7 +190,6 @@ export async function startApp(host: HTMLElement): Promise<void> {
     });
     scene.render(elapsed);
     const pulse = beatPulse(audio?.currentBeat() ?? null);
-    bezel.pulse(pulse);
     fireButton?.update(elapsed, pulse);
     postFx.update(elapsed);
   });

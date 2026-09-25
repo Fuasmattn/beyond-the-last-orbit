@@ -11,7 +11,7 @@ Player feedback: letterboxed 3:4 box wastes the screen; the game reads as a Spac
 
 | Topic | Decision |
 |---|---|
-| Field | Adaptive: logical height fixed 320, width = `clamp(round(320 × viewAspect), 180, 600)` |
+| Field | Adaptive: logical height fixed 320, width = `clamp(round(320 × viewAspect), 140, 600)` |
 | Width changes | Sim width locked at stage start; mid-stage resize rescales the view (thin bars) until next stage |
 | Formation | Replace march-and-drop with beat-quantized shape formations + fly-in entries |
 | Art | Neon vector line-art (Pixi `Graphics`) + bloom; pixel font kept for HUD/menus |
@@ -26,7 +26,7 @@ Player feedback: letterboxed 3:4 box wastes the screen; the game reads as a Spac
 - `FIELD_H` stays 320. `PLAYER_ZONE_TOP` stays 240. Beat track occupies bottom `BEAT_TRACK.h = 16` px; player max y bottom = `FIELD_H - BEAT_TRACK.h - PLAYER.bottomMargin`.
 - Boss x-positions/sway center on `fieldW / 2`; sway amplitude scales `min(1.6, fieldW / 240)`.
 - Curtain (Dreadnought P3) spans full `fieldW`.
-- Layout: `computeLayout(viewW, viewH, dpr)` → `{ fieldW, scale, offsetX, offsetY }` with `scale = viewH / FIELD_H` (height-fit, non-integer allowed); if clamped width is narrower than viewport, center horizontally; if the viewport is narrower than `180 × scale`, scale by width instead.
+- Layout: `computeLayout(viewW, viewH, dpr)` → `{ fieldW, scale, offsetX, offsetY }` with `scale = viewH / FIELD_H` (height-fit, non-integer allowed); if clamped width is narrower than viewport, center horizontally; if the viewport is narrower than `140 × scale`, scale by width instead.
 - Menus/scenes read `ctx.fieldW()` for centering; HUD right-aligned items anchor to `fieldW`.
 
 ## 2. Rhythm formations
@@ -64,7 +64,7 @@ Replaces `updateFormation` march logic. Divers, specials, splitters, phasers, bo
 
 ## Testing
 
-- Unit: `computeLayout` widths/clamps; shapes return `count` distinct in-bounds slots for widths 180/240/600; formation morph/advance cadence vs beats; entry completes; width adoption at stage start; bosses in-bounds for widths 180/600; existing tests updated for `fieldW`.
+- Unit: `computeLayout` widths/clamps; shapes return `count` distinct in-bounds slots for widths 140/240/600; formation morph/advance cadence vs beats; entry completes; width adoption at stage start; bosses in-bounds for widths 180/600; existing tests updated for `fieldW`.
 - Manual (preview): portrait 375×812, desktop 1280×800; play stage 1, boss.
 
 ## Milestones

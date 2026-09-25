@@ -1,6 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
 import { INITIALS_LENGTH, InitialsPicker } from '../app/initialsPicker';
-import { FIELD_W } from '../data/balance';
 import type { Tap } from '../input/inputFrame';
 import { computeCredits } from '../meta/credits';
 import { insertHighscore, qualifiesForHighscore } from '../persist/save';
@@ -10,6 +9,7 @@ import { formatHighscoreLine } from '../view/highscoreTable';
 import { centerText, PixelText } from '../view/pixelText';
 import type { FrameInput, RunSummary, Scene, SceneContext } from './scene';
 import { sceneBackground } from './ui';
+import { viewport } from '../app/viewport';
 
 const LETTER_SCALE = 3;
 const LETTER_Y = 130;
@@ -24,7 +24,7 @@ const COUNT_UP_TIME = 1.5;
 const COIN_TICK = 0.07;
 
 function letterLeft(i: number): number {
-  return Math.round(FIELD_W / 2 + (i - 1) * LETTER_SPACING - 4.5);
+  return Math.round(viewport.w / 2 + (i - 1) * LETTER_SPACING - 4.5);
 }
 
 export class GameOverScene implements Scene {

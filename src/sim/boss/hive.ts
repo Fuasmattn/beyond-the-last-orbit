@@ -1,4 +1,4 @@
-import { ENEMY, FIELD_W, HIVE } from '../../data/balance';
+import { ENEMY, HIVE } from '../../data/balance';
 import { aimVelocity } from '../bullets';
 import { overlaps } from '../geometry';
 import { fireAimedBurst, fireRing } from '../patterns';
@@ -12,7 +12,7 @@ export function spawnHive(state: SimState): void {
   const hp = Math.round(HIVE.hp * state.diff.bossHpScale);
   state.boss = {
     kind: 'hive',
-    x: (FIELD_W - HIVE.w) / 2,
+    x: (state.fieldW - HIVE.w) / 2,
     y: -HIVE.h,
     w: HIVE.w,
     h: HIVE.h,

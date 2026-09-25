@@ -130,6 +130,10 @@ export type Phase = 'stageIntro' | 'playing' | 'bossDying' | 'stageClear' | 'war
 
 export interface SimState {
   time: number;
+  /** Logical playfield width, fixed for the current stage. */
+  fieldW: number;
+  /** Width requested by the view; adopted at the next stage start. */
+  nextFieldW: number;
   rng: { seed: number };
   nextId: number;
   phase: Phase;

@@ -1,4 +1,4 @@
-import { BOMB, FIELD_H, FIELD_W, MINI } from '../data/balance';
+import { BOMB, FIELD_H, MINI } from '../data/balance';
 import { inFormation } from './formation';
 import { allocId } from './ids';
 import { fireRing } from './patterns';
@@ -53,8 +53,8 @@ export function updateSpecials(state: SimState, dt: number, events: SimEvent[]):
     if (e.x < 0) {
       e.x = 0;
       f.vx = Math.abs(f.vx);
-    } else if (e.x + e.w > FIELD_W) {
-      e.x = FIELD_W - e.w;
+    } else if (e.x + e.w > state.fieldW) {
+      e.x = state.fieldW - e.w;
       f.vx = -Math.abs(f.vx);
     }
   }

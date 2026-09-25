@@ -1,5 +1,4 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
-import { FIELD_W } from '../data/balance';
 import {
   cosmeticsOf,
   equippedLaser,
@@ -17,6 +16,7 @@ import { MenuList } from '../view/menuList';
 import { centerText, PixelText } from '../view/pixelText';
 import type { FrameInput, Scene, SceneContext } from './scene';
 import { inRect, sceneBackground, type Rect } from './ui';
+import { viewport } from '../app/viewport';
 
 const TABS: readonly CosmeticKind[] = ['skin', 'laser'];
 const TAB_LABEL: Record<CosmeticKind, string> = { skin: 'SHIP SKINS', laser: 'LASERS' };
@@ -137,7 +137,7 @@ export class ShopScene implements Scene {
     );
     this.list.refresh(this.t);
     this.credits.setText(`CREDITS ${this.ctx.save.credits}`);
-    this.credits.position.set(FIELD_W - 4 - this.credits.pixelWidth, 6);
+    this.credits.position.set(viewport.w - 4 - this.credits.pixelWidth, 6);
     for (const k of TABS) this.tabs[k].tint = k === this.tab ? 0xffe14a : 0x666666;
     const r = TAB_RECT[this.tab];
     this.tabUnderline.clear().rect(r.x, r.y + r.h, r.w, 1).fill(0xffe14a);

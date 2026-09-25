@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   BOSS_DYING_TIME,
   ENEMY,
-  FIELD_W,
   PLAYER,
   PLAYER_ZONE_TOP,
   SIM_DT,
@@ -108,7 +107,7 @@ describe('step', () => {
     b.parts.forEach((t) => (t.alive = false));
     b.hp = 1;
     s.bullets.push({
-      id: 5000, x: 0, y: WARDEN.y, w: FIELD_W, h: WARDEN.h, vx: 0, vy: 0, owner: 'player', onBeat: false, mult: 1,
+      id: 5000, x: 0, y: WARDEN.y, w: s.fieldW, h: WARDEN.h, vx: 0, vy: 0, owner: 'player', onBeat: false, mult: 1,
     });
     const events: SimEvent[] = [];
     for (let t = 0; t < BOSS_DYING_TIME + STAGE.clearTime + 0.5; t += SIM_DT) events.push(...step(s, NO_INPUT));

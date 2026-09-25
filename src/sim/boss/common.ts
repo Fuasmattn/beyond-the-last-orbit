@@ -1,4 +1,4 @@
-import { BOSS_DYING_TIME, BOSS_POINTS, FIELD_W, HITSTOP } from '../../data/balance';
+import { BOSS_DYING_TIME, BOSS_POINTS, HITSTOP } from '../../data/balance';
 import { aimVelocity, spawnEnemyBullet } from '../bullets';
 import type { Boss, Box, SimEvent, SimState } from '../types';
 
@@ -29,7 +29,9 @@ export function tickBoss(state: SimState, b: Boss, dt: number, m: Motion): boole
       b.entering = false;
     }
   }
-  b.x = FIELD_W / 2 + Math.sin(b.t * m.swaySpeed) * m.swayAmp - b.w / 2;
+  // Wider fields get a wider sway, but the boss always stays inside.
+  const amp = Math.min(m.swayAmp * Math.min(1.6, state.fieldW / 240), Math.max(0, (state.fieldW - b.w) / 2 - 4));
+  b.x = state.fieldW / 2 + Math.sin(b.t * m.swaySpeed) * amp - b.w / 2;
   for (const p of b.parts) {
     p.x = b.x + p.offsetX;
     p.y = b.y + p.offsetY;

@@ -1,11 +1,11 @@
 import { Container } from 'pixi.js';
-import { FIELD_W } from '../data/balance';
 import { formatHighscoreLine } from '../view/highscoreTable';
 import { MenuList } from '../view/menuList';
 import { centerText, PixelText } from '../view/pixelText';
 import { Starfield } from '../view/starfield';
 import type { FrameInput, Scene, SceneContext } from './scene';
 import { sceneBackground } from './ui';
+import { viewport } from '../app/viewport';
 
 const PAGE_TIME = 5;
 const NOTICE_TIME = 3;
@@ -84,7 +84,7 @@ export class TitleScene implements Scene {
     for (const t of this.table) t.visible = showTable;
     this.tagline.visible = !showTable;
     this.credits.setText(`CREDITS ${this.ctx.save.credits}`);
-    this.credits.position.set(FIELD_W - 4 - this.credits.pixelWidth, 4);
+    this.credits.position.set(viewport.w - 4 - this.credits.pixelWidth, 4);
     this.menu.refresh(this.t);
     this.notice.visible = this.ctx.notice !== null && this.t < NOTICE_TIME;
     if (this.t >= NOTICE_TIME) this.ctx.notice = null;

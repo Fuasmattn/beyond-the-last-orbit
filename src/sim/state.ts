@@ -1,12 +1,14 @@
-import { FIELD_H, FIELD_W, PLAYER } from '../data/balance';
+import { BEAT_TRACK, FIELD_H, FIELD_W_DEFAULT, PLAYER } from '../data/balance';
 import { difficultyFor } from './difficulty';
 import { emptyStageStats, startStage } from './stageFlow';
 import type { SimState } from './types';
 
 /** New run at world 1, stage 1, in the stage intro. */
-export function createInitialState(seed: number): SimState {
+export function createInitialState(seed: number, fieldW: number = FIELD_W_DEFAULT): SimState {
   const state: SimState = {
     time: 0,
+    fieldW,
+    nextFieldW: fieldW,
     rng: { seed },
     nextId: 1,
     phase: 'stageIntro',
@@ -17,8 +19,8 @@ export function createInitialState(seed: number): SimState {
     score: 0,
     nextExtraLife: PLAYER.extraLifeEvery,
     player: {
-      x: (FIELD_W - PLAYER.w) / 2,
-      y: FIELD_H - PLAYER.h - PLAYER.bottomMargin,
+      x: (fieldW - PLAYER.w) / 2,
+      y: FIELD_H - BEAT_TRACK.h - PLAYER.h - PLAYER.bottomMargin,
       w: PLAYER.w,
       h: PLAYER.h,
       vx: 0,

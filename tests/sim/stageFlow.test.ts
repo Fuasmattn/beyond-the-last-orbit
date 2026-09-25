@@ -6,6 +6,7 @@ import {
   checkExtraLife,
   computeStageResult,
   finishStage,
+  startStage,
 } from '../../src/sim/stageFlow';
 import { createInitialState } from '../../src/sim/state';
 import { step } from '../../src/sim/step';
@@ -126,5 +127,16 @@ describe('checkExtraLife', () => {
     checkExtraLife(s, events);
     expect(s.player.lives).toBe(PLAYER.maxLives);
     expect(events).toHaveLength(0);
+  });
+});
+
+describe('field width', () => {
+  it('adopts the pending field width at stage start and keeps the player inside', () => {
+    const s = createInitialState(1, 400);
+    s.player.x = 390;
+    s.nextFieldW = 200;
+    startStage(s, []);
+    expect(s.fieldW).toBe(200);
+    expect(s.player.x).toBeLessThanOrEqual(200 - s.player.w);
   });
 });

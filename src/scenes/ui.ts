@@ -1,6 +1,7 @@
 import { Sprite, Texture } from 'pixi.js';
-import { FIELD_H, FIELD_W } from '../data/balance';
+import { FIELD_H } from '../data/balance';
 import type { Tap } from '../input/inputFrame';
+import { viewport } from '../app/viewport';
 
 export interface Rect {
   x: number;
@@ -15,7 +16,7 @@ export function inRect(tap: Tap, r: Rect): boolean {
 
 export function sceneBackground(): Sprite {
   const bg = new Sprite(Texture.WHITE);
-  bg.width = FIELD_W;
+  bg.width = viewport.w;
   bg.height = FIELD_H;
   bg.tint = 0x05060d;
   return bg;

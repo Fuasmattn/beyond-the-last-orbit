@@ -4,7 +4,14 @@ Neon arcade rhythm shooter with a procedurally synthesized 70s/80s heavy-metal s
 
 The playfield fills the whole window: height is fixed, width follows the screen (portrait phone to ultra-wide).
 
-Three worlds (Near Earth Orbit, Moon, Mars) × 5 stages, a boss on every fifth stage, then an endless harder loop. Credits earned per run buy cosmetic ship skins and laser styles.
+Three worlds (Near Earth Orbit, Moon, Mars) × 5 stages, a boss on every fifth stage, then an endless harder loop.
+
+Two run types, each with its own highscore table:
+
+- **Rhythm run** — the beat game above: linear stages, multiplier from on-beat shots. Best with sound.
+- **Rogue run** — plays fine muted. Nothing is judged on the beat; hits and grazes (enemy bullets skimming the ship) build the multiplier, misses drop it. After each stage pick the next node on a branching map (BATTLE, ELITE, CACHE, REPAIR); elites and bosses grant a pick-1-of-3 upgrade draft.
+
+Credits earned per run buy cosmetic ship skins and laser styles (SHOP) and permanent rogue-run upgrades (HANGAR).
 
 ## Run
 
@@ -24,7 +31,7 @@ npm run build      # typecheck + production build in dist/
 | Pause | P / Esc | Switch away from the tab |
 | Menus | Arrows + Space/Enter, Esc back | Tap |
 
-Calibrate your audio/input latency under **Settings → Calibrate timing** (important with Bluetooth headphones).
+Calibrate your audio/input latency under **Settings → Calibrate timing** (important with Bluetooth headphones). If the beat markers look early or late against the music, adjust **Settings → Visual offset** (moves visuals only).
 
 ## Layout
 
@@ -34,3 +41,4 @@ Calibrate your audio/input latency under **Settings → Calibrate timing** (impo
 - `src/view`, `src/fx` — PixiJS rendering, particles, post-FX
 - `src/scenes` — title, run, game over, shop, settings, calibration
 - `docs/superpowers` — design spec and per-milestone implementation plans
+- `docs/research` — background research (roguelite structure, bullet-hell/rhythm hybrids, rhythm timing)

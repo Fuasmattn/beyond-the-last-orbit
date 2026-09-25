@@ -1,6 +1,6 @@
 # M8 — Run modes, roguelite runs, permanent upgrades
 
-Date: 2026-09-25 · Status: approved for implementation (hands-off iteration; owner reviews afterwards)
+Date: 2026-09-25 · Status: implemented (hands-off iteration; owner reviews afterwards)
 
 Research backing this spec: `docs/research/2026-09-25-*.md` (roguelite meta and branching maps, bullet-hell and rhythm hybrids, rhythm timing and latency).
 
@@ -97,11 +97,19 @@ Costs grow ~3× per level so early levels are cheap onboarding and late levels a
 
 ## Rhythm timing fix (shipped with M8)
 
-Hit window ±70 ms → ±100 ms (PERFECT ±45 ms); presses judged at the input event's timestamp; `currentTime` smoothed against `performance.now()`; beat visuals drawn ~20 ms ahead for display latency.
+Hit window ±70 ms → ±100 ms (PERFECT ±45 ms), capped at ¼ beat for fast endless tempos; grades follow the scoring verdict; presses judged at the input event's timestamp; `currentTime` smoothed against `performance.now()`; beat visuals drawn ~20 ms ahead for display latency, plus a user **Visual offset** setting (±100 ms) separate from the input calibration.
 
-## Future (not in M8)
+## Deviations from research recommendations
 
-- **Heat / Ascension**: stackable opt-in modifiers after the first Rogue clear (faster bullets, fewer rests, *Beat Lock* = rhythm multiplier inside the Rogue run).
-- Shops and random events as node types; relic-style passives with synergies.
-- Focus/slow movement and a small visible hitbox for denser bullet-hell elites.
-- Separate visual offset calibration (see timing research).
+- *Bullet-hell research* recommends cosmetic-only meta progression. The owner explicitly asked for gameplay upgrades, so the HANGAR changes stats — but only in Rogue runs, keeping Rhythm highscores clean. Revisit if Rogue feels solved.
+- *Roguelite research* proposes a second in-run currency (Scrap), Shop/Signal nodes and a Threat ladder. Deferred to keep M8 shippable; see Future.
+
+## Future (not in M8) — suggested order
+
+1. **Readability for denser fire** (bullet-hell research): small visible hitbox dot, enemy bullets with a bright core + dark rim in a color the player never uses, wind-up telegraph before elite rings.
+2. **Per-world elite patterns**: walls with gaps (Earth), rings/spirals (Moon), aimed + static mixes (Mars) — data-driven emitters (angle, count, speed, spin, beat-lock flag) that beat-lock in Rhythm runs.
+3. **Threat ladder** (Ascension/Heat): unlocked by the first Rogue world-3 clear, 0–10 stacking modifiers, credits ×(1 + 0.1 × threat), level 10 disables hangar stats. Tag rogue highscores with threat level.
+4. **Scrap + SHOP node + SIGNAL (“?”) node**: in-run currency, shop with rising reroll price, random events with ambush risk.
+5. **Upgrade synergies / downsides** (Nova Drift-style mods), node reward previews beyond the node type, a draft "4th choice" hangar upgrade, one-per-run revive.
+6. **Beat Assist / Beat Lock**: rhythm run assist (all shots on-beat, unranked) and a rogue modifier that re-enables the beat multiplier.
+7. **Calibration upgrades**: visual sync test (nudge a flash onto the click), warn when `outputLatency` > 100 ms (Bluetooth), early/late hints next to grades.

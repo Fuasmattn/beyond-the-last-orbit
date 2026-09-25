@@ -1,5 +1,7 @@
 # M8 plan — run modes, roguelite runs, permanent upgrades
 
+Status: done (all tasks committed separately).
+
 Spec: `docs/superpowers/specs/2026-09-25-m8-run-modes-roguelite-design.md`. One commit per task; `npm test` + `npm run build` green before each.
 
 ## Task 1 — Ship stats + run mode in the sim

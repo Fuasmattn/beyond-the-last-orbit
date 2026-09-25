@@ -1,4 +1,5 @@
-import { Container, Graphics, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
+import { MENU_W } from '../data/balance';
 import {
   cosmeticsOf,
   equippedLaser,
@@ -13,10 +14,10 @@ import { activateCosmetic, itemState, type ShopResult } from '../meta/shop';
 import { hueToRgb } from '../view/color';
 import { createLaserView, type LaserView } from '../view/laserView';
 import { MenuList } from '../view/menuList';
+import { SHIP_ART } from '../view/vectorArt';
 import { centerText, PixelText } from '../view/pixelText';
 import type { FrameInput, Scene, SceneContext } from './scene';
 import { inRect, sceneBackground, type Rect } from './ui';
-import { viewport } from '../app/viewport';
 
 const TABS: readonly CosmeticKind[] = ['skin', 'laser'];
 const TAB_LABEL: Record<CosmeticKind, string> = { skin: 'SHIP SKINS', laser: 'LASERS' };
@@ -50,7 +51,7 @@ export class ShopScene implements Scene {
   private readonly message: PixelText;
   private readonly tabs: Record<CosmeticKind, PixelText>;
   private readonly tabUnderline = new Graphics();
-  private readonly ship: Sprite;
+  private readonly ship: Graphics;
   private readonly previewLayer = new Container();
   private bullets: PreviewBullet[] = [];
   private previewLaserId = '';
@@ -77,8 +78,8 @@ export class ShopScene implements Scene {
       .fill(0x0b0f22)
       .rect(PREVIEW.x, PREVIEW.y, PREVIEW.w, PREVIEW.h)
       .stroke({ color: 0x333a55, width: 1 });
-    this.ship = new Sprite(Texture.WHITE);
-    this.ship.position.set(PREVIEW.x + PREVIEW.w / 2 - 6, PREVIEW.y + PREVIEW.h - 14);
+    this.ship = new Graphics(SHIP_ART.arrow);
+    this.ship.position.set(PREVIEW.x + PREVIEW.w / 2, PREVIEW.y + PREVIEW.h - 6);
     this.list = new MenuList(g, { x: 28, y: 140, lineH: 14, width: 184 });
     this.message = new PixelText(g, '');
     const hint = new PixelText(
@@ -137,16 +138,16 @@ export class ShopScene implements Scene {
     );
     this.list.refresh(this.t);
     this.credits.setText(`CREDITS ${this.ctx.save.credits}`);
-    this.credits.position.set(viewport.w - 4 - this.credits.pixelWidth, 6);
+    this.credits.position.set(MENU_W - 4 - this.credits.pixelWidth, 6);
     for (const k of TABS) this.tabs[k].tint = k === this.tab ? 0xffe14a : 0x666666;
     const r = TAB_RECT[this.tab];
     this.tabUnderline.clear().rect(r.x, r.y + r.h, r.w, 1).fill(0xffe14a);
 
     const skin = this.previewSkin();
-    this.ship.texture = this.ctx.textures.skins.get(skin.id) ?? Texture.WHITE;
-    this.ship.tint = skin.hueCycle ? hueToRgb(this.t * 0.25) : 0xffffff;
+    this.ship.context = SHIP_ART[skin.hull];
+    this.ship.tint = skin.hueCycle ? hueToRgb(this.t * 0.25) : (skin.palette['#'] ?? 0xffffff);
     const pulse = Math.max(0, 1 - ((this.t * 2) % 1) * 4);
-    for (const b of this.bullets) b.view.update(this.ship.x + 5, Math.round(b.y), this.t, pulse, false);
+    for (const b of this.bullets) b.view.update(this.ship.x - 1, Math.round(b.y), this.t, pulse, false);
 
     this.message.visible = this.messageTime > 0;
     centerText(this.message, 236);
@@ -234,7 +235,7 @@ export class ShopScene implements Scene {
       this.fireTimer = FIRE_EVERY;
       const view = createLaserView(laser, this.ctx.textures.orb);
       this.previewLayer.addChild(view.root);
-      this.bullets.push({ view, y: this.ship.y - 6 });
+      this.bullets.push({ view, y: this.ship.y - 14 });
     }
     for (const b of this.bullets) b.y -= PREVIEW_BULLET_SPEED * dt;
     const gone = this.bullets.filter((b) => b.y < PREVIEW.y + 2);

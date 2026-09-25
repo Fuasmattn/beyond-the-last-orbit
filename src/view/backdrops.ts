@@ -1,119 +1,93 @@
 import { Container, Graphics } from 'pixi.js';
+import { FIELD_H } from '../data/balance';
 import type { WorldId } from '../data/worlds';
-import { viewport } from '../app/viewport';
+import { lerpColor } from './beatPulse';
 
 export interface Backdrop {
   readonly root: Container;
-  update(dt: number): void;
+  /** `pulse` 0..1 from the beat brightens the grid. */
+  update(dt: number, pulse: number): void;
 }
 
-function drifter(g: Graphics, speed: number, wrap: number): (dt: number) => void {
-  return (dt) => {
-    g.x += speed * dt;
-    if (g.x > wrap) g.x -= wrap + 40;
-    if (g.x < -40) g.x += wrap + 40;
-  };
+interface Theme {
+  /** Planet disc gradient, top → horizon. */
+  top: number;
+  bottom: number;
+  grid: number;
+  floor: number;
 }
 
-/** Earth's curve along the bottom with a cyan atmosphere, sunrise rim and drifting satellites. */
-function earth(): Backdrop {
-  const root = new Container();
-  const planet = new Graphics()
-    .circle(120, 560, 302)
-    .fill(0x4af2ff)
-    .circle(120, 560, 300)
-    .fill(0x0b2a66)
-    .ellipse(70, 280, 34, 8)
-    .fill(0x1f6b3a)
-    .ellipse(170, 290, 26, 6)
-    .fill(0x1f6b3a)
-    .ellipse(120, 305, 40, 7)
-    .fill(0x1a5c33);
-  planet.alpha = 0.85;
-  const sunrise = new Graphics()
-    .arc(120, 560, 303, Math.PI * 1.3, Math.PI * 1.44)
-    .stroke({ color: 0xffa040, width: 2, alpha: 0.8 });
-  const satA = new Graphics().rect(0, 0, 5, 1).fill(0x7fa8ff).rect(2, -1, 1, 3).fill(0xc8ccd6);
-  satA.position.set(20, 190);
-  const satB = new Graphics().rect(0, 0, 3, 1).fill(0x7fa8ff);
-  satB.position.set(180, 215);
-  root.addChild(planet, sunrise, satA, satB);
-  const moveA = drifter(satA, 6, viewport.w);
-  const moveB = drifter(satB, -4, viewport.w);
-  return {
-    root,
-    update(dt) {
-      moveA(dt);
-      moveB(dt);
-    },
-  };
-}
+const THEMES: Record<WorldId, Theme> = {
+  earth: { top: 0x7ff8ff, bottom: 0x3d5aff, grid: 0x4af2ff, floor: 0x050a24 },
+  moon: { top: 0xf2f4ff, bottom: 0x9b6bff, grid: 0xb46bff, floor: 0x0b0620 },
+  mars: { top: 0xffe14a, bottom: 0xff3b5c, grid: 0xff3d9a, floor: 0x1a0414 },
+};
 
-/** Cratered lunar surface scrolling below, small Earth in the distance. */
-function moon(): Backdrop {
-  const root = new Container();
-  const earthDot = new Graphics().circle(206, 44, 9).fill(0x1d4fa3).ellipse(203, 42, 4, 2).fill(0x2f8f4e);
-  const ground = new Graphics().rect(0, 292, viewport.w, 28).fill(0x2e3138).rect(0, 292, viewport.w, 1).fill(0x6b7080);
-  const craters = new Container();
-  for (let copy = 0; copy < 2; copy++) {
-    const g = new Graphics();
-    for (const [x, y, r] of [
-      [20, 302, 6],
-      [70, 310, 4],
-      [110, 299, 3],
-      [150, 308, 7],
-      [205, 301, 4],
-    ] as const) {
-      g.ellipse(x, y, r, r * 0.45).fill(0x1d1f24);
+export const HORIZON_Y = 196;
+const PLANET_R = 62;
+const GRID_LINES = 12;
+const GRID_SPEED = 0.35;
+const RAY_SPACING = 22;
+
+/** Synthwave planet: gradient bands above the horizon, with widening slits toward the bottom. */
+function planet(theme: Theme, cx: number): Graphics {
+  const g = new Graphics();
+  g.circle(cx, HORIZON_Y, PLANET_R * 1.6).fill({ color: theme.bottom, alpha: 0.06 });
+  g.circle(cx, HORIZON_Y, PLANET_R * 1.2).fill({ color: theme.bottom, alpha: 0.08 });
+  for (let y = HORIZON_Y - PLANET_R; y < HORIZON_Y; y++) {
+    const dy = HORIZON_Y - y;
+    const t = 1 - dy / PLANET_R;
+    // Slits start 45 % down the disc and widen toward the horizon.
+    if (t > 0.45) {
+      const period = 7;
+      const gap = 1 + Math.floor(((t - 0.45) / 0.55) * 4);
+      if (dy % period < gap) continue;
     }
-    g.x = copy * viewport.w;
-    craters.addChild(g);
+    const half = Math.sqrt(PLANET_R * PLANET_R - dy * dy);
+    g.rect(cx - half, y, half * 2, 1).fill(lerpColor(theme.top, theme.bottom, t));
   }
-  root.addChild(earthDot, ground, craters);
-  root.alpha = 0.9;
-  return {
-    root,
-    update(dt) {
-      craters.x -= 10 * dt;
-      if (craters.x <= -viewport.w) craters.x += viewport.w;
-    },
-  };
+  return g;
 }
 
-/** Rust-red Mars with drifting dust-storm bands and Phobos passing overhead. */
-function mars(): Backdrop {
+function synthwave(world: WorldId, width: number): Backdrop {
+  const theme = THEMES[world];
   const root = new Container();
-  const planet = new Graphics().circle(200, 340, 140).fill(0x8a2f1a).circle(200, 340, 140).stroke({ color: 0xff7a3d, width: 1, alpha: 0.6 });
-  planet.alpha = 0.8;
-  const storms = new Graphics()
-    .ellipse(170, 230, 50, 3)
-    .fill({ color: 0xb5502a, alpha: 0.6 })
-    .ellipse(210, 250, 40, 2)
-    .fill({ color: 0xd06a3a, alpha: 0.5 })
-    .ellipse(150, 270, 30, 2)
-    .fill({ color: 0xb5502a, alpha: 0.5 });
-  const phobos = new Graphics().ellipse(0, 0, 5, 3).fill(0x8c8077).ellipse(-1, -1, 1, 1).fill(0x5c524b);
-  phobos.position.set(-20, 70);
-  root.addChild(planet, storms, phobos);
-  const movePhobos = drifter(phobos, 5, viewport.w);
-  let t = 0;
+  const cx = width / 2;
+  const floor = new Graphics().rect(0, HORIZON_Y, width, FIELD_H - HORIZON_Y).fill(theme.floor);
+  const grid = new Graphics();
+  const horizon = new Graphics()
+    .rect(0, HORIZON_Y - 1, width, 3)
+    .fill({ color: theme.grid, alpha: 0.12 })
+    .rect(0, HORIZON_Y, width, 1)
+    .fill({ color: theme.grid, alpha: 0.7 });
+  const disc = planet(theme, cx);
+  disc.alpha = 0.55;
+  root.addChild(disc, floor, grid, horizon);
+
+  const span = FIELD_H - HORIZON_Y;
+  let phase = 0;
   return {
     root,
-    update(dt) {
-      t += dt;
-      storms.x = Math.sin(t * 0.2) * 12;
-      movePhobos(dt);
+    update(dt, pulse) {
+      phase = (phase + dt * GRID_SPEED) % 1;
+      const alpha = 0.16 + 0.3 * pulse;
+      grid.clear();
+      // Rays fan out from the vanishing point on the horizon.
+      const rays = Math.ceil(width / RAY_SPACING);
+      for (let i = -rays * 2; i <= rays * 2; i++) {
+        grid.moveTo(cx + i * 2, HORIZON_Y).lineTo(cx + i * RAY_SPACING * 3, FIELD_H);
+      }
+      grid.stroke({ color: theme.grid, width: 1, alpha: alpha * 0.8 });
+      // Cross lines get denser toward the horizon, fade into it, and scroll toward the viewer.
+      for (let i = 0; i < GRID_LINES; i++) {
+        const d = (i + phase) / GRID_LINES;
+        const y = HORIZON_Y + span * d * d;
+        grid.moveTo(0, y).lineTo(width, y).stroke({ color: theme.grid, width: 1, alpha: alpha * (0.2 + 0.8 * d) });
+      }
     },
   };
 }
 
-export function createBackdrop(world: WorldId): Backdrop {
-  switch (world) {
-    case 'earth':
-      return earth();
-    case 'moon':
-      return moon();
-    case 'mars':
-      return mars();
-  }
+export function createBackdrop(world: WorldId, width: number): Backdrop {
+  return synthwave(world, width);
 }

@@ -5,17 +5,8 @@ import { popupAlpha, popupRise, Popups } from '../fx/popups';
 import { Shake } from '../fx/shake';
 import type { EnemyKind, SimEvent, SimState } from '../sim/types';
 import { PixelText } from './pixelText';
+import { ENEMY_COLOR as KIND_COLOR } from './vectorArt';
 
-const KIND_COLOR: Record<EnemyKind, number> = {
-  grunt: 0x7dff6b,
-  gunner: 0xff5ad1,
-  diver: 0xffb341,
-  shield: 0x9aa7ff,
-  splitter: 0x4af2a0,
-  phaser: 0xc58bff,
-  bomber: 0xff7a3d,
-  mini: 0x9affd6,
-};
 const FIRE: readonly number[] = [0xffffff, 0xffe14a, 0xff7a3d, 0xff3b5c];
 const CHAIN_EVERY = 0.08;
 const EXHAUST_EVERY = 1 / 60;

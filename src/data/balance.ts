@@ -2,6 +2,8 @@
 export const FIELD_W_MIN = 140;
 export const FIELD_W_MAX = 600;
 export const FIELD_W_DEFAULT = 240;
+/** Menus are laid out in a fixed MENU_W × FIELD_H frame that the app centers and scales to fit. */
+export const MENU_W = 240;
 export const FIELD_H = 320;
 /** Top edge of the player movement zone (bottom 25 % of the field). */
 export const PLAYER_ZONE_TOP = 240;

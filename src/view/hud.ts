@@ -98,14 +98,14 @@ export class Hud extends Container {
     this.updateResults(state);
     this.popupTime = Math.max(0, this.popupTime - dt);
     this.popup.visible = this.popupTime > 0;
-    centerText(this.popup, 200);
+    centerText(this.popup, 200, viewport.w);
   }
 
   private updateRhythm(state: SimState, beat: number | null, audioOk: boolean): void {
     this.ring.visible = audioOk;
     if (!audioOk) {
       this.mult.setText('NO AUDIO');
-      centerText(this.mult, 4);
+      centerText(this.mult, 4, viewport.w);
       return;
     }
     const m = state.rhythm.mult;
@@ -164,8 +164,8 @@ export class Hud extends Container {
     }
     this.banner.setText(banner);
     this.sub.setText(sub);
-    centerText(this.banner, y);
-    centerText(this.sub, y + 20);
+    centerText(this.banner, y, viewport.w);
+    centerText(this.sub, y + 20, viewport.w);
   }
 
   private updateResults(state: SimState): void {

@@ -1,14 +1,14 @@
 import { Application, Container, Graphics, TextureSource } from 'pixi.js';
 import { AudioEngine } from '../audio/engine';
 import { compileSong, type CompiledSong } from '../audio/song';
-import { FIELD_H, FX, MAX_STEPS_PER_FRAME, SIM_DT } from '../data/balance';
+import { FIELD_H, FX, MAX_STEPS_PER_FRAME, MENU_W, SIM_DT } from '../data/balance';
 import { EARTH_SONG } from '../data/songs/earth';
 import { MARS_SONG } from '../data/songs/mars';
 import { METRONOME_SONG } from '../data/songs/metronome';
 import { MOON_SONG } from '../data/songs/moon';
 import { worldAt, type WorldId } from '../data/worlds';
 import { FrameMonitor } from '../fx/frameMonitor';
-import { mergeInputs } from '../input/inputFrame';
+import { mergeInputs, type Tap } from '../input/inputFrame';
 import { KeyboardInput } from '../input/keyboard';
 import { TouchInput } from '../input/touch';
 import { loadSave, memoryStore, writeSave, type KeyValueStore } from '../persist/save';
@@ -19,9 +19,11 @@ import type { FrameInput, Scene, SceneContext } from '../scenes/scene';
 import { SettingsScene } from '../scenes/settingsScene';
 import { ShopScene } from '../scenes/shopScene';
 import { TitleScene } from '../scenes/titleScene';
+import { createBackdrop, type Backdrop } from '../view/backdrops';
 import { beatPulse } from '../view/beatPulse';
 import { FireButtonView } from '../view/fireButton';
 import { PostFx } from '../view/postfx';
+import { Starfield } from '../view/starfield';
 import { loadTextures } from '../view/textures';
 import { FixedLoop } from './fixedLoop';
 import { computeLayout, type Layout } from './layout';
@@ -37,13 +39,33 @@ function browserStore(): KeyValueStore {
   }
 }
 
+/** Menus use a fixed MENU_W × FIELD_H design frame, centered and shrunk to fit narrow fields. */
+function menuFrame(scene: Scene): boolean {
+  return !(scene instanceof RunScene);
+}
+
+function menuScale(): number {
+  return Math.min(1, viewport.w / MENU_W);
+}
+
+function frameMenu(scene: Scene): void {
+  const k = menuScale();
+  scene.root.scale.set(k);
+  scene.root.position.set(Math.round((viewport.w - MENU_W * k) / 2), Math.round((FIELD_H - FIELD_H * k) / 2));
+}
+
+function toMenu(scene: Scene, t: Tap): Tap {
+  const k = menuScale();
+  return { x: (t.x - scene.root.x) / k, y: (t.y - scene.root.y) / k };
+}
+
 export async function startApp(host: HTMLElement): Promise<void> {
   TextureSource.defaultOptions.scaleMode = 'nearest';
   const app = new Application();
   await app.init({
     resizeTo: window,
     background: '#000000',
-    antialias: false,
+    antialias: true,
     resolution: window.devicePixelRatio || 1,
     autoDensity: true,
   });
@@ -74,6 +96,11 @@ export async function startApp(host: HTMLElement): Promise<void> {
   const textures = loadTextures();
   const game = new Container();
   const sceneLayer = new Container();
+  // Shared animated backdrop behind every menu; runs draw their own world backdrop.
+  const menuBackdrop = new Container();
+  const menuStars = new Starfield();
+  let menuPlanet: Backdrop | null = null;
+  sceneLayer.addChild(menuBackdrop);
   // Clip everything (planets, streaks, off-field bullets) to the playfield.
   const fieldMask = new Graphics();
   game.addChild(sceneLayer, fieldMask);
@@ -96,6 +123,10 @@ export async function startApp(host: HTMLElement): Promise<void> {
     game.scale.set(layout.scale);
     game.position.set(layout.offsetX, layout.offsetY);
     fieldMask.clear().rect(0, 0, layout.fieldW, FIELD_H).fill(0xffffff);
+    menuPlanet?.root.destroy({ children: true });
+    menuPlanet = createBackdrop('earth', layout.fieldW);
+    menuBackdrop.removeChildren();
+    menuBackdrop.addChild(menuStars, menuPlanet.root);
     postFx.setScale(layout.scale);
     if (widthChanged) rebuildMenu?.();
   };
@@ -183,13 +214,20 @@ export async function startApp(host: HTMLElement): Promise<void> {
       const input: FrameInput = {
         sim,
         menu: keyboard.consumeMenu(),
-        taps: touch.consumeTaps(),
+        taps: menuFrame(scene) ? touch.consumeTaps().map((t) => toMenu(scene, t)) : touch.consumeTaps(),
         pause: keyboard.consumePause(),
       };
       scene.update(input, SIM_DT);
     });
-    scene.render(elapsed);
     const pulse = beatPulse(audio?.currentBeat() ?? null);
+    const inMenu = menuFrame(scene);
+    menuBackdrop.visible = inMenu;
+    if (inMenu) {
+      frameMenu(scene);
+      menuStars.update(elapsed);
+      menuPlanet?.update(elapsed, pulse);
+    }
+    scene.render(elapsed);
     fireButton?.update(elapsed, pulse);
     postFx.update(elapsed);
   });

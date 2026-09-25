@@ -18,11 +18,8 @@ describe('cosmetics', () => {
     }
   });
 
-  it('draws every skin at the ship hitbox size', () => {
-    for (const s of SKINS) {
-      expect(s.rows, s.id).toHaveLength(8);
-      expect(s.rows.every((r) => r.length === 13)).toBe(true);
-    }
+  it('gives every skin a vector hull', () => {
+    for (const s of SKINS) expect(['arrow', 'swept'], s.id).toContain(s.hull);
   });
 
   it('defaults are owned and equipped in a fresh save', () => {

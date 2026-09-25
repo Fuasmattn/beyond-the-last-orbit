@@ -5,12 +5,22 @@ import { centerText, PixelText } from '../view/pixelText';
 import type { FrameInput, Scene, SceneContext } from './scene';
 import { sceneBackground } from './ui';
 
-type Row = SettingKey | 'calibrate' | 'back';
+type Row = SettingKey | 'calibrate' | 'musicTest' | 'back';
+
+/** Music test tracks: each world's song in its main, boss and final-phase arrangements. */
+const TRACKS = [0, 1, 2].flatMap((world) =>
+  (['main', 'boss', 'bossFinal'] as const).map((arrangement) => ({
+    world,
+    arrangement,
+    label: `${['EARTH', 'MOON', 'MARS'][world]}${arrangement === 'main' ? '' : arrangement === 'boss' ? ' BOSS' : ' FINAL'}`,
+  })),
+);
 
 const ROWS: readonly { key: Row; label: string }[] = [
   { key: 'musicVolume', label: 'MUSIC VOLUME' },
   { key: 'sfxVolume', label: 'SFX VOLUME' },
   { key: 'guitarTone', label: 'GUITAR TONE' },
+  { key: 'musicTest', label: 'MUSIC TEST' },
   { key: 'crt', label: 'CRT FILTER' },
   { key: 'bloom', label: 'BLOOM' },
   { key: 'shake', label: 'SCREEN SHAKE' },
@@ -27,6 +37,8 @@ export class SettingsScene implements Scene {
   readonly root = new Container();
   private readonly list: MenuList;
   private t = 0;
+  private track = 0;
+  private playing = false;
 
   constructor(private readonly ctx: SceneContext) {
     const g = ctx.textures.glyphs;
@@ -51,7 +63,8 @@ export class SettingsScene implements Scene {
         this.list.move(a === 'up' ? -1 : 1);
         this.ctx.audio?.sfx.menuMove();
       } else if (a === 'left' || a === 'right') {
-        if (row !== 'calibrate' && row !== 'back') this.change(row, a === 'left' ? -1 : 1);
+        if (row === 'musicTest') this.cycleTrack(a === 'left' ? -1 : 1);
+        else if (row !== 'calibrate' && row !== 'back') this.change(row, a === 'left' ? -1 : 1);
       } else if (a === 'confirm') {
         if (this.activate(row)) return;
       } else if (a === 'back') {
@@ -63,7 +76,10 @@ export class SettingsScene implements Scene {
       if (i === null) continue;
       this.list.selected = i;
       const row = ROWS[i]!.key;
-      if (isStepped(row)) {
+      if (row === 'musicTest') {
+        const mid = this.list.layout.x + this.list.layout.width / 2;
+        this.cycleTrack(tap.x < mid ? -1 : 1);
+      } else if (isStepped(row)) {
         const mid = this.list.layout.x + this.list.layout.width / 2;
         this.change(row, tap.x < mid ? -1 : 1);
       } else if (this.activate(row)) {
@@ -86,6 +102,8 @@ export class SettingsScene implements Scene {
           case 'bloom':
           case 'shake':
             return { label, value: onOff(s[key]) };
+          case 'musicTest':
+            return { label, value: `${this.playing ? '> ' : ''}< ${TRACKS[this.track]!.label} >` };
           case 'guitarTone':
             return { label, value: s.guitarTone === 'amp' ? 'AMP' : 'RETRO' };
           case 'calibrate':
@@ -112,15 +130,42 @@ export class SettingsScene implements Scene {
     this.ctx.applySettings();
     this.ctx.persist();
     this.ctx.audio?.sfx.menuMove();
+    // The tone applies from the next song start; restart the music test so the switch is audible.
+    if (key === 'guitarTone' && this.playing) this.toggleMusic(true);
+  }
+
+  /** Plays the selected track (restarting it) or stops it. */
+  private toggleMusic(play = !this.playing): void {
+    const audio = this.ctx.audio;
+    if (!audio) return;
+    this.playing = play;
+    if (!play) {
+      audio.stopSong();
+      return;
+    }
+    const tr = TRACKS[this.track]!;
+    audio.startSong(this.ctx.songForWorld(tr.world, 0));
+    if (tr.arrangement !== 'main') audio.queueArrangement(tr.arrangement);
+  }
+
+  private cycleTrack(delta: number): void {
+    this.track = (this.track + delta + TRACKS.length) % TRACKS.length;
+    this.ctx.audio?.sfx.menuMove();
+    this.toggleMusic(true);
   }
 
   /** Returns true when the scene was left. */
   private activate(row: Row): boolean {
+    if (row === 'musicTest') {
+      this.toggleMusic();
+      return false;
+    }
     if (row === 'back') {
       this.exit();
       return true;
     }
     if (row === 'calibrate') {
+      this.toggleMusic(false);
       this.ctx.audio?.sfx.menuSelect();
       this.ctx.goto(this.ctx.scenes.calibration());
       return true;
@@ -130,6 +175,7 @@ export class SettingsScene implements Scene {
   }
 
   private exit(): void {
+    this.toggleMusic(false);
     this.ctx.audio?.sfx.menuSelect();
     this.ctx.goto(this.ctx.scenes.title());
   }

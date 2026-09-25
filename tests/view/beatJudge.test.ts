@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { RHYTHM } from '../../src/data/balance';
 import { judgeLabel, LOOKAHEAD_BEATS, markerOffset, upcomingBeats } from '../../src/view/beatJudge';
 
 describe('judgeLabel', () => {
   it('grades by distance from the beat', () => {
     expect(judgeLabel(0, true)).toBe('PERFECT');
-    expect(judgeLabel(-0.035, true)).toBe('PERFECT');
-    expect(judgeLabel(0.05, true)).toBe('GOOD');
-    expect(judgeLabel(-0.07, true)).toBe('GOOD');
-    expect(judgeLabel(0.12, false)).toBe('OFF');
+    expect(judgeLabel(-RHYTHM.perfectSec, true)).toBe('PERFECT');
+    expect(judgeLabel(RHYTHM.perfectSec + 0.005, true)).toBe('GOOD');
+    expect(judgeLabel(-RHYTHM.windowSec, true)).toBe('GOOD');
+    expect(judgeLabel(RHYTHM.windowSec + 0.02, false)).toBe('OFF');
   });
 
   it('falls back to the sim verdict without a delta', () => {

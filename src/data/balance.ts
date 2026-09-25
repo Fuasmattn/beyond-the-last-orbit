@@ -189,8 +189,13 @@ export const DREAD = {
 } as const;
 
 export const RHYTHM = {
-  /** ± seconds around a grid line that count as on-beat. */
-  windowSec: 0.07,
+  /**
+   * ± seconds around a grid line that count as on-beat (GOOD). Generous on purpose: timing competes
+   * with aiming and dodging, so this sits at the forgiving end of rhythm-game windows.
+   */
+  windowSec: 0.1,
+  /** ± seconds for a PERFECT grade (display only; scoring treats PERFECT and GOOD alike). */
+  perfectSec: 0.045,
   /** Grid lines per beat (1 = quarter notes). */
   subdivision: 1,
   shotsPerStep: 4,

@@ -42,7 +42,7 @@ export class TouchInput implements InputSource {
       if (isInFireButton(lx, ly, l.fieldW)) {
         if (!this.firePending) {
           this.firePending = true;
-          this.fireOnBeat = this.judgeFire();
+          this.fireOnBeat = this.judgeFire(e.timeStamp);
         }
         return;
       }

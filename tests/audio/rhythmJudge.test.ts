@@ -18,9 +18,9 @@ describe('judgeShot', () => {
   });
 
   it('applies the calibration offset', () => {
-    // player consistently 100 ms late → offset +100 ms makes it on-beat
-    expect(judgeShot(clock, 1.1)).toBe(false);
-    expect(judgeShot(clock, 1.1, 100)).toBe(true);
+    // player consistently 150 ms late → offset +150 ms makes it on-beat
+    expect(judgeShot(clock, 1.15)).toBe(false);
+    expect(judgeShot(clock, 1.15, 150)).toBe(true);
   });
 
   it('rejects shots before the song starts', () => {

@@ -6,8 +6,8 @@ export interface InputSource {
   poll(): InputFrame;
 }
 
-/** Called at the moment fire is pressed; returns rhythm verdict or null (no audio). */
-export type FireJudge = () => boolean | null;
+/** Called when fire is pressed with the event's timestamp; returns rhythm verdict or null (no audio). */
+export type FireJudge = (timeStamp?: number) => boolean | null;
 
 export type MenuAction = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back';
 

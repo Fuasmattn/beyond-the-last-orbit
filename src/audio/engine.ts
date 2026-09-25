@@ -1,5 +1,6 @@
 import { SOUR } from '../data/balance';
 import { BeatClock } from './beatClock';
+import { AudioClockSync } from './clockSync';
 import { judgeShot } from './rhythmJudge';
 import { Sequencer } from './sequencer';
 import { Sfx } from './sfx';
@@ -13,6 +14,10 @@ const FADE_SEC = 0.5;
 /** Fixed delay of the warble line; music is heard this much later than scheduled. */
 const WARBLE_BASE_SEC = 0.012;
 const WARBLE_RATE_HZ = 5.5;
+/** Presses whose event timestamp is older than this are judged at handler time instead. */
+const MAX_PRESS_AGE_MS = 150;
+/** Typical render-to-display delay: visuals are drawn for when they will be seen, not for now. */
+const VISUAL_LEAD_SEC = 0.02;
 /** Bus levels at volume 1 (match createBuses). */
 const MUSIC_LEVEL = 0.7;
 const SFX_LEVEL = 0.8;
@@ -33,6 +38,7 @@ export class AudioEngine {
   private readonly warbleIn: GainNode;
   private readonly warbleDepth: GainNode;
   private sour = 0;
+  private readonly sync = new AudioClockSync();
 
   private constructor(
     private readonly ctx: AudioContext,
@@ -74,9 +80,16 @@ export class AudioEngine {
     void this.ctx.resume();
   }
 
-  /** Musical time the listener is hearing now (output latency and warble delay removed). */
-  private heardTime(): number {
-    return this.ctx.currentTime - (this.ctx.outputLatency || 0) - WARBLE_BASE_SEC;
+  /**
+   * Musical time the listener hears at `perfMs` (a `performance.now()` / event timestamp; default now),
+   * with output latency and warble delay removed. Smoothed across the audio clock's buffer steps.
+   */
+  private heardTime(perfMs?: number): number {
+    const now = performance.now();
+    this.sync.sample(this.ctx.currentTime, now);
+    const age = perfMs === undefined ? 0 : now - perfMs;
+    const at = age >= 0 && age <= MAX_PRESS_AGE_MS ? now - age : now;
+    return this.sync.at(at) - (this.ctx.outputLatency || 0) - WARBLE_BASE_SEC;
   }
 
   startSong(song: CompiledSong): void {
@@ -127,9 +140,9 @@ export class AudioEngine {
     this.buses.sfx.gain.setTargetAtTime(SFX_LEVEL * sfx, t, 0.02);
   }
 
-  /** Signed seconds from the nearest heard beat right now (no calibration offset); null if silent. */
-  beatDelta(): number | null {
-    return this.playing ? this.playing.clock.gridDelta(this.heardTime(), 1) : null;
+  /** Signed seconds from the nearest heard beat at `perfMs` (default now; no calibration offset); null if silent. */
+  beatDelta(perfMs?: number): number | null {
+    return this.playing ? this.playing.clock.gridDelta(this.heardTime(perfMs), 1) : null;
   }
 
   setPaused(paused: boolean): void {
@@ -137,12 +150,15 @@ export class AudioEngine {
     void (paused ? this.ctx.suspend() : this.ctx.resume());
   }
 
+  /** Beat the listener hears when the frame being drawn now reaches the screen. */
   currentBeat(): number | null {
-    return this.playing ? this.playing.clock.beatAt(this.heardTime()) : null;
+    if (!this.playing) return null;
+    return this.playing.clock.beatAt(this.heardTime() + VISUAL_LEAD_SEC);
   }
 
-  judgeFire(offsetMs = 0): boolean | null {
-    return judgeShot(this.playing?.clock ?? null, this.heardTime(), offsetMs);
+  /** `perfMs`: the press event's timestamp, so handler delay does not count against the player. */
+  judgeFire(offsetMs = 0, perfMs?: number): boolean | null {
+    return judgeShot(this.playing?.clock ?? null, this.heardTime(perfMs), offsetMs);
   }
 
   private tick(): void {

@@ -80,9 +80,9 @@ export async function startApp(host: HTMLElement): Promise<void> {
   const { data: save, reset } = loadSave(store);
 
   let pressDelta: number | null = null;
-  const judgeFire = () => {
-    pressDelta = audio?.beatDelta() ?? null;
-    return audio?.judgeFire(save.settings.latencyOffsetMs) ?? null;
+  const judgeFire = (timeStamp?: number) => {
+    pressDelta = audio?.beatDelta(timeStamp) ?? null;
+    return audio?.judgeFire(save.settings.latencyOffsetMs, timeStamp) ?? null;
   };
 
   const songs: Record<WorldId, CompiledSong> = {

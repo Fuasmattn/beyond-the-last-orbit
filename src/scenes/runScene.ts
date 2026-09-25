@@ -12,11 +12,15 @@ import type { RunMode, SimEvent, SimState } from '../sim/types';
 import { judgeLabel } from '../view/beatJudge';
 import { DraftOverlay } from '../view/draftOverlay';
 import { Hud } from '../view/hud';
+import { MenuList } from '../view/menuList';
 import { RouteOverlay } from '../view/routeOverlay';
 import { GameRenderer } from '../view/renderer';
 import type { FrameInput, Scene, SceneContext } from './scene';
 
 const GAME_OVER_DELAY = 1;
+const PAUSE_ITEMS = ['RESUME', 'END RUN'] as const;
+const PAUSE_MENU = { x: 0, y: 0, lineH: 14, width: 44 } as const;
+const PAUSE_MENU_Y = 172;
 
 function newSeed(): number {
   return (Math.random() * 2 ** 32) >>> 0;
@@ -29,7 +33,9 @@ export class RunScene implements Scene {
   private readonly hud: Hud;
   private readonly route: RouteOverlay;
   private readonly draft: DraftOverlay;
+  private readonly pauseMenu: MenuList;
   private elapsed = 0;
+  private pauseBlink = 0;
   private paused = false;
   private gameOverTime = 0;
   private readonly sour = new Sourness();
@@ -44,7 +50,10 @@ export class RunScene implements Scene {
     this.hud = new Hud(ctx.textures.glyphs);
     this.route = new RouteOverlay(ctx.textures.glyphs, ctx.isTouch);
     this.draft = new DraftOverlay(ctx.textures.glyphs, ctx.isTouch);
-    this.root.addChild(this.renderer.root, this.hud, this.route, this.draft);
+    this.pauseMenu = new MenuList(ctx.textures.glyphs, PAUSE_MENU);
+    this.pauseMenu.setRows(PAUSE_ITEMS.map((label) => ({ label })));
+    this.pauseMenu.visible = false;
+    this.root.addChild(this.renderer.root, this.hud, this.route, this.draft, this.pauseMenu);
     ctx.audio?.sfx.start();
     ctx.audio?.startSong(ctx.songForWorld(this.state.world, this.state.loop));
   }
@@ -55,23 +64,19 @@ export class RunScene implements Scene {
 
   update(input: FrameInput, dt: number): void {
     const s = this.state;
-    if (input.pause && s.phase !== 'gameOver') this.setPaused(!this.paused);
+    if (input.pause && s.phase !== 'gameOver') {
+      this.setPaused(!this.paused);
+      this.pauseMenu.selected = 0;
+      return;
+    }
     if (this.paused) {
-      if (this.ctx.isTouch && input.taps.length > 0) this.setPaused(false);
+      this.updatePauseMenu(input);
       return;
     }
     if (s.phase === 'gameOver') {
       this.gameOverTime += dt;
       if (this.gameOverTime > GAME_OVER_DELAY && (input.menu.includes('confirm') || input.taps.length > 0)) {
-        this.ctx.goto(this.ctx.scenes.gameOver({
-            mode: s.mode,
-            score: s.score,
-            world: s.world,
-            stage: s.stage,
-            loop: s.loop,
-            bossesKilled: s.run.bossesKilled,
-            perfectStages: s.run.perfectStages,
-          }));
+        this.finishRun();
       }
       return;
     }
@@ -127,10 +132,16 @@ export class RunScene implements Scene {
     this.renderer.root.position.set(Math.round(off.x), Math.round(off.y));
     this.ctx.setAberration(shakeOn ? this.renderer.trauma : 0);
     this.hud.update(this.state, this.paused, beat, this.ctx.audio !== null, elapsed);
+    this.pauseMenu.visible = this.paused;
+    if (this.paused) {
+      this.pauseMenu.position.set(Math.round(viewport.w / 2 - PAUSE_MENU.width / 2), PAUSE_MENU_Y);
+      this.pauseBlink += elapsed;
+      this.pauseMenu.refresh(this.pauseBlink);
+    }
     this.elapsed += this.paused ? 0 : elapsed;
     const r = this.state.rogue;
-    this.route.visible = r !== null && this.state.phase === 'route';
-    this.draft.visible = r !== null && this.state.phase === 'draft';
+    this.route.visible = r !== null && this.state.phase === 'route' && !this.paused;
+    this.draft.visible = r !== null && this.state.phase === 'draft' && !this.paused;
     if (r && this.route.visible) this.route.update(r, viewport.w, this.elapsed);
     if (r && this.draft.visible) this.draft.update(r, viewport.w, this.elapsed);
   }
@@ -147,6 +158,44 @@ export class RunScene implements Scene {
     if (!shot || shot.type !== 'shot' || this.state.beatMode === 'off') return;
     const delta = press === null ? null : press - this.ctx.save.settings.latencyOffsetMs / 1000;
     this.hud.judge(judgeLabel(delta, shot.onBeat));
+  }
+
+  /** Pause menu: RESUME, or END RUN (scored like a game over: credits and highscore still count). */
+  private updatePauseMenu(input: FrameInput): void {
+    const menu = this.pauseMenu;
+    let chosen: number | null = null;
+    for (const a of input.menu) {
+      if (a === 'up' || a === 'down') {
+        menu.move(a === 'up' ? -1 : 1);
+        this.ctx.audio?.sfx.menuMove();
+      } else if (a === 'confirm') chosen = menu.selected;
+    }
+    for (const t of input.taps) {
+      const i = menu.indexAt({ x: t.x - menu.x, y: t.y - menu.y });
+      // Tapping outside the menu resumes, as before.
+      chosen = i ?? 0;
+    }
+    if (chosen === null) return;
+    this.setPaused(false);
+    if (PAUSE_ITEMS[chosen] === 'END RUN') {
+      this.ctx.audio?.stopSong();
+      this.finishRun();
+    }
+  }
+
+  private finishRun(): void {
+    const s = this.state;
+    this.ctx.goto(
+      this.ctx.scenes.gameOver({
+        mode: s.mode,
+        score: s.score,
+        world: s.world,
+        stage: s.stage,
+        loop: s.loop,
+        bossesKilled: s.run.bossesKilled,
+        perfectStages: s.run.perfectStages,
+      }),
+    );
   }
 
   private setPaused(p: boolean): void {

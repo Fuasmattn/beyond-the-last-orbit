@@ -129,7 +129,6 @@ export class Hud extends Container {
     const world = worldAt(state.world);
     if (paused) {
       banner = 'PAUSED';
-      sub = 'PRESS P TO RESUME';
     } else if (state.phase === 'gameOver') {
       banner = 'GAME OVER';
       sub = 'PRESS FIRE';

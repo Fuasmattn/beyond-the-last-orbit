@@ -4,6 +4,8 @@ import type { NodeKind, RogueState, RouteMap, RouteNode } from './types';
 
 /** Map rows per world: every stage between the fixed opener and the boss. */
 export const MAP_ROWS = STAGE.perWorld - 2;
+/** Map row whose nodes are all beat stages (stage 3 of every world). */
+export const BEAT_ROW = 1;
 const LANE_SETS: readonly (readonly number[])[] = [
   [0, 1],
   [1, 2],
@@ -62,6 +64,15 @@ function uncross(rng: Rng, row: RouteNode[]): void {
 
 function assignKinds(rng: Rng, row: RouteNode[], rowIdx: number, world: number): void {
   const battle = Math.floor(nextRandom(rng) * row.length);
+  if (rowIdx === BEAT_ROW) {
+    // Beat row: fights only (no way around the beat), one guaranteed battle, the rest elite or battle.
+    const eliteChance = ROUTE.weights.elite / (ROUTE.weights.elite + ROUTE.weights.cache);
+    row.forEach((n, i) => {
+      n.beat = true;
+      n.kind = i !== battle && nextRandom(rng) < eliteChance ? 'elite' : 'battle';
+    });
+    return;
+  }
   const pool: Partial<Record<Exclude<NodeKind, 'battle'>, number>> = {
     elite: ROUTE.weights.elite + ROUTE.eliteWeightPerWorld * world,
     cache: ROUTE.weights.cache,
@@ -79,7 +90,10 @@ function assignKinds(rng: Rng, row: RouteNode[], rowIdx: number, world: number):
   });
 }
 
-/** One world's map: `MAP_ROWS` rows of 2–3 nodes, adjacent-lane links, no crossings, one battle per row. */
+/**
+ * One world's map: `MAP_ROWS` rows of 2–3 nodes, adjacent-lane links, no crossings. Each row has one
+ * battle and otherwise distinct kinds; the beat row holds only fights.
+ */
 export function generateMap(rng: Rng, world: number): RouteMap {
   let lanes: number[][] = [];
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
@@ -108,6 +122,7 @@ export function createRogueState(seed: number, rerolls: number, world: number): 
     map: generateMap(rng, world),
     path: [],
     node: 'battle',
+    beat: false,
     boons: {},
     offer: [],
     draftPending: false,

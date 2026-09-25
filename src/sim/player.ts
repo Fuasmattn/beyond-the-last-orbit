@@ -1,4 +1,4 @@
-import { BEAT_TRACK, FIELD_H, HITSTOP, PLAYER, PLAYER_ZONE_TOP } from '../data/balance';
+import { BEAT_STAGE, BEAT_TRACK, FIELD_H, HITSTOP, PLAYER, PLAYER_ZONE_TOP } from '../data/balance';
 import { allocId } from './ids';
 import { clamp } from './math';
 import { applyShotRhythm, dropStreakLevel, recordShot, resetRhythm } from './scoring';
@@ -37,23 +37,28 @@ function tryFire(state: SimState, input: InputFrame, events: SimEvent[]): void {
 
   const cx = p.x + p.w / 2;
   const y = p.y - PLAYER.bulletH;
-  if (state.mode === 'rhythm') applyShotRhythm(state, input.fireOnBeat);
-  const onBeat = state.mode === 'rhythm' && input.fireOnBeat === true;
+  applyShotRhythm(state, input.fireOnBeat);
+  const judged = state.beatMode !== 'off';
+  const onBeat = judged && input.fireOnBeat === true;
+  // Beat stages: a PERFECT press fires a power shot.
+  const power = state.beatMode === 'master' && onBeat && input.firePerfect;
+  const w = power ? BEAT_STAGE.powerW : PLAYER.bulletW;
   const bolt = (x: number, vx: number, extra: boolean) =>
     state.bullets.push({
       id: allocId(state),
-      x: x - PLAYER.bulletW / 2,
+      x: x - w / 2,
       y,
-      w: PLAYER.bulletW,
+      w,
       h: PLAYER.bulletH,
       vx,
       vy: -PLAYER.bulletSpeed,
       owner: 'player',
       onBeat,
       mult: state.rhythm.mult,
-      damage: ship.damage,
-      pierce: ship.pierce,
+      damage: ship.damage + (power ? BEAT_STAGE.powerDamage : 0),
+      pierce: ship.pierce + (power ? BEAT_STAGE.powerPierce : 0),
       ...(extra ? { extra } : {}),
+      ...(power ? { power } : {}),
     });
   if (ship.twin) {
     bolt(cx - TWIN_GAP, 0, false);
@@ -67,7 +72,7 @@ function tryFire(state: SimState, input: InputFrame, events: SimEvent[]): void {
   }
   p.cooldown = ship.cooldown;
   recordShot(state);
-  events.push({ type: 'shot', x: cx, y, onBeat });
+  events.push({ type: 'shot', x: cx, y, onBeat, power });
 }
 
 export function hitPlayer(state: SimState, events: SimEvent[]): void {

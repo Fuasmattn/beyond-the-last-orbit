@@ -9,7 +9,7 @@ export function moveBullets(state: SimState, dt: number): void {
     b.y += b.vy * dt;
   }
   const inField = (b: Bullet) => b.y + b.h > 0 && b.y < FIELD_H && b.x + b.w > 0 && b.x < state.fieldW;
-  if (state.mode === 'rogue' && state.phase === 'playing') {
+  if (state.mode === 'rogue' && state.beatMode === 'off' && state.phase === 'playing') {
     // A primary bolt that leaves the field without hitting anything breaks the streak by a level.
     for (const b of state.bullets) {
       if (b.owner === 'player' && !b.extra && !b.pierced?.length && !inField(b)) dropStreakLevel(state);

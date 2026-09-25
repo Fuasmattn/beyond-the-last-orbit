@@ -3,6 +3,14 @@ import type { ShapeKind } from './shapes';
 /** `rhythm`: linear run scored on the beat. `rogue`: route map, drafted upgrades, streak scoring. */
 export type RunMode = 'rhythm' | 'rogue';
 
+/**
+ * How fire timing scores: `off` = not judged (rogue), `classic` = rhythm run (x4),
+ * `master` = rogue beat stage (x8, power shots, beat rank).
+ */
+export type BeatMode = 'off' | 'classic' | 'master';
+
+export type BeatRank = 'S' | 'A' | 'B' | 'C';
+
 /** Rogue route map node types. */
 export type NodeKind = 'battle' | 'elite' | 'cache' | 'repair';
 
@@ -20,6 +28,8 @@ export type BoonId =
 export interface RouteNode {
   lane: number;
   kind: NodeKind;
+  /** On the world's beat row: played as a beat stage. */
+  beat?: boolean;
   /** Lanes of the connected nodes in the next row. */
   next: number[];
 }
@@ -37,6 +47,8 @@ export interface RogueState {
   path: number[];
   /** Kind of the current or last-entered node (stage 1 counts as a battle). */
   node: NodeKind;
+  /** The current or last-entered node is on the beat row. */
+  beat: boolean;
   /** Drafted upgrade stacks. */
   boons: Partial<Record<BoonId, number>>;
   /** Upgrades on offer while drafting. */
@@ -113,6 +125,8 @@ export interface Bullet extends Box {
   pierced?: number[];
   /** Player side bolts (twin/spread): not capped and not counted for accuracy. */
   extra?: boolean;
+  /** Player power shot (PERFECT in a beat stage). */
+  power?: boolean;
   /** Enemy bullets: entered the graze margin (scores once it leaves without hitting). */
   nearMiss?: boolean;
   /** Enemy bullets: already scored a graze. */
@@ -231,6 +245,8 @@ export interface StageResult {
   time: number;
   bonus: number;
   perfect: boolean;
+  /** Beat stages only. */
+  beatRank: BeatRank | null;
 }
 
 /** `route` / `draft`: rogue runs wait for the player to pick a map node / an upgrade. */
@@ -238,6 +254,7 @@ export type Phase = 'stageIntro' | 'playing' | 'bossDying' | 'stageClear' | 'rou
 
 export interface SimState {
   mode: RunMode;
+  beatMode: BeatMode;
   ship: ShipStats;
   time: number;
   /** Logical playfield width, fixed for the current stage. */
@@ -275,7 +292,7 @@ export interface SimState {
 }
 
 export type SimEvent =
-  | { type: 'shot'; x: number; y: number; onBeat: boolean }
+  | { type: 'shot'; x: number; y: number; onBeat: boolean; power: boolean }
   | { type: 'enemyHit'; id: number; x: number; y: number }
   | { type: 'enemyKilled'; id: number; kind: EnemyKind; x: number; y: number; points: number }
   | { type: 'enemyShot'; x: number; y: number }

@@ -13,6 +13,7 @@ export function createInitialState(
 ): SimState {
   const state: SimState = {
     mode: opts.mode,
+    beatMode: opts.mode === 'rhythm' ? 'classic' : 'off',
     ship: { ...opts.ship },
     time: 0,
     fieldW,

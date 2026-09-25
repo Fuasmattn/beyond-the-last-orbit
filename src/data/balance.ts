@@ -208,6 +208,27 @@ export const RHYTHM = {
   maxMult: 4,
 } as const;
 
+/** Rogue beat stages: on-beat is the only multiplier source, with bigger stakes. */
+export const BEAT_STAGE = {
+  maxMult: 8,
+  /** Multiplier levels lost per off-beat shot. */
+  offBeatDrop: 2,
+  /** PERFECT shots become power shots with this much extra damage and pierce, and a wider bolt. */
+  powerDamage: 1,
+  powerPierce: 1,
+  powerW: 4,
+  /** Beat rank thresholds on the on-beat share, best first. */
+  ranks: [
+    ['S', 0.9],
+    ['A', 0.75],
+    ['B', 0.5],
+  ],
+  /** Fewer shots than this rank C (no rank farming by barely shooting). */
+  minShots: 10,
+  /** Stage bonus multiplier for an S rank. */
+  sBonusMul: 2,
+} as const;
+
 /** Rogue elite stages. */
 export const ELITE = {
   difficultyBoost: 3,

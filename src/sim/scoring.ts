@@ -1,40 +1,52 @@
-import { COMBO, ELITE, GRAZE, RHYTHM } from '../data/balance';
+import { BEAT_STAGE, COMBO, ELITE, GRAZE, RHYTHM } from '../data/balance';
 import type { Bullet, SimState } from './types';
 
-const MAX_STREAK = ((RHYTHM.maxMult - 1) / RHYTHM.multStep) * RHYTHM.shotsPerStep;
-
-export function rhythmMultForStreak(streak: number): number {
-  return Math.min(RHYTHM.maxMult, 1 + RHYTHM.multStep * Math.floor(streak / RHYTHM.shotsPerStep));
+export function rhythmMultForStreak(streak: number, maxMult: number = RHYTHM.maxMult): number {
+  return Math.min(maxMult, 1 + RHYTHM.multStep * Math.floor(streak / RHYTHM.shotsPerStep));
 }
 
-/** onBeat null = no audio judgement → neutral. */
-export function applyShotRhythm(state: SimState, onBeat: boolean | null): void {
-  if (onBeat === null) return;
+/** Highest multiplier right now: x8 in beat stages, x4 otherwise. */
+export function multCap(state: SimState): number {
+  return state.beatMode === 'master' ? BEAT_STAGE.maxMult : RHYTHM.maxMult;
+}
+
+function maxStreak(state: SimState): number {
+  return ((multCap(state) - 1) / RHYTHM.multStep) * RHYTHM.shotsPerStep;
+}
+
+function setStreak(state: SimState, streak: number): void {
   const r = state.rhythm;
+  r.streak = Math.max(0, Math.min(maxStreak(state), streak));
+  r.mult = rhythmMultForStreak(r.streak, multCap(state));
+}
+
+/** onBeat null = no audio judgement → neutral. Only judged runs/stages (beatMode ≠ off) score timing. */
+export function applyShotRhythm(state: SimState, onBeat: boolean | null): void {
+  if (onBeat === null || state.beatMode === 'off') return;
   if (onBeat) {
-    r.streak = Math.min(MAX_STREAK, r.streak + 1);
+    setStreak(state, state.rhythm.streak + 1);
     state.stats.onBeatShots++;
     state.stageStats.onBeatShots++;
-    r.mult = rhythmMultForStreak(r.streak);
   } else {
-    dropStreakLevel(state);
+    dropStreakLevel(state, state.beatMode === 'master' ? BEAT_STAGE.offBeatDrop : 1);
   }
 }
 
-/** Falls back to the start of the previous multiplier level. */
-export function dropStreakLevel(state: SimState): void {
-  const r = state.rhythm;
-  const level = Math.floor(r.streak / RHYTHM.shotsPerStep);
-  r.streak = Math.max(0, (level - 1) * RHYTHM.shotsPerStep);
-  r.mult = rhythmMultForStreak(r.streak);
+/** Falls back to the start of the multiplier level `levels` below the current one. */
+export function dropStreakLevel(state: SimState, levels = 1): void {
+  const level = Math.floor(state.rhythm.streak / RHYTHM.shotsPerStep);
+  setStreak(state, (level - levels) * RHYTHM.shotsPerStep);
 }
 
-/** Rogue runs: hits and grazes build the multiplier instead of beat timing. */
+/** Re-applies the current cap (entering or leaving a beat stage). */
+export function clampStreak(state: SimState): void {
+  setStreak(state, state.rhythm.streak);
+}
+
+/** Rogue runs outside beat stages: hits and grazes build the multiplier instead of beat timing. */
 export function bumpStreak(state: SimState): void {
-  if (state.mode !== 'rogue') return;
-  const r = state.rhythm;
-  r.streak = Math.min(MAX_STREAK, r.streak + 1);
-  r.mult = rhythmMultForStreak(r.streak);
+  if (state.mode !== 'rogue' || state.beatMode !== 'off') return;
+  setStreak(state, state.rhythm.streak + 1);
 }
 
 export function resetRhythm(state: SimState): void {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PLAYER, STAGE } from '../../src/data/balance';
 import { BOONS } from '../../src/sim/boons';
-import { createRogueState, generateMap, MAP_ROWS, reachableLanes } from '../../src/sim/route';
+import { BEAT_ROW, createRogueState, generateMap, MAP_ROWS, reachableLanes } from '../../src/sim/route';
 import { defaultRunOptions } from '../../src/sim/ship';
 import { advanceStage, chooseBoon, chooseNode, finishStage, rerollDraft, startStage } from '../../src/sim/stageFlow';
 import { createInitialState } from '../../src/sim/state';
@@ -69,14 +69,24 @@ describe('generateMap', () => {
     }
   });
 
-  it('has exactly one battle per row, distinct kinds, and no repair in the first row', () => {
+  it('has one battle and distinct kinds per row, no repair in the first row', () => {
     for (const m of maps) {
       m.rows.forEach((row, i) => {
+        if (i === BEAT_ROW) return;
         const kinds = row.map((n) => n.kind);
         expect(kinds.filter((k) => k === 'battle')).toHaveLength(1);
         expect(new Set(kinds).size).toBe(kinds.length);
         if (i === 0) expect(kinds).not.toContain('repair');
+        expect(row.every((n) => !n.beat)).toBe(true);
       });
+    }
+  });
+
+  it('makes the beat row all fights, at least one battle', () => {
+    for (const m of maps) {
+      const row = m.rows[BEAT_ROW]!;
+      expect(row.every((n) => n.beat && (n.kind === 'battle' || n.kind === 'elite'))).toBe(true);
+      expect(row.some((n) => n.kind === 'battle')).toBe(true);
     }
   });
 

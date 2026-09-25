@@ -2,7 +2,7 @@ import { BEAT_STAGE, BEAT_TRACK, FIELD_H, HITSTOP, PLAYER, PLAYER_ZONE_TOP } fro
 import { allocId } from './ids';
 import { clamp } from './math';
 import { applyShotRhythm, dropStreakLevel, recordShot, resetRhythm } from './scoring';
-import type { InputFrame, SimEvent, SimState } from './types';
+import type { Box, InputFrame, SimEvent, SimState } from './types';
 
 export function updatePlayer(
   state: SimState,
@@ -73,6 +73,13 @@ function tryFire(state: SimState, input: InputFrame, events: SimEvent[]): void {
   p.cooldown = ship.cooldown;
   recordShot(state);
   events.push({ type: 'shot', x: cx, y, onBeat, power });
+}
+
+/** What enemy bullets and lasers must touch to hit: the whole hull, or in rogue runs a small center core. */
+export function hurtbox(state: SimState): Box {
+  const p = state.player;
+  if (state.mode !== 'rogue') return p;
+  return { x: p.x + (p.w - PLAYER.hurtW) / 2, y: p.y + (p.h - PLAYER.hurtH) / 2, w: PLAYER.hurtW, h: PLAYER.hurtH };
 }
 
 export function hitPlayer(state: SimState, events: SimEvent[]): void {

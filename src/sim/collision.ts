@@ -1,7 +1,7 @@
 import { ENEMY, GRAZE, POINTS } from '../data/balance';
 import { hitBoss } from './boss';
 import { overlaps } from './geometry';
-import { hitPlayer } from './player';
+import { hitPlayer, hurtbox } from './player';
 import { recordHit, registerGraze, registerKill } from './scoring';
 import { spawnMini } from './specials';
 import type { Box, SimEvent, SimState } from './types';
@@ -46,8 +46,9 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
   }
 
   if (state.player.invuln <= 0) {
+    const hurt = hurtbox(state);
     for (const b of state.bullets) {
-      if (b.owner === 'enemy' && !spent.has(b.id) && overlaps(b, state.player)) {
+      if (b.owner === 'enemy' && !spent.has(b.id) && overlaps(b, hurt)) {
         spent.add(b.id);
         hitPlayer(state, events);
         break;
@@ -77,9 +78,9 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
  * score once each. (A hit clears all enemy bullets, so a bullet that hits never scores.)
  */
 function checkGrazes(state: SimState, spent: ReadonlySet<number>, events: SimEvent[]): void {
-  const p = state.player;
+  const h = hurtbox(state);
   const m = GRAZE.margin;
-  const zone: Box = { x: p.x - m, y: p.y - m, w: p.w + m * 2, h: p.h + m * 2 };
+  const zone: Box = { x: h.x - m, y: h.y - m, w: h.w + m * 2, h: h.h + m * 2 };
   for (const b of state.bullets) {
     if (b.owner !== 'enemy' || b.grazed || spent.has(b.id)) continue;
     if (overlaps(b, zone)) {

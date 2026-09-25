@@ -100,6 +100,12 @@ export class GameRenderer {
   private readonly hull: Graphics;
   private readonly flame = new Graphics(FLAME_ART);
   private readonly shield = new Graphics();
+  /** Rogue runs: marks the small hurtbox at the hull's center. */
+  private readonly hitDot = new Graphics()
+    .rect(-(PLAYER.hurtW + 2) / 2, -(PLAYER.hurtH + 2) / 2, PLAYER.hurtW + 2, PLAYER.hurtH + 2)
+    .fill({ color: 0xff3d9a, alpha: 0.8 })
+    .rect(-PLAYER.hurtW / 2, -PLAYER.hurtH / 2, PLAYER.hurtW, PLAYER.hurtH)
+    .fill(0xffffff);
   private readonly enemyViews = new Map<number, Graphics>();
   private readonly bulletViews = new Map<number, Graphics>();
   private readonly bulletPool: Graphics[] = [];
@@ -121,7 +127,7 @@ export class GameRenderer {
     this.hull = new Graphics(SHIP_ART[cosmetics.skin.hull]);
     this.flame.tint = FLAME_COLOR;
     this.flame.position.set(0, 1);
-    this.ship.addChild(this.flame, this.hull, this.shield);
+    this.ship.addChild(this.flame, this.hull, this.shield, this.hitDot);
     this.backdrop.height = FIELD_H;
     this.effects = new Effects(tex.glyphs);
     this.laserBeam.alpha = 0.85;
@@ -179,6 +185,8 @@ export class GameRenderer {
     const blinkOff = p.invuln > 0 && Math.floor(state.time * 20) % 2 === 1;
     this.ship.visible = state.phase !== 'gameOver' && !blinkOff;
     this.hull.tint = color;
+    this.hitDot.visible = state.mode === 'rogue';
+    this.hitDot.position.set(0, -p.h / 2);
     // Shield charges: a pulsing ring per charge.
     this.shield.clear();
     for (let i = 0; i < p.shield; i++) {
@@ -204,7 +212,9 @@ export class GameRenderer {
         const cracked = e.kind === 'shield' && e.hp < e.maxHp;
         const ctx = cracked ? SHIELD_CRACKED_ART : ENEMY_ART[e.kind];
         if (g.context !== ctx) g.context = ctx;
-        const flashing = e.flash > 0;
+        // Elite telegraph: the next volley's shooter strobes white.
+        const charging = e.charging === true && blink(state.time, 12);
+        const flashing = e.flash > 0 || charging;
         g.tint = flashing ? 0xffffff : mulColor(cracked ? 0xff5a5a : ENEMY_COLOR[e.kind], worldTint);
         g.position.set(e.x + e.w / 2, e.y + e.h / 2);
         const s = (flashing ? 1.25 : 1) + ENEMY_PULSE * pulse * pulse;

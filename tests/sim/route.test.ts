@@ -245,3 +245,38 @@ describe('elite volleys', () => {
     expect(bullets).toBeGreaterThanOrEqual(10);
   });
 });
+
+describe('per-world elite volleys', () => {
+  function eliteAt(world: number): SimState {
+    const s = rogue();
+    s.world = world;
+    s.rogue!.node = 'elite';
+    s.stage = 2;
+    startStage(s, []);
+    for (const e of s.enemies) e.entry = null;
+    s.phase = 'playing';
+    s.enemyFireTimer = 999;
+    s.player.invuln = 999;
+    return s;
+  }
+
+  it('telegraphs the shooter one beat before the bar line', () => {
+    const s = eliteAt(1);
+    step(s, { ...NO_INPUT, beat: 0.01 });
+    step(s, { ...NO_INPUT, beat: 3.01 });
+    expect(s.enemies.filter((e) => e.charging)).toHaveLength(1);
+    step(s, { ...NO_INPUT, beat: 4.01 });
+    expect(s.enemies.some((e) => e.charging)).toBe(false);
+    expect(s.bullets.filter((b) => b.owner === 'enemy').length).toBeGreaterThanOrEqual(10);
+  });
+
+  it('Earth fires a wall with a gap', () => {
+    const s = eliteAt(0);
+    step(s, { ...NO_INPUT, beat: 0.01 });
+    step(s, { ...NO_INPUT, beat: 4.01 });
+    const xs = s.bullets.filter((b) => b.owner === 'enemy' && b.vx === 0).map((b) => b.x).sort((a, b) => a - b);
+    expect(xs.length).toBeGreaterThan(s.fieldW / 20);
+    const gaps = xs.slice(1).map((x, i) => x - xs[i]!);
+    expect(Math.max(...gaps)).toBeGreaterThanOrEqual(20);
+  });
+});

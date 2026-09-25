@@ -28,6 +28,9 @@ export const PLAYER = {
   maxLives: 5,
   extraLifeEvery: 50_000,
   invulnTime: 1.5,
+  /** Rogue runs: enemy bullets and lasers only hit this core at the hull's center (shown as a dot). */
+  hurtW: 5,
+  hurtH: 4,
 } as const;
 
 export const ENEMY = {
@@ -237,10 +240,17 @@ export const ELITE = {
   /** Gunners fire aimed bursts of this many bullets, `burstSpread` rad apart. */
   burstCount: 3,
   burstSpread: 0.22,
-  /** Every `ringEvery` beats a random formation enemy fires a slow ring. */
+  /** Every `ringEvery` beats (one bar) a formation enemy fires the world's volley; it flashes one beat before. */
   ringEvery: 4,
   ringCount: 10,
   ringSpeed: 55,
+  /** Earth: a falling wall of bullets with one gap. */
+  wallSpacing: 10,
+  wallGap: 26,
+  wallSpeed: 45,
+  /** Mars: aimed fan, alternating with rings. */
+  fanCount: 5,
+  fanSpread: 0.18,
 } as const;
 
 /** Rogue route map: node weights for the non-battle slots (elite gains per world). */
@@ -254,7 +264,7 @@ export const ROUTE = {
 } as const;
 
 /** Rogue runs: enemy bullets passing this close to the ship without hitting score a graze. */
-export const GRAZE = { margin: 6, points: 10 } as const;
+export const GRAZE = { margin: 8, points: 10 } as const;
 
 export const COMBO = {
   window: 1,

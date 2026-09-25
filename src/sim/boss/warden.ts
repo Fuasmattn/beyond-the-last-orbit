@@ -3,7 +3,7 @@ import { overlaps } from '../geometry';
 import { allocId } from '../ids';
 import { clamp } from '../math';
 import { fireRing, fireSpread } from '../patterns';
-import { hitPlayer } from '../player';
+import { hitPlayer, hurtbox } from '../player';
 import { nextRandom } from '../rng';
 import { recordHit, registerKill } from '../scoring';
 import type { Boss, Box, Bullet, Laser, SimEvent, SimState } from '../types';
@@ -108,7 +108,7 @@ function updateLaser(state: SimState, b: Boss, dt: number, events: SimEvent[]): 
     return;
   }
   l.x = clamp(l.x + ((l.dir * WARDEN.laserSweep) / WARDEN.laserFire) * dt, 4, state.fieldW - 4);
-  if (state.player.invuln <= 0 && overlaps(laserBox(b, l), state.player)) hitPlayer(state, events);
+  if (state.player.invuln <= 0 && overlaps(laserBox(b, l), hurtbox(state))) hitPlayer(state, events);
   if (l.t >= WARDEN.laserFire) b.laser = null;
 }
 

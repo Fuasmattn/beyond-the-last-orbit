@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GRAZE, PLAYER, RHYTHM, SIM_DT, STAGE } from '../../src/data/balance';
 import { moveBullets } from '../../src/sim/bullets';
 import { resolveCollisions } from '../../src/sim/collision';
-import { hitPlayer, updatePlayer } from '../../src/sim/player';
+import { hitPlayer, hurtbox, updatePlayer } from '../../src/sim/player';
 import { defaultRunOptions } from '../../src/sim/ship';
 import { computeStageResult } from '../../src/sim/stageFlow';
 import { createInitialState } from '../../src/sim/state';
@@ -66,28 +66,28 @@ describe('rogue streak', () => {
 describe('graze', () => {
   it('scores once per enemy bullet that skims past the ship', () => {
     const s = rogue();
-    const p = s.player;
-    s.bullets = [bullet({ owner: 'enemy', x: p.x - GRAZE.margin + 1, y: p.y })];
+    const h = hurtbox(s);
+    s.bullets = [bullet({ owner: 'enemy', x: h.x - GRAZE.margin + 1, y: h.y })];
     const events: SimEvent[] = [];
     resolveCollisions(s, events);
     expect(events.filter((e) => e.type === 'graze')).toHaveLength(0);
-    s.bullets[0]!.y = p.y + p.h + GRAZE.margin + 2;
+    s.bullets[0]!.y = h.y + h.h + GRAZE.margin + 2;
     resolveCollisions(s, events);
     resolveCollisions(s, events);
     expect(events.filter((e) => e.type === 'graze')).toHaveLength(1);
     expect(s.score).toBe(GRAZE.points);
     expect(s.rhythm.streak).toBe(1);
     expect(s.stageStats.grazes).toBe(1);
-    expect(p.lives).toBe(PLAYER.startLives);
+    expect(s.player.lives).toBe(PLAYER.startLives);
   });
 
   it('does not score a bullet that goes on to hit the ship', () => {
     const s = rogue();
-    const p = s.player;
-    s.bullets = [bullet({ owner: 'enemy', x: p.x - GRAZE.margin + 1, y: p.y })];
+    const h = hurtbox(s);
+    s.bullets = [bullet({ owner: 'enemy', x: h.x - GRAZE.margin + 1, y: h.y })];
     const events: SimEvent[] = [];
     resolveCollisions(s, events);
-    s.bullets[0]!.x = p.x + 2;
+    s.bullets[0]!.x = h.x + 1;
     resolveCollisions(s, events);
     expect(events.some((e) => e.type === 'playerHit')).toBe(true);
     expect(events.some((e) => e.type === 'graze')).toBe(false);
@@ -105,6 +105,21 @@ describe('graze', () => {
     r.bullets = [bullet({ owner: 'enemy', x: r.player.x - GRAZE.margin + 1, y: r.player.y })];
     resolveCollisions(r, events);
     expect(events.filter((e) => e.type === 'graze')).toHaveLength(0);
+  });
+});
+
+describe('rogue hurtbox', () => {
+  it('only the small core takes bullets in rogue runs; the whole hull in rhythm runs', () => {
+    const s = rogue();
+    const p = s.player;
+    s.bullets = [bullet({ owner: 'enemy', x: p.x, y: p.y })];
+    resolveCollisions(s, []);
+    expect(p.lives).toBe(PLAYER.startLives);
+    const r = createInitialState(1);
+    r.phase = 'playing';
+    r.bullets = [bullet({ owner: 'enemy', x: r.player.x, y: r.player.y })];
+    resolveCollisions(r, []);
+    expect(r.player.lives).toBe(PLAYER.startLives - 1);
   });
 });
 

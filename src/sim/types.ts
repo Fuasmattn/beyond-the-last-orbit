@@ -105,6 +105,8 @@ export interface Enemy extends Box {
   free: { vx: number; vy: number } | null;
   /** Bullets pass through while phased. */
   phased: boolean;
+  /** Elite stages: winding up the next bar's volley (telegraph). */
+  charging?: boolean;
 }
 
 export interface Bullet extends Box {

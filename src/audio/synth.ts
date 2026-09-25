@@ -1,4 +1,5 @@
 import { renderLeadNote, renderPowerChord } from './guitar';
+import { guitarRenderer, type GuitarRenderRequest } from './guitarRenderer';
 import type { Voicing } from './pattern';
 import type { CabName, DrumName, SampleBank } from './samples';
 
@@ -199,23 +200,28 @@ const VIBRATO_DEPTH = 0.009;
 const CHOKE_SEC = 0.02;
 /** Level of notes rendered from recorded DI strings relative to synthesized ones. */
 const DI_LEVEL = 0.63;
-/** Pre-render budget: one note per tick keeps each tick under ~5 ms. */
-const WARM_INTERVAL_MS = 12;
+/** Main-thread pre-render pacing when no worker is available. */
+const WARM_INTERVAL_MS = 30;
 
 /** Rendered notes per audio context, shared across songs. */
 const noteCache = new WeakMap<BaseAudioContext, Map<string, AudioBuffer>>();
 
-function cachedNote(ctx: BaseAudioContext, key: string, render: () => Float32Array<ArrayBuffer>): AudioBuffer {
+function noteMap(ctx: BaseAudioContext): Map<string, AudioBuffer> {
   let cache = noteCache.get(ctx);
   if (!cache) noteCache.set(ctx, (cache = new Map()));
-  let buf = cache.get(key);
-  if (!buf) {
-    const data = render();
-    buf = ctx.createBuffer(1, data.length, ctx.sampleRate);
-    buf.copyToChannel(data, 0);
-    cache.set(key, buf);
-  }
+  return cache;
+}
+
+function storeNote(ctx: BaseAudioContext, key: string, data: Float32Array<ArrayBuffer>): AudioBuffer {
+  const buf = ctx.createBuffer(1, data.length, ctx.sampleRate);
+  buf.copyToChannel(data, 0);
+  noteMap(ctx).set(key, buf);
   return buf;
+}
+
+/** Cached note, rendered synchronously if the worker hasn't delivered it yet (rare after pre-warming). */
+function cachedNote(ctx: BaseAudioContext, key: string, render: () => Float32Array<ArrayBuffer>): AudioBuffer {
+  return noteMap(ctx).get(key) ?? storeNote(ctx, key, render());
 }
 
 /** Plays a rendered buffer from `t` for `dur` seconds, choking it at the end. */
@@ -312,30 +318,56 @@ export function createRig(
   const src = source ? 'di' : 'ks';
   // Real strings sustain denser into the amp than synthesized ones; keep the guitar/drum balance.
   const noteLevel = source ? DI_LEVEL : 1;
-  const chordBuffer = (midi: number, mute: boolean, voicing: Voicing, take: number) =>
-    cachedNote(ctx, `chord:${src}:${midi}:${mute ? 'm' : 'o'}:${voicing}:${take}`, () =>
-      renderPowerChord(midi, {
-        sampleRate: ctx.sampleRate,
-        mute,
-        take,
-        seconds: mute ? CHORD_SEC.mute : CHORD_SEC.open,
-        voicing,
-        source,
-      }),
-    );
-  const leadBuffer = (midi: number) =>
-    cachedNote(ctx, `lead:${src}:${midi}`, () =>
-      renderLeadNote(midi, { sampleRate: ctx.sampleRate, take: 0, seconds: LEAD_SEC, source }),
-    );
+  if (source && bank) guitarRenderer.setStrings(bank.guitarLibrary.library, bank.guitarLibrary.sampleRate);
+  const chordReq = (midi: number, mute: boolean, voicing: Voicing, take: number): GuitarRenderRequest => ({
+    key: `chord:${src}:${midi}:${mute ? 'm' : 'o'}:${voicing}:${take}`,
+    kind: 'chord',
+    midi,
+    mute,
+    voicing,
+    take,
+    seconds: mute ? CHORD_SEC.mute : CHORD_SEC.open,
+    sampleRate: ctx.sampleRate,
+    useStrings: source !== null,
+  });
+  const leadReq = (midi: number): GuitarRenderRequest => ({
+    key: `lead:${src}:${midi}`,
+    kind: 'lead',
+    midi,
+    mute: false,
+    voicing: 'single',
+    take: 0,
+    seconds: LEAD_SEC,
+    sampleRate: ctx.sampleRate,
+    useStrings: source !== null,
+  });
+  const renderNow = (r: GuitarRenderRequest) =>
+    r.kind === 'lead'
+      ? renderLeadNote(r.midi, { sampleRate: r.sampleRate, take: r.take, seconds: r.seconds, source })
+      : renderPowerChord(r.midi, { sampleRate: r.sampleRate, mute: r.mute, take: r.take, seconds: r.seconds, voicing: r.voicing, source });
+  const buffer = (r: GuitarRenderRequest) => cachedNote(ctx, r.key, () => renderNow(r));
+  const chordBuffer = (midi: number, mute: boolean, voicing: Voicing, take: number) => buffer(chordReq(midi, mute, voicing, take));
+  const leadBuffer = (midi: number) => buffer(leadReq(midi));
 
   return {
     prewarm(notes) {
       if (tone !== 'amp') return;
-      const jobs: (() => void)[] = [];
+      const reqs: GuitarRenderRequest[] = [];
       for (const n of notes) {
-        if (n.kind === 'lead') jobs.push(() => leadBuffer(n.midi));
-        else for (const take of [0, 1]) jobs.push(() => chordBuffer(n.midi, n.mute, n.voicing, take));
+        if (n.kind === 'lead') reqs.push(leadReq(n.midi));
+        else for (const take of [0, 1]) reqs.push(chordReq(n.midi, n.mute, n.voicing, take));
       }
+      const todo = reqs.filter((r) => !noteMap(ctx).has(r.key));
+      if (guitarRenderer.available) {
+        // Off the main thread; results land in the cache as they arrive, in play order.
+        for (const r of todo) {
+          void guitarRenderer.render(r).then((data) => {
+            if (!noteMap(ctx).has(r.key)) storeNote(ctx, r.key, data);
+          });
+        }
+        return;
+      }
+      const jobs = todo.map((r) => () => buffer(r));
       const next = () => {
         jobs.shift()?.();
         if (jobs.length > 0) setTimeout(next, WARM_INTERVAL_MS);

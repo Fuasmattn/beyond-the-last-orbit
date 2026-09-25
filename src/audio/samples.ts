@@ -5,6 +5,8 @@
  * Loading is asynchronous; until a sound has arrived the rig keeps using its synthesized fallback.
  */
 
+import { nearestString, type RecordedString, type StringLibrary } from './guitar';
+
 export type DrumName = 'kick' | 'snare' | 'hat' | 'hatopen' | 'china' | 'crash';
 export type CabName = 'v30-sm57' | 'v30-rockdriver-blend';
 
@@ -23,8 +25,6 @@ export const CAB_FILES: readonly CabName[] = ['v30-sm57', 'v30-rockdriver-blend'
 /** Recorded DI guitar notes (FreePats FSBS Direct, CC0): MIDI pitch → two takes each. */
 export const DI_NOTES: readonly number[] = [36, 40, 41, 45, 48, 50, 52, 55, 59, 61, 64, 67, 71, 74, 77, 80, 82, 85];
 export const DI_TAKES = 2;
-/** Farthest a recording is pitch-shifted before falling back to synthesis. */
-const DI_MAX_SHIFT = 4;
 
 export interface DrumSet {
   accent: AudioBuffer[];
@@ -101,16 +101,13 @@ export class SampleBank {
   }
 
   /** Nearest recorded DI note to `midi` for this take (null if none is close enough or loaded). */
-  guitarString(midi: number, take: number): { data: Float32Array; sampleRate: number; midi: number } | null {
-    let best: number | null = null;
-    for (const m of this.di.keys()) {
-      if (Math.abs(m - midi) > DI_MAX_SHIFT) continue;
-      if (best === null || Math.abs(m - midi) < Math.abs(best - midi)) best = m;
-    }
-    if (best === null) return null;
-    const takes = this.di.get(best)!.filter(Boolean);
-    const data = takes[take % Math.max(1, takes.length)];
-    return data ? { data, sampleRate: this.diRate, midi: best } : null;
+  guitarString(midi: number, take: number): RecordedString | null {
+    return nearestString(this.di, this.diRate, midi, take);
+  }
+
+  /** The loaded DI recordings (for handing to the render worker). */
+  get guitarLibrary(): { library: StringLibrary; sampleRate: number } {
+    return { library: this.di, sampleRate: this.diRate };
   }
 
   /** Whether the DI guitar recordings have arrived. */

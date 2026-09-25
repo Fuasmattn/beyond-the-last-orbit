@@ -14,6 +14,25 @@ export interface RecordedString {
 /** Looks up a recording for `midi` (take = double-tracking variant); null → synthesize the string. */
 export type StringSource = (midi: number, take: number) => RecordedString | null;
 
+/** Farthest a recording is pitch-shifted before falling back to synthesis. */
+export const MAX_STRING_SHIFT = 4;
+
+/** Recorded takes by the MIDI pitch they were played at. */
+export type StringLibrary = ReadonlyMap<number, readonly Float32Array[]>;
+
+/** Nearest recording to `midi` within MAX_STRING_SHIFT semitones, for this take; null if none. */
+export function nearestString(lib: StringLibrary, sampleRate: number, midi: number, take: number): RecordedString | null {
+  let best: number | null = null;
+  for (const m of lib.keys()) {
+    if (Math.abs(m - midi) > MAX_STRING_SHIFT) continue;
+    if (best === null || Math.abs(m - midi) < Math.abs(best - midi)) best = m;
+  }
+  if (best === null) return null;
+  const takes = lib.get(best)!.filter(Boolean);
+  const data = takes[take % Math.max(1, takes.length)];
+  return data ? { data, sampleRate, midi: best } : null;
+}
+
 export interface GuitarNoteOptions {
   sampleRate: number;
   /** Recorded strings to use instead of Karplus-Strong synthesis. */
@@ -147,18 +166,54 @@ function lowpass(x: Float32Array, sampleRate: number, cutoff: number): void {
   }
 }
 
+/** Oversampling factor of the amp: distortion harmonics above Nyquist would otherwise fold back as harsh aliasing. */
+const OVERSAMPLE = 4;
+/** Half-length of the windowed-sinc decimation filter, in oversampled taps. */
+const DECIMATE_TAPS = 24;
+
+/** Windowed-sinc low-pass taps at the base Nyquist × 0.9, for decimating by OVERSAMPLE. */
+const DECIMATE_KERNEL: Float32Array = (() => {
+  const n = DECIMATE_TAPS * 2 + 1;
+  const k = new Float32Array(n);
+  const cutoff = 0.9 / OVERSAMPLE / 2;
+  let sum = 0;
+  for (let i = 0; i < n; i++) {
+    const m = i - DECIMATE_TAPS;
+    const sinc = m === 0 ? 2 * cutoff : Math.sin(2 * Math.PI * cutoff * m) / (Math.PI * m);
+    const w = 0.42 - 0.5 * Math.cos((2 * Math.PI * i) / (n - 1)) + 0.08 * Math.cos((4 * Math.PI * i) / (n - 1));
+    k[i] = sinc * w;
+    sum += k[i]!;
+  }
+  for (let i = 0; i < n; i++) k[i]! /= sum;
+  return k;
+})();
+
 /**
  * High-gain amp: tighten lows, asymmetric first stage (even harmonics like a biased tube), tame
- * the fizz between stages, symmetric second stage, then normalize and fade the tail.
+ * the fizz between stages, symmetric second stage, then normalize and fade the tail. The two gain
+ * stages run at OVERSAMPLE× the sample rate and are low-passed before decimating back.
  */
 function drive(x: Float32Array, sampleRate: number, gain1: number, gain2: number, peak: number): void {
   highpass(x, sampleRate, 140);
+  const hiRate = sampleRate * OVERSAMPLE;
+  const up = new Float32Array(x.length * OVERSAMPLE);
+  for (let i = 0; i < x.length; i++) {
+    const a = x[i]!;
+    const b = x[i + 1] ?? a;
+    for (let k = 0; k < OVERSAMPLE; k++) up[i * OVERSAMPLE + k] = a + ((b - a) * k) / OVERSAMPLE;
+  }
   const bias = 0.25;
   const off = Math.tanh(bias);
-  for (let i = 0; i < x.length; i++) x[i] = Math.tanh(gain1 * x[i]! + bias) - off;
-  lowpass(x, sampleRate, 6500);
-  highpass(x, sampleRate, 30);
-  for (let i = 0; i < x.length; i++) x[i] = Math.tanh(gain2 * x[i]!);
+  for (let i = 0; i < up.length; i++) up[i] = Math.tanh(gain1 * up[i]! + bias) - off;
+  lowpass(up, hiRate, 6500);
+  highpass(up, hiRate, 30);
+  for (let i = 0; i < up.length; i++) up[i] = Math.tanh(gain2 * up[i]!);
+  for (let i = 0; i < x.length; i++) {
+    const c = i * OVERSAMPLE;
+    let acc = 0;
+    for (let t = -DECIMATE_TAPS; t <= DECIMATE_TAPS; t++) acc += (up[c + t] ?? 0) * DECIMATE_KERNEL[t + DECIMATE_TAPS]!;
+    x[i] = acc;
+  }
   let max = 0;
   for (let i = 0; i < x.length; i++) max = Math.max(max, Math.abs(x[i]!));
   const norm = max > 0 ? peak / max : 0;

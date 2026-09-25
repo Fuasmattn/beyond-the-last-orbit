@@ -23,6 +23,12 @@ npm test           # unit tests (Vitest)
 npm run build      # typecheck + production build in dist/
 ```
 
+## Deploy
+
+`.github/workflows/deploy.yml` typechecks, tests and builds every push and pull request, and deploys `main` to GitHub Pages (the build's base path follows the Pages URL, e.g. `/<repo>/`).
+
+One-time setup after pushing to GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+
 ## Controls
 
 | Action | Keyboard | Touch |

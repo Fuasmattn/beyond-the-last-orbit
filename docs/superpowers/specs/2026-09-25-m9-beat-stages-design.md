@@ -1,6 +1,6 @@
 # M9 — Beat stages in rogue runs, readability, per-world elite patterns
 
-Date: 2026-09-25 · Builds on M8 (`2026-09-25-m8-run-modes-roguelite-design.md`)
+Date: 2026-09-25 · Status: implemented · Builds on M8 (`2026-09-25-m8-run-modes-roguelite-design.md`)
 
 ## Owner input
 
@@ -56,3 +56,9 @@ Mastering the beat therefore pays in power (drafts, power shots) and score (x8, 
 - Sim: `SimState.beatMode: 'off' | 'classic' | 'master'` replaces `mode === 'rhythm'` checks for judging; rhythm runs are `classic`, rogue beat stages `master`.
 - `RouteNode.beat`, map row `BEAT_ROW = 1`.
 - `StageResult.beatRank`.
+
+## Open for playtest
+
+- Beat rank thresholds (90/75/50 %) and the x8 cap vs. the ±100 ms window: S may be too easy with PERFECT at ±45 ms only affecting power shots.
+- Earth elite walls every bar are dense on ultra-wide fields (≈40 bullets per wall at 427 px); consider every other bar or a wider gap.
+- Whether the separate Rhythm Run is still needed now that beat stages exist inside rogue runs.

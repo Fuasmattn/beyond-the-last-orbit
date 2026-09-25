@@ -9,7 +9,8 @@ Three worlds (Near Earth Orbit, Moon, Mars) × 5 stages, a boss on every fifth s
 Two run types, each with its own highscore table:
 
 - **Rhythm run** — the beat game above: linear stages, multiplier from on-beat shots. Best with sound.
-- **Rogue run** — plays fine muted. Nothing is judged on the beat; hits and grazes (enemy bullets skimming the ship) build the multiplier, misses drop it. After each stage pick the next node on a branching map (BATTLE, ELITE, CACHE, REPAIR); elites and bosses grant a pick-1-of-3 upgrade draft.
+- **Rogue run** — hits and grazes (enemy bullets skimming the ship's core, shown as a dot) build the multiplier, misses drop it. After each stage pick the next node on a branching map (BATTLE, ELITE, CACHE, REPAIR); elites and bosses grant a pick-1-of-3 upgrade draft. Elites fire telegraphed per-world volleys (walls, rings, fans).
+  - **Beat stages**: stage 3 of every world is a beat stage — only on-beat shots build the multiplier (up to x8), off-beat shots cost two levels, PERFECT shots fire power shots, and a beat rank S/A earns an upgrade draft (S also doubles the stage bonus).
 
 Credits earned per run buy cosmetic ship skins and laser styles (SHOP) and permanent rogue-run upgrades (HANGAR).
 

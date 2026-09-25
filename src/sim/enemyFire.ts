@@ -1,3 +1,4 @@
+import { ENEMY } from '../data/balance';
 import { aimVelocity, spawnBomb, spawnEnemyBullet } from './bullets';
 import { inFormation } from './formation';
 import { nextRandom } from './rng';
@@ -5,15 +6,16 @@ import type { Enemy, SimEvent, SimState } from './types';
 
 const canShoot = (e: Enemy) => inFormation(e) && !e.phased;
 
-/** Bottom-most shooter of each column, plus every gunner. */
+/** Bottom-most shooter of each vertical lane, plus every gunner. */
 function shooters(enemies: readonly Enemy[]): Enemy[] {
-  const bottomByCol = new Map<number, Enemy>();
+  const bottomByLane = new Map<number, Enemy>();
   for (const e of enemies) {
     if (!canShoot(e)) continue;
-    const cur = bottomByCol.get(e.col);
-    if (!cur || e.row > cur.row) bottomByCol.set(e.col, e);
+    const lane = Math.round((e.x + e.w / 2) / ENEMY.spacingX);
+    const cur = bottomByLane.get(lane);
+    if (!cur || e.y > cur.y) bottomByLane.set(lane, e);
   }
-  const result = [...bottomByCol.values()];
+  const result = [...bottomByLane.values()];
   for (const e of enemies) if (e.kind === 'gunner' && canShoot(e) && !result.includes(e)) result.push(e);
   return result;
 }

@@ -1,3 +1,5 @@
+import type { ShapeKind } from './shapes';
+
 export type EnemyKind = 'grunt' | 'gunner' | 'diver' | 'shield' | 'splitter' | 'phaser' | 'bomber' | 'mini';
 export type BossKind = 'warden' | 'hive' | 'dreadnought';
 
@@ -18,6 +20,17 @@ export interface Dive {
   fired: boolean;
 }
 
+/** Fly-in from off-screen: quadratic curve from (x0, y0) via (cx, cy) to the live slot. */
+export interface Entry {
+  /** Seconds since launch; negative while waiting to launch. */
+  t: number;
+  duration: number;
+  x0: number;
+  y0: number;
+  cx: number;
+  cy: number;
+}
+
 export interface Enemy extends Box {
   id: number;
   kind: EnemyKind;
@@ -28,6 +41,8 @@ export interface Enemy extends Box {
   flash: number;
   /** Scripted swoop out of the formation and back. */
   dive: Dive | null;
+  /** Flying in to its slot at stage start. */
+  entry: Entry | null;
   /** Self-moving outside the formation (bounces off walls, leaves at the bottom). */
   free: { vx: number; vy: number } | null;
   /** Bullets pass through while phased. */
@@ -55,10 +70,21 @@ export interface Player extends Box {
 }
 
 export interface Formation {
-  x: number;
+  /** Top edge; advances down over time. */
   y: number;
-  dir: 1 | -1;
+  /** Horizontal offset of the center, eased toward `swayDir × amplitude`. */
+  sway: number;
+  /** Flips on every beat. */
+  swayDir: 1 | -1;
+  shapes: readonly ShapeKind[];
+  shapeIdx: number;
+  /** 0..1 progress from the previous shape to the current one. */
+  morph: number;
+  /** Beats since the last advance. */
+  beats: number;
   total: number;
+  rows: number;
+  cols: number;
 }
 
 export interface BossPart extends Box {
@@ -99,8 +125,8 @@ export interface Boss extends Box {
 
 export interface Difficulty {
   d: number;
-  marchMin: number;
-  marchMax: number;
+  swayAmp: number;
+  advanceStep: number;
   fireRate: number;
   bulletSpeed: number;
   diveInterval: number;

@@ -11,11 +11,12 @@ import {
 import { WORLDS } from '../../src/data/worlds';
 import { startStage } from '../../src/sim/stageFlow';
 import { createInitialState } from '../../src/sim/state';
+import { landedState } from './helpers';
 import { step } from '../../src/sim/step';
 import { NO_INPUT, type InputFrame, type SimEvent } from '../../src/sim/types';
 
 function playing(seed = 1) {
-  const s = createInitialState(seed);
+  const s = landedState(seed);
   s.phase = 'playing';
   return s;
 }

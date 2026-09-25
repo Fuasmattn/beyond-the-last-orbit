@@ -1,22 +1,34 @@
 import { describe, expect, it } from 'vitest';
-import { ENEMY, FORMATION } from '../../src/data/balance';
-import {
-  formationBottom,
-  formationSpeed,
-  formationWidth,
-  updateFormation,
-} from '../../src/sim/formation';
+import { ENEMY, FORMATION, SIM_DT } from '../../src/data/balance';
+import { advanceBars, formationBottom, inFormation, slotPosition, updateFormation } from '../../src/sim/formation';
+import { stageShapes } from '../../src/sim/shapes';
 import { createInitialState } from '../../src/sim/state';
+import type { SimState } from '../../src/sim/types';
 
-describe('formation', () => {
-  it('spawns rows × cols enemies centered horizontally', () => {
+/** Runs the formation for `seconds`, crossing a beat every `beatSec`. */
+function run(s: SimState, seconds: number, beatSec = 0.4): void {
+  let acc = 0;
+  for (let t = 0; t < seconds; t += SIM_DT) {
+    acc += SIM_DT;
+    let beats = 0;
+    while (acc >= beatSec) {
+      acc -= beatSec;
+      beats++;
+    }
+    updateFormation(s, SIM_DT, beats);
+  }
+}
+
+function settle(s: SimState): void {
+  run(s, 6, 1e9);
+}
+
+describe('formation spawn and entry', () => {
+  it('spawns rows × cols enemies that all fly in', () => {
     const s = createInitialState(1);
-    const cols = s.diff.cols;
-    expect(s.enemies).toHaveLength(ENEMY.rows * cols);
-    expect(s.formation.total).toBe(ENEMY.rows * cols);
-    const left = s.formation.x;
-    const right = s.fieldW - (left + formationWidth(cols));
-    expect(Math.abs(left - right)).toBeLessThanOrEqual(1);
+    expect(s.enemies).toHaveLength(ENEMY.rows * s.diff.cols);
+    expect(s.formation.total).toBe(ENEMY.rows * s.diff.cols);
+    expect(s.enemies.every((e) => e.entry !== null && !inFormation(e))).toBe(true);
   });
 
   it('puts gunners in the top row and grunts below on stage 1', () => {
@@ -25,47 +37,79 @@ describe('formation', () => {
     expect(s.enemies.filter((e) => e.row > 0).every((e) => e.kind === 'grunt')).toBe(true);
   });
 
-  it('spawns enemies at full hp and not diving', () => {
+  it('lands every enemy in its slot', () => {
     const s = createInitialState(1);
-    expect(s.enemies.every((e) => e.hp === e.maxHp && e.dive === null)).toBe(true);
+    settle(s);
+    for (const e of s.enemies) {
+      expect(e.entry).toBeNull();
+      const slot = slotPosition(s, e);
+      expect(e.x).toBeCloseTo(slot.x);
+      expect(e.y).toBeCloseTo(slot.y);
+    }
   });
 
-  it('marches in its direction and moves enemies with it', () => {
+  it('starts enemies outside the field', () => {
     const s = createInitialState(1);
-    const x0 = s.enemies[0]!.x;
-    updateFormation(s, 0.1);
-    expect(s.enemies[0]!.x).toBeGreaterThan(x0);
+    for (const e of s.enemies) expect(e.x + e.w < 0 || e.x > s.fieldW || e.y + e.h < 0).toBe(true);
+  });
+});
+
+describe('beat motion', () => {
+  it('flips sway direction on every beat', () => {
+    const s = createInitialState(1);
+    settle(s);
+    const dir = s.formation.swayDir;
+    updateFormation(s, SIM_DT, 1);
+    expect(s.formation.swayDir).toBe(-dir);
+    updateFormation(s, SIM_DT, 2);
+    expect(s.formation.swayDir).toBe(-dir);
   });
 
-  it('reverses and drops when hitting the right edge', () => {
+  it('advances and morphs after four bars', () => {
     const s = createInitialState(1);
-    s.formation.x = s.fieldW - formationWidth(s.diff.cols) - FORMATION.edgeMargin - 0.1;
+    settle(s);
     const y0 = s.formation.y;
-    updateFormation(s, 0.5);
-    expect(s.formation.dir).toBe(-1);
-    expect(s.formation.y).toBe(y0 + FORMATION.dropStep);
-    const maxRight = Math.max(...s.enemies.map((e) => e.x + e.w));
-    expect(maxRight).toBeLessThanOrEqual(s.fieldW - FORMATION.edgeMargin + 1e-9);
+    updateFormation(s, SIM_DT, 15);
+    expect(s.formation.y).toBe(y0);
+    updateFormation(s, SIM_DT, 1);
+    expect(s.formation.y).toBeCloseTo(y0 + s.diff.advanceStep);
+    expect(s.formation.shapeIdx).toBe(1 % stageShapes(0, 1).length);
+    expect(s.formation.morph).toBeLessThan(1);
   });
 
-  it('uses only surviving columns for edge detection', () => {
+  it('advances faster as the formation thins out', () => {
+    expect(advanceBars(1)).toBe(4);
+    expect(advanceBars(0.4)).toBe(2);
+    expect(advanceBars(0.1)).toBe(1);
     const s = createInitialState(1);
-    s.enemies = s.enemies.filter((e) => e.col < 2);
-    s.formation.x = 100;
-    updateFormation(s, 0.1);
-    expect(s.formation.dir).toBe(1);
+    settle(s);
+    s.enemies = s.enemies.slice(0, 3);
+    const y0 = s.formation.y;
+    updateFormation(s, SIM_DT, 4);
+    expect(s.formation.y).toBeCloseTo(y0 + s.diff.advanceStep);
   });
 
-  it('speeds up as enemies die', () => {
-    expect(formationSpeed(40, 40, 10, 90)).toBe(10);
-    expect(formationSpeed(1, 40, 10, 90)).toBeGreaterThan(formationSpeed(20, 40, 10, 90));
-    expect(formationSpeed(0, 40, 10, 90)).toBe(90);
-  });
+  for (const fieldW of [140, 600]) {
+    it(`keeps every slot inside a ${fieldW}px field while swaying`, () => {
+      const s = createInitialState(3, fieldW);
+      for (let i = 0; i < 40; i++) {
+        run(s, 0.5);
+        for (const e of s.enemies) {
+          if (!inFormation(e)) continue;
+          expect(e.x).toBeGreaterThanOrEqual(FORMATION.edgeMargin - 1e-6);
+          expect(e.x + e.w).toBeLessThanOrEqual(fieldW - FORMATION.edgeMargin + 1e-6);
+        }
+      }
+    });
+  }
+});
 
-  it('reports formation bottom', () => {
+describe('formationBottom', () => {
+  it('ignores enemies still flying in', () => {
     const s = createInitialState(1);
-    const expected = s.formation.y + (ENEMY.rows - 1) * ENEMY.spacingY + ENEMY.h;
-    expect(formationBottom(s)).toBe(expected);
+    expect(formationBottom(s)).toBe(-Infinity);
+    settle(s);
+    expect(formationBottom(s)).toBeGreaterThan(s.formation.y);
     s.enemies = [];
     expect(formationBottom(s)).toBe(-Infinity);
   });

@@ -12,7 +12,7 @@ describe('slotOffset', () => {
           const width = shapeWidth(cols, fieldW);
           const slots: { dx: number; dy: number }[] = [];
           for (let row = 0; row < ROWS; row++) {
-            for (let col = 0; col < cols; col++) slots.push(slotOffset(kind, row, col, ROWS, cols, width));
+            for (let col = 0; col < cols; col++) slots.push(slotOffset(kind, row, col, cols, width));
           }
           for (const s of slots) {
             expect(s.dy).toBeGreaterThanOrEqual(0);

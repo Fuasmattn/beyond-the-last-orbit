@@ -41,8 +41,17 @@ export const ENEMY = {
 } as const;
 
 export const FORMATION = {
-  dropStep: 6,
   edgeMargin: 8,
+  /** Sway approach rate per second toward the current beat side. */
+  swayEase: 10,
+  /** Fly-in: per-row and per-column launch delays, and flight time. */
+  entryRowDelay: 0.45,
+  entryColDelay: 0.07,
+  entryTime: 1.4,
+  /** Bars between advances while > 50 % / > 20 % / fewer of the formation survive. */
+  advanceBars: [4, 2, 1],
+  /** Beats a shape morph takes. */
+  morphBeats: 1,
 } as const;
 
 export const POINTS = {
@@ -73,8 +82,8 @@ export const DIVE = {
 export const DIFFICULTY = {
   k: 18,
   loopWeight: 15,
-  marchMin: [12, 40],
-  marchMax: [80, 150],
+  swayAmp: [8, 22],
+  advanceStep: [6, 12],
   fireRate: [0.7, 2.6],
   bulletSpeed: [100, 170],
   diveInterval: [7, 2],

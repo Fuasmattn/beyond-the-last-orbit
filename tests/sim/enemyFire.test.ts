@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { ENEMY } from '../../src/data/balance';
 import { updateEnemyFire } from '../../src/sim/enemyFire';
-import { createInitialState } from '../../src/sim/state';
+import { landedState } from './helpers';
 import type { SimEvent } from '../../src/sim/types';
 
 describe('updateEnemyFire', () => {
   it('fires when the timer expires and resets it', () => {
-    const s = createInitialState(3);
+    const s = landedState(3);
     s.enemyFireTimer = 0.01;
     const events: SimEvent[] = [];
     updateEnemyFire(s, 0.02, events);
@@ -18,7 +18,7 @@ describe('updateEnemyFire', () => {
   });
 
   it('does not fire before the timer expires', () => {
-    const s = createInitialState(3);
+    const s = landedState(3);
     s.enemyFireTimer = 1;
     updateEnemyFire(s, 0.1, []);
     expect(s.bullets).toHaveLength(0);
@@ -26,7 +26,7 @@ describe('updateEnemyFire', () => {
 
   it('only fires from bottom-most enemies or gunners', () => {
     for (let seed = 1; seed < 40; seed++) {
-      const s = createInitialState(seed);
+      const s = landedState(seed);
       s.enemyFireTimer = 0;
       updateEnemyFire(s, 0.01, []);
       const b = s.bullets[0]!;
@@ -37,7 +37,7 @@ describe('updateEnemyFire', () => {
   });
 
   it('gunners aim at the player', () => {
-    const s = createInitialState(3);
+    const s = landedState(3);
     s.enemies = s.enemies.filter((e) => e.kind === 'gunner' && e.col === 0);
     s.player.x = 200;
     s.enemyFireTimer = 0;

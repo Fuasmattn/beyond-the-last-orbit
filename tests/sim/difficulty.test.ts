@@ -13,7 +13,7 @@ describe('difficulty', () => {
     const easy = difficultyFor(0, 1, 0);
     const hard = difficultyFor(2, 5, 3);
     expect(hard.fireRate).toBeGreaterThan(easy.fireRate);
-    expect(hard.marchMax).toBeGreaterThan(easy.marchMax);
+    expect(hard.advanceStep).toBeGreaterThan(easy.advanceStep);
     expect(hard.diveInterval).toBeLessThan(easy.diveInterval);
     expect(hard.fireRate).toBeLessThanOrEqual(DIFFICULTY.fireRate[1]);
     expect(hard.bulletSpeed).toBeLessThanOrEqual(DIFFICULTY.bulletSpeed[1]);

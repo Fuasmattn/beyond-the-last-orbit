@@ -28,6 +28,7 @@ export function spawnFree(
     maxHp: 1,
     flash: 0,
     dive: null,
+    entry: null,
     free: { vx, vy },
     phased: false,
     x: cx - size.w / 2,

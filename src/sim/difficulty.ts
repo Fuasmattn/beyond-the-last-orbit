@@ -14,8 +14,8 @@ export function difficultyFor(world: number, stage: number, loop: number): Diffi
   const d = difficultyScalar(world, stage, loop);
   return {
     d,
-    marchMin: curve(DIFFICULTY.marchMin, d),
-    marchMax: curve(DIFFICULTY.marchMax, d),
+    swayAmp: curve(DIFFICULTY.swayAmp, d),
+    advanceStep: curve(DIFFICULTY.advanceStep, d),
     fireRate: curve(DIFFICULTY.fireRate, d),
     bulletSpeed: curve(DIFFICULTY.bulletSpeed, d),
     diveInterval: curve(DIFFICULTY.diveInterval, d),

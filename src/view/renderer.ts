@@ -4,7 +4,7 @@ import type { LaserDef, SkinDef } from '../data/cosmetics';
 import { worldAt, type WorldId } from '../data/worlds';
 import { laserBox } from '../sim/boss/warden';
 import type { Boss, BossKind, Bullet, Enemy, SimEvent, SimState } from '../sim/types';
-import { blink, popInScale } from './anim';
+import { blink } from './anim';
 import { createBackdrop, type Backdrop } from './backdrops';
 import { beatPulse, lerpColor } from './beatPulse';
 import { hueToRgb } from './color';
@@ -188,7 +188,6 @@ export class GameRenderer {
   private renderEnemies(state: SimState, beat: number | null, worldTint: number): void {
     const tick = beat !== null && beat >= 0 ? Math.floor(beat) : Math.floor(state.time * 2);
     const frame = tick % 2 === 0 ? 0 : 1;
-    const intro = state.phase === 'stageIntro' && !state.boss ? 1 - state.phaseTimer / STAGE.introTime : 1;
     syncViews<Enemy, EnemyView>(
       this.enemyViews,
       state.enemies,
@@ -213,7 +212,7 @@ export class GameRenderer {
         body.tint = flashing ? 0xffffff : worldTint;
         const x = Math.round(e.x + e.w / 2);
         const y = Math.round(e.y + e.h / 2);
-        const scale = e.row >= 0 ? popInScale(intro, e.row) : 1;
+        const scale = 1;
         body.position.set(x, y);
         body.scale.set(scale);
         body.alpha = e.phased ? 0.25 : 1;

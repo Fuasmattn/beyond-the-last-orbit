@@ -4,6 +4,7 @@ import { divePosition, updateDives } from '../../src/sim/dive';
 import { formationBottom, slotPosition } from '../../src/sim/formation';
 import { startStage } from '../../src/sim/stageFlow';
 import { createInitialState } from '../../src/sim/state';
+import { landFormation } from './helpers';
 import type { Dive, SimEvent } from '../../src/sim/types';
 
 const dive = (over: Partial<Dive> = {}): Dive => ({
@@ -21,6 +22,7 @@ function diverStage() {
   const s = createInitialState(1);
   s.stage = 2; // d = 2 → row 2 are divers
   startStage(s, []);
+  landFormation(s);
   s.phase = 'playing';
   return s;
 }

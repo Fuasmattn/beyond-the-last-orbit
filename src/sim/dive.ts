@@ -1,14 +1,9 @@
 import { DIVE } from '../data/balance';
 import { aimVelocity, spawnEnemyBullet } from './bullets';
 import { inFormation, slotPosition } from './formation';
-import { clamp } from './math';
+import { clamp, smoothstep } from './math';
 import { nextRandom } from './rng';
 import type { Dive, SimEvent, SimState } from './types';
-
-function smoothstep(a: number, b: number, x: number): number {
-  const t = clamp((x - a) / (b - a), 0, 1);
-  return t * t * (3 - 2 * t);
-}
 
 /** Swoop down to the target, swinging sideways, then blend back into the formation slot. */
 export function divePosition(dive: Dive, slotX: number, slotY: number): { x: number; y: number } {

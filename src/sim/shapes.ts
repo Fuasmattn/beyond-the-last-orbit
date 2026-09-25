@@ -24,7 +24,7 @@ export function shapeWidth(cols: number, fieldW: number): number {
  * Slot of (row, col) in a formation shape. Every shape keeps columns evenly spaced and
  * rows `spacingY` apart, so slots never overlap as long as the column spacing ≥ ENEMY.w.
  */
-export function slotOffset(kind: ShapeKind, row: number, col: number, rows: number, cols: number, width: number): SlotOffset {
+export function slotOffset(kind: ShapeKind, row: number, col: number, cols: number, width: number): SlotOffset {
   const u = cols > 1 ? (2 * col) / (cols - 1) - 1 : 0;
   const half = width / 2;
   const sy = ENEMY.spacingY;
@@ -47,7 +47,7 @@ export function slotOffset(kind: ShapeKind, row: number, col: number, rows: numb
 }
 
 const SEQUENCES: readonly (readonly ShapeKind[])[] = [
-  ['block', 'chevron'],
+  ['chevron', 'wave'],
   ['wave', 'arch', 'block'],
   ['chevron', 'stagger', 'tilt'],
   ['arch', 'wave', 'stagger', 'chevron'],

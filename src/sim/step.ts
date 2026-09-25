@@ -26,7 +26,8 @@ export function step(state: SimState, input: InputFrame, dt: number = SIM_DT): S
   switch (state.phase) {
     case 'stageIntro':
       updatePlayer(state, noFire, dt, events);
-      updateBoss(state, dt, beats, events);
+      if (state.boss) updateBoss(state, dt, beats, events);
+      else updateFormation(state, dt, beats);
       moveBullets(state, dt);
       state.phaseTimer -= dt;
       if (state.phaseTimer <= 0) {
@@ -74,7 +75,7 @@ function playing(state: SimState, input: InputFrame, dt: number, beats: number, 
   if (state.boss) {
     updateBoss(state, dt, beats, events);
   } else {
-    updateFormation(state, dt);
+    updateFormation(state, dt, beats);
     updateDives(state, dt, events);
     updateEnemyFire(state, dt, events);
   }

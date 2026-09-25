@@ -31,7 +31,7 @@ export function createInitialState(seed: number, fieldW: number = FIELD_W_DEFAUL
     },
     enemies: [],
     bullets: [],
-    formation: { x: 0, y: 0, dir: 1, total: 0 },
+    formation: { y: 0, sway: 0, swayDir: 1, shapes: ['block'], shapeIdx: 0, morph: 1, beats: 0, total: 0, rows: 0, cols: 0 },
     boss: null,
     diff: difficultyFor(0, 1, 0),
     enemyFireTimer: 1.5,

@@ -4,7 +4,7 @@ import { spawnBomb } from '../../src/sim/bullets';
 import { resolveCollisions } from '../../src/sim/collision';
 import { updateEnemyFire } from '../../src/sim/enemyFire';
 import { phaserPhased, spawnMini, updateSpecials } from '../../src/sim/specials';
-import { createInitialState } from '../../src/sim/state';
+import { landedState } from './helpers';
 import type { Bullet, Enemy, SimEvent } from '../../src/sim/types';
 
 const bulletAt = (e: Enemy): Bullet => ({
@@ -20,7 +20,7 @@ describe('phaserPhased', () => {
 
 describe('free enemies', () => {
   it('move, bounce off walls and leave at the bottom', () => {
-    const s = createInitialState(1);
+    const s = landedState(1);
     s.enemies = [];
     spawnMini(s, 2, 100, -1);
     const m = s.enemies[0]!;
@@ -35,7 +35,7 @@ describe('free enemies', () => {
 
 describe('splitters', () => {
   it('split into two minis heading apart when killed', () => {
-    const s = createInitialState(1);
+    const s = landedState(1);
     const e = s.enemies[0]!;
     e.kind = 'splitter';
     s.bullets = [bulletAt(e)];
@@ -50,7 +50,7 @@ describe('splitters', () => {
 
 describe('phasers', () => {
   it('let bullets pass while phased', () => {
-    const s = createInitialState(1);
+    const s = landedState(1);
     const e = s.enemies[0]!;
     e.kind = 'phaser';
     e.phased = true;
@@ -61,7 +61,7 @@ describe('phasers', () => {
   });
 
   it('toggle with the beat count', () => {
-    const s = createInitialState(1);
+    const s = landedState(1);
     const e = s.enemies[0]!;
     e.kind = 'phaser';
     e.col = 0;
@@ -76,7 +76,7 @@ describe('phasers', () => {
 
 describe('bombs', () => {
   it('bombers drop bombs', () => {
-    const s = createInitialState(1);
+    const s = landedState(1);
     s.enemies.forEach((e) => (e.kind = 'bomber'));
     s.enemyFireTimer = 0;
     updateEnemyFire(s, 0.01, []);
@@ -87,7 +87,7 @@ describe('bombs', () => {
   });
 
   it('burst into a ring when the fuse runs out', () => {
-    const s = createInitialState(1);
+    const s = landedState(1);
     s.bullets = [];
     spawnBomb(s, 100, 100);
     const events: SimEvent[] = [];

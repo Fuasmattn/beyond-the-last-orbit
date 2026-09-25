@@ -42,6 +42,7 @@ function sanitizeSettings(v: unknown): Settings {
     bloom: bool(v.bloom, d.bloom),
     shake: bool(v.shake, d.shake),
     latencyOffsetMs: num(v.latencyOffsetMs, d.latencyOffsetMs, -300, 300),
+    guitarTone: v.guitarTone === 'retro' ? 'retro' : 'amp',
     visualOffsetMs: num(v.visualOffsetMs, d.visualOffsetMs, -VISUAL_OFFSET_MAX_MS, VISUAL_OFFSET_MAX_MS),
   };
 }

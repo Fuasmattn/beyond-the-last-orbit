@@ -5,7 +5,7 @@ import { gradeShot, type ShotJudgement } from './rhythmJudge';
 import { Sequencer } from './sequencer';
 import { Sfx } from './sfx';
 import type { CompiledSong } from './song';
-import { createBuses, type Buses } from './synth';
+import { createBuses, type Buses, type GuitarTone } from './synth';
 
 const SCHEDULE_INTERVAL_MS = 25;
 const LOOKAHEAD_SEC = 0.1;
@@ -40,6 +40,7 @@ export class AudioEngine {
   private sour = 0;
   private readonly sync = new AudioClockSync();
   private visualOffsetSec = 0;
+  private guitarTone: GuitarTone = 'amp';
 
   private constructor(
     private readonly ctx: AudioContext,
@@ -100,7 +101,7 @@ export class AudioEngine {
     this.sync.reset();
     const start = this.ctx.currentTime + START_DELAY_SEC;
     const clock = new BeatClock(song.bpm, start);
-    const seq = new Sequencer(this.ctx, gain, song, clock);
+    const seq = new Sequencer(this.ctx, gain, song, clock, this.guitarTone);
     seq.sour = this.sour;
     this.playing = { seq, clock, gain, scheduledTo: start, arrangement: 'main' };
     this.tick();
@@ -163,6 +164,11 @@ export class AudioEngine {
   /** Beat the listener hears now, for the simulation (no visual lead or offset). */
   simBeat(): number | null {
     return this.playing ? this.playing.clock.beatAt(this.heardTime()) : null;
+  }
+
+  /** Takes effect from the next song. */
+  setGuitarTone(tone: GuitarTone): void {
+    this.guitarTone = tone;
   }
 
   /** User trim for beat visuals (+ = earlier), from Settings → Visual offset. */

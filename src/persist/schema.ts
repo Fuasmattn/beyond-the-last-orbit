@@ -21,6 +21,8 @@ export interface Settings {
   latencyOffsetMs: number;
   /** Shifts beat visuals only (+ = earlier); judging is unaffected. */
   visualOffsetMs: number;
+  /** Soundtrack guitars: modeled amp (default) or the original retro synth. */
+  guitarTone: 'amp' | 'retro';
 }
 
 export interface SaveData {
@@ -53,6 +55,7 @@ export function defaultSave(): SaveData {
       shake: true,
       latencyOffsetMs: 0,
       visualOffsetMs: 0,
+      guitarTone: 'amp',
     },
   };
 }

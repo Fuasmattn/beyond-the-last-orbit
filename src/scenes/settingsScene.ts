@@ -10,6 +10,7 @@ type Row = SettingKey | 'calibrate' | 'back';
 const ROWS: readonly { key: Row; label: string }[] = [
   { key: 'musicVolume', label: 'MUSIC VOLUME' },
   { key: 'sfxVolume', label: 'SFX VOLUME' },
+  { key: 'guitarTone', label: 'GUITAR TONE' },
   { key: 'crt', label: 'CRT FILTER' },
   { key: 'bloom', label: 'BLOOM' },
   { key: 'shake', label: 'SCREEN SHAKE' },
@@ -85,6 +86,8 @@ export class SettingsScene implements Scene {
           case 'bloom':
           case 'shake':
             return { label, value: onOff(s[key]) };
+          case 'guitarTone':
+            return { label, value: s.guitarTone === 'amp' ? 'AMP' : 'RETRO' };
           case 'calibrate':
             return { label, value: `${offset >= 0 ? '+' : ''}${offset}MS` };
           case 'visualOffsetMs': {

@@ -8,7 +8,7 @@ import {
   type CompiledArrangement,
   type CompiledSong,
 } from './song';
-import { createRig, type Rig } from './synth';
+import { createRig, type GuitarTone, type Rig } from './synth';
 
 const MIN_NOTE = 0.04;
 const TWIN_PAN = 0.4;
@@ -31,8 +31,9 @@ export class Sequencer {
     out: AudioNode,
     private readonly song: CompiledSong,
     private readonly clock: BeatClock,
+    tone: GuitarTone = 'amp',
   ) {
-    this.rig = createRig(ctx, out);
+    this.rig = createRig(ctx, out, tone);
     this.stepDur = clock.beatDur / STEPS_PER_BEAT;
     this.current = { arr: this.arrangement('main'), startStep: 0 };
   }

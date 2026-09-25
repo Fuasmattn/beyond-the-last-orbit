@@ -1,3 +1,8 @@
+import { renderLeadNote, renderPowerChord } from './guitar';
+
+/** `amp`: plucked-string guitars through a modeled amp and cab. `retro`: the original sawtooth synth. */
+export type GuitarTone = 'amp' | 'retro';
+
 export function midiToHz(midi: number): number {
   return 440 * 2 ** ((midi - 69) / 12);
 }
@@ -123,9 +128,69 @@ function decay(ctx: BaseAudioContext, t: number, peak: number, length: number): 
   return g;
 }
 
-export function createRig(ctx: BaseAudioContext, out: AudioNode): Rig {
+/** Speaker cabinet: tight lows, low-mid scoop, presence bump, steep roll-off above ~5 kHz (no fizz). */
+function cabinet(ctx: BaseAudioContext, out: AudioNode, pan: number, level: number): AudioNode {
+  const input = ctx.createGain();
+  const post = ctx.createGain();
+  post.gain.value = level;
+  const panner = ctx.createStereoPanner();
+  panner.pan.value = pan;
+  input
+    .connect(filter(ctx, 'highpass', 80))
+    .connect(filter(ctx, 'peaking', 120, 1, 3))
+    .connect(filter(ctx, 'peaking', 500, 0.9, -3.5))
+    .connect(filter(ctx, 'peaking', 1900, 1.1, 3))
+    .connect(filter(ctx, 'lowpass', 5200, 0.7))
+    .connect(filter(ctx, 'lowpass', 5200, 0.7))
+    .connect(post)
+    .connect(panner)
+    .connect(out);
+  return input;
+}
+
+const CHORD_SEC = { open: 2, mute: 0.35 } as const;
+const LEAD_SEC = 2.2;
+const AMP_GUITAR_LEVEL = 0.34;
+const AMP_LEAD_LEVEL = 0.13;
+const VIBRATO_DEPTH = 0.009;
+const CHOKE_SEC = 0.02;
+
+/** Rendered notes per audio context, shared across songs. */
+const noteCache = new WeakMap<BaseAudioContext, Map<string, AudioBuffer>>();
+
+function cachedNote(ctx: BaseAudioContext, key: string, render: () => Float32Array<ArrayBuffer>): AudioBuffer {
+  let cache = noteCache.get(ctx);
+  if (!cache) noteCache.set(ctx, (cache = new Map()));
+  let buf = cache.get(key);
+  if (!buf) {
+    const data = render();
+    buf = ctx.createBuffer(1, data.length, ctx.sampleRate);
+    buf.copyToChannel(data, 0);
+    cache.set(key, buf);
+  }
+  return buf;
+}
+
+/** Plays a rendered buffer from `t` for `dur` seconds, choking it at the end. */
+function playNote(ctx: BaseAudioContext, buf: AudioBuffer, t: number, dur: number, dest: AudioNode, detune: number): AudioBufferSourceNode {
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.detune.value = detune;
+  const env = ctx.createGain();
+  const end = t + Math.min(dur, buf.duration);
+  env.gain.setValueAtTime(1, t);
+  env.gain.setValueAtTime(1, Math.max(t, end - CHOKE_SEC));
+  env.gain.linearRampToValueAtTime(0, end);
+  src.connect(env).connect(dest);
+  src.start(t);
+  src.stop(end + 0.01);
+  return src;
+}
+
+export function createRig(ctx: BaseAudioContext, out: AudioNode, tone: GuitarTone = 'amp'): Rig {
   const noise = makeNoiseBuffer(ctx);
   const amps = [guitarAmp(ctx, out, -0.6), guitarAmp(ctx, out, 0.6)];
+  const cabs = tone === 'amp' ? [cabinet(ctx, out, -0.7, AMP_GUITAR_LEVEL), cabinet(ctx, out, 0.7, AMP_GUITAR_LEVEL)] : [];
 
   const bassBus = ctx.createGain();
   bassBus.gain.value = 0.3;
@@ -142,9 +207,12 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode): Rig {
   echo.delayTime.value = 0.32;
   const echoFb = ctx.createGain();
   echoFb.gain.value = 0.28;
-  leadBus.connect(leadShaper).connect(leadTone).connect(out);
+  // Amp-tone leads are already distorted; they skip the synth lead's shaper.
+  if (tone === 'amp') leadBus.connect(leadTone).connect(out);
+  else leadBus.connect(leadShaper).connect(leadTone).connect(out);
   leadTone.connect(echo).connect(echoFb).connect(echo);
   echoFb.connect(out);
+  const leadCab = tone === 'amp' ? cabinet(ctx, leadBus, 0, AMP_LEAD_LEVEL / leadBus.gain.value) : null;
 
   const drums = ctx.createGain();
   drums.gain.value = 0.8;
@@ -160,6 +228,17 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode): Rig {
 
   return {
     guitar(t, midi, dur, mute, detune = 0) {
+      if (tone === 'amp') {
+        cabs.forEach((cab, take) => {
+          const key = `chord:${midi}:${mute ? 'm' : 'o'}:${take}`;
+          const seconds = mute ? CHORD_SEC.mute : CHORD_SEC.open;
+          const buf = cachedNote(ctx, key, () =>
+            renderPowerChord(midi, { sampleRate: ctx.sampleRate, mute, take, seconds }),
+          );
+          playNote(ctx, buf, t, dur, cab, detune);
+        });
+        return;
+      }
       amps.forEach((amp, side) => {
         const env = envelope(ctx, t, dur, 0.5);
         const tone = filter(ctx, 'lowpass', mute ? 900 : 6000);
@@ -192,6 +271,25 @@ export function createRig(ctx: BaseAudioContext, out: AudioNode): Rig {
     },
 
     lead(t, midi, dur, pan = 0, detune = 0) {
+      if (leadCab) {
+        const buf = cachedNote(ctx, `lead:${midi}`, () =>
+          renderLeadNote(midi, { sampleRate: ctx.sampleRate, take: 0, seconds: LEAD_SEC }),
+        );
+        const panner = ctx.createStereoPanner();
+        panner.pan.value = pan;
+        panner.connect(leadCab);
+        const src = playNote(ctx, buf, t, dur, panner, detune);
+        // Finger vibrato: eases in after the pick, like the synth lead.
+        const vibrato = ctx.createOscillator();
+        vibrato.frequency.value = 5.5;
+        const depth = ctx.createGain();
+        depth.gain.setValueAtTime(0, t);
+        depth.gain.linearRampToValueAtTime(VIBRATO_DEPTH, t + Math.min(0.25, dur));
+        vibrato.connect(depth).connect(src.playbackRate);
+        vibrato.start(t);
+        vibrato.stop(t + dur + 0.02);
+        return;
+      }
       const env = envelope(ctx, t, dur, 0.7);
       const panner = ctx.createStereoPanner();
       panner.pan.value = pan;

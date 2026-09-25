@@ -30,9 +30,12 @@ describe('updateEnemyFire', () => {
       s.enemyFireTimer = 0;
       updateEnemyFire(s, 0.01, []);
       const b = s.bullets[0]!;
-      const bottomY = s.formation.y + (ENEMY.rows - 1) * ENEMY.spacingY + ENEMY.h;
-      const topY = s.formation.y + ENEMY.h;
-      expect([bottomY, topY]).toContain(b.y);
+      const cx = b.x + b.w / 2;
+      const shooter = s.enemies.find((e) => Math.abs(e.x + e.w / 2 - cx) < 1e-6 && Math.abs(e.y + e.h - b.y) < 1e-6)!;
+      expect(shooter).toBeDefined();
+      const lane = (e: { x: number; w: number }) => Math.round((e.x + e.w / 2) / ENEMY.spacingX);
+      const below = s.enemies.some((e) => e !== shooter && lane(e) === lane(shooter) && e.y > shooter.y);
+      expect(shooter.kind === 'gunner' || !below).toBe(true);
     }
   });
 

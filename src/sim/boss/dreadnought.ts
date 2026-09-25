@@ -100,8 +100,8 @@ export function hitDreadnought(state: SimState, bullet: Bullet, events: SimEvent
 
   for (const p of b.parts) {
     if (!p.alive || !overlaps(bullet, p)) continue;
-    recordHit(state);
-    p.hp--;
+    recordHit(state, bullet);
+    p.hp -= bullet.damage ?? 1;
     p.flash = 0.06;
     if (p.hp <= 0) {
       p.alive = false;
@@ -114,8 +114,8 @@ export function hitDreadnought(state: SimState, bullet: Bullet, events: SimEvent
   const core = dreadCore(b);
   if (overlaps(bullet, core)) {
     if (b.parts.some((p) => p.alive)) return true;
-    recordHit(state);
-    b.hp--;
+    recordHit(state, bullet);
+    b.hp -= bullet.damage ?? 1;
     b.flash = 0.06;
     events.push({ type: 'bossHit', x: bullet.x, y: core.y + core.h });
     if (b.hp <= 0) {

@@ -119,8 +119,8 @@ export function hitWarden(state: SimState, bullet: Bullet, events: SimEvent[]): 
 
   for (const t of b.parts) {
     if (!t.alive || !overlaps(bullet, t)) continue;
-    recordHit(state);
-    t.hp--;
+    recordHit(state, bullet);
+    t.hp -= bullet.damage ?? 1;
     t.flash = 0.06;
     if (t.hp <= 0) {
       t.alive = false;
@@ -132,8 +132,8 @@ export function hitWarden(state: SimState, bullet: Bullet, events: SimEvent[]): 
 
   const core = wardenCore(b);
   if (overlaps(bullet, core)) {
-    recordHit(state);
-    b.hp--;
+    recordHit(state, bullet);
+    b.hp -= bullet.damage ?? 1;
     b.flash = 0.06;
     events.push({ type: 'bossHit', x: bullet.x, y: core.y + core.h });
     if (b.hp <= 0) {

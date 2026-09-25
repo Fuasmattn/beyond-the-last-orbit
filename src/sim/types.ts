@@ -1,5 +1,8 @@
 import type { ShapeKind } from './shapes';
 
+/** `rhythm`: linear run scored on the beat. `rogue`: route map, drafted upgrades, streak scoring. */
+export type RunMode = 'rhythm' | 'rogue';
+
 export type EnemyKind = 'grunt' | 'gunner' | 'diver' | 'shield' | 'splitter' | 'phaser' | 'bomber' | 'mini';
 export type BossKind = 'warden' | 'hive' | 'dreadnought';
 
@@ -59,6 +62,34 @@ export interface Bullet extends Box {
   mult: number;
   /** Bombs: seconds until the bullet bursts into a ring. */
   fuse?: number;
+  /** Player bolts: damage per hit (default 1). */
+  damage?: number;
+  /** Player bolts: enemies it may still pass through. */
+  pierce?: number;
+  /** Player bolts: ids of enemies already pierced (so a bolt hits each enemy once). */
+  pierced?: number[];
+  /** Player side bolts (twin/spread): not capped and not counted for accuracy. */
+  extra?: boolean;
+  /** Enemy bullets: already scored a graze. */
+  grazed?: boolean;
+}
+
+/** Per-run ship performance; base values from PLAYER, raised by permanent and drafted upgrades. */
+export interface ShipStats {
+  /** Primary bolts allowed on screen. */
+  maxBullets: number;
+  cooldown: number;
+  speed: number;
+  damage: number;
+  pierce: number;
+  twin: boolean;
+  spread: boolean;
+  /** Multiplies all kill points. */
+  scoreMul: number;
+  /** Shield charges restored at every stage start. */
+  shieldMax: number;
+  /** Shield charges restored at the start of every world. */
+  worldShield: number;
 }
 
 export interface Player extends Box {
@@ -67,6 +98,8 @@ export interface Player extends Box {
   cooldown: number;
   invuln: number;
   lives: number;
+  /** Charges that each absorb one hit. */
+  shield: number;
 }
 
 export interface Formation {
@@ -155,6 +188,8 @@ export interface StageResult {
 export type Phase = 'stageIntro' | 'playing' | 'bossDying' | 'stageClear' | 'warp' | 'gameOver';
 
 export interface SimState {
+  mode: RunMode;
+  ship: ShipStats;
   time: number;
   /** Logical playfield width, fixed for the current stage. */
   fieldW: number;
@@ -194,6 +229,7 @@ export type SimEvent =
   | { type: 'enemyKilled'; id: number; kind: EnemyKind; x: number; y: number; points: number }
   | { type: 'enemyShot'; x: number; y: number }
   | { type: 'playerHit'; x: number; y: number; livesLeft: number }
+  | { type: 'shieldHit'; x: number; y: number; shieldLeft: number }
   | { type: 'formationInvaded' }
   | { type: 'split'; id: number; x: number; y: number }
   | { type: 'bombBurst'; x: number; y: number }

@@ -24,6 +24,8 @@ export function startStage(state: SimState, events: SimEvent[]): void {
   state.boss = null;
   state.stageStats = emptyStageStats();
   state.result = null;
+  const refill = state.stage === 1 ? Math.max(state.ship.shieldMax, state.ship.worldShield) : state.ship.shieldMax;
+  state.player.shield = Math.max(state.player.shield, refill);
   if (boss) spawnBoss(state);
   else spawnFormation(state);
   state.enemyFireTimer = 1.5;

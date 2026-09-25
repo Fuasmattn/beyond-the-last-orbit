@@ -18,11 +18,16 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
       continue;
     }
     for (const e of state.enemies) {
-      if (e.hp <= 0 || e.phased || !overlaps(b, e)) continue;
-      spent.add(b.id);
-      e.hp--;
+      if (e.hp <= 0 || e.phased || b.pierced?.includes(e.id) || !overlaps(b, e)) continue;
+      recordHit(state, b);
+      if ((b.pierce ?? 0) > 0) {
+        b.pierce!--;
+        (b.pierced ??= []).push(e.id);
+      } else {
+        spent.add(b.id);
+      }
+      e.hp -= b.damage ?? 1;
       e.flash = ENEMY.flashTime;
-      recordHit(state);
       const cx = e.x + e.w / 2;
       const cy = e.y + e.h / 2;
       if (e.hp <= 0) {

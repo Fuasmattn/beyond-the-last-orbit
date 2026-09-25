@@ -1,5 +1,5 @@
 import { COMBO, RHYTHM } from '../data/balance';
-import type { SimState } from './types';
+import type { Bullet, SimState } from './types';
 
 const MAX_STREAK = ((RHYTHM.maxMult - 1) / RHYTHM.multStep) * RHYTHM.shotsPerStep;
 
@@ -32,7 +32,9 @@ export function recordShot(state: SimState): void {
   state.stageStats.shots++;
 }
 
-export function recordHit(state: SimState): void {
+/** Counts a player bolt's hit for accuracy: once per primary bolt (side bolts and repeat pierce hits are free). */
+export function recordHit(state: SimState, bullet: Bullet): void {
+  if (bullet.extra || (bullet.pierced && bullet.pierced.length > 0)) return;
   state.stats.hits++;
   state.stageStats.hits++;
 }
@@ -45,7 +47,7 @@ export function registerKill(state: SimState, base: number, bulletMult: number):
   const c = state.combo;
   c.chain = c.timer > 0 ? Math.min(COMBO.maxChain, c.chain + 1) : 0;
   c.timer = COMBO.window;
-  const points = Math.round(base * bulletMult * comboMult(state));
+  const points = Math.round(base * bulletMult * comboMult(state) * state.ship.scoreMul);
   state.score += points;
   return points;
 }

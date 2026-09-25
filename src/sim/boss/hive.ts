@@ -87,8 +87,8 @@ export function hitHive(state: SimState, bullet: Bullet, events: SimEvent[]): bo
   if (!b || b.entering || b.dying > 0 || b.phased) return false;
   const core = hiveCore(b);
   if (overlaps(bullet, core)) {
-    recordHit(state);
-    b.hp--;
+    recordHit(state, bullet);
+    b.hp -= bullet.damage ?? 1;
     b.flash = 0.06;
     events.push({ type: 'bossHit', x: bullet.x, y: core.y + core.h });
     if (b.hp <= 0) {

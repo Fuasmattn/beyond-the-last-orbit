@@ -9,7 +9,11 @@ import { sceneBackground } from './ui';
 const PAGE_TIME = 5;
 const NOTICE_TIME = 3;
 const TABLE_X = 82;
-const ITEMS = ['START GAME', 'SHOP', 'SETTINGS'] as const;
+const ITEMS = ['RHYTHM RUN', 'ROGUE RUN', 'HANGAR', 'SHOP', 'SETTINGS'] as const;
+const TABLES = [
+  { key: 'highscores', title: 'RHYTHM HIGH SCORES' },
+  { key: 'rogueHighscores', title: 'ROGUE HIGH SCORES' },
+] as const;
 
 export class TitleScene implements Scene {
   readonly root = new Container();
@@ -17,7 +21,7 @@ export class TitleScene implements Scene {
   private readonly notice: PixelText;
   private readonly credits: PixelText;
   private readonly tableHeader: PixelText;
-  private readonly table: PixelText[] = [];
+  private readonly tables: PixelText[][] = [];
   private readonly menu: MenuList;
   private readonly logo: PixelText[];
   private logoX = 0;
@@ -38,14 +42,17 @@ export class TitleScene implements Scene {
     this.credits = new PixelText(g, '', 0x7dff6b);
     this.notice = new PixelText(g, ctx.notice ?? '', 0xff5a5a);
     centerText(this.notice, 296);
-    this.tableHeader = new PixelText(g, 'HIGH SCORES', 0xff5ad1);
-    centerText(this.tableHeader, 104);
-    ctx.save.highscores.forEach((e, i) => {
-      const t = new PixelText(g, formatHighscoreLine(i + 1, e), i === 0 ? 0xffe14a : 0xcccccc);
-      t.position.set(TABLE_X, 118 + i * 9);
-      this.table.push(t);
-    });
-    this.menu = new MenuList(g, { x: 92, y: 228, lineH: 14, width: 64 });
+    this.tableHeader = new PixelText(g, '', 0xff5ad1);
+    for (const { key } of TABLES) {
+      this.tables.push(
+        ctx.save[key].map((e, i) => {
+          const t = new PixelText(g, formatHighscoreLine(i + 1, e), i === 0 ? 0xffe14a : 0xcccccc);
+          t.position.set(TABLE_X, 118 + i * 9);
+          return t;
+        }),
+      );
+    }
+    this.menu = new MenuList(g, { x: 92, y: 212, lineH: 14, width: 64 });
     this.menu.setRows(ITEMS.map((label) => ({ label })));
 
     this.root.addChild(
@@ -53,7 +60,7 @@ export class TitleScene implements Scene {
       ...this.logo,
       this.tagline,
       this.tableHeader,
-      ...this.table,
+      ...this.tables.flat(),
       this.menu,
       this.credits,
       this.notice,
@@ -87,10 +94,16 @@ export class TitleScene implements Scene {
     cyan!.x = this.logoX - split;
     pink!.x = this.logoX + split;
     cyan!.alpha = pink!.alpha = 0.75;
-    const showTable = this.table.length > 0 && Math.floor(this.t / PAGE_TIME) % 2 === 1;
-    this.tableHeader.visible = showTable;
-    for (const t of this.table) t.visible = showTable;
-    this.tagline.visible = !showTable;
+    // Pages cycle: tagline, then each non-empty highscore table.
+    const pages = [-1, ...TABLES.map((_, i) => i).filter((i) => this.tables[i]!.length > 0)];
+    const page = pages[Math.floor(this.t / PAGE_TIME) % pages.length]!;
+    this.tables.forEach((rows, i) => rows.forEach((t) => (t.visible = i === page)));
+    this.tableHeader.visible = page >= 0;
+    if (page >= 0) {
+      this.tableHeader.setText(TABLES[page]!.title);
+      centerText(this.tableHeader, 104);
+    }
+    this.tagline.visible = page < 0;
     this.credits.setText(`CREDITS ${this.ctx.save.credits}`);
     this.credits.position.set(MENU_W - 4 - this.credits.pixelWidth, 4);
     this.menu.refresh(this.t);
@@ -105,6 +118,7 @@ export class TitleScene implements Scene {
   private activate(i: number): void {
     this.ctx.audio?.sfx.menuSelect();
     const s = this.ctx.scenes;
-    this.ctx.goto(i === 0 ? s.run() : i === 1 ? s.shop() : s.settings());
+    const next = [() => s.run('rhythm'), () => s.run('rogue'), () => s.hangar(), () => s.shop(), () => s.settings()];
+    this.ctx.goto(next[i]!());
   }
 }

@@ -83,9 +83,11 @@ export class Hud extends Container {
     const label = `${state.world + 1}-${state.stage}`;
     this.stage.setText(state.loop > 0 ? `L${state.loop + 1} ${label}` : `STAGE ${label}`);
     this.stage.x = viewport.w - 4 - this.stage.pixelWidth;
-    this.track.update(viewport.w, audioOk ? beat : null, state.rhythm.mult, state.rhythm.streak, dt);
-    this.lives.setText(`SHIPS ${Math.max(0, state.player.lives)}`);
-    this.noAudio.visible = !audioOk;
+    const rhythm = state.mode === 'rhythm';
+    this.track.update(viewport.w, audioOk ? beat : null, state.rhythm.mult, state.rhythm.streak, dt, rhythm);
+    const shield = state.player.shield > 0 ? `  SHIELD ${state.player.shield}` : '';
+    this.lives.setText(`SHIPS ${Math.max(0, state.player.lives)}${shield}`);
+    this.noAudio.visible = !audioOk && rhythm;
     centerText(this.noAudio, 4, viewport.w);
     this.updateBossBar(state);
     this.updateBanner(state, paused);
@@ -148,7 +150,7 @@ export class Hud extends Container {
     const lines = r
       ? [
           `ACCURACY  ${pct(r.accuracy)}`,
-          `ON BEAT   ${pct(r.beatPct)}`,
+          state.mode === 'rogue' ? `GRAZES    ${state.stageStats.grazes}` : `ON BEAT   ${pct(r.beatPct)}`,
           r.noHit ? 'NO HIT    +2000' : 'HIT TAKEN',
           r.perfect ? 'PERFECT!' : '',
           `BONUS     +${r.bonus}`,

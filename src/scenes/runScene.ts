@@ -2,9 +2,11 @@ import { Container } from 'pixi.js';
 import { viewport } from '../app/viewport';
 import { Sourness } from '../audio/sourness';
 import { equippedLaser, equippedSkin } from '../data/cosmetics';
+import { rogueRunOptions } from '../meta/upgrades';
+import { defaultRunOptions } from '../sim/ship';
 import { createInitialState } from '../sim/state';
 import { step } from '../sim/step';
-import type { SimEvent, SimState } from '../sim/types';
+import type { RunMode, SimEvent, SimState } from '../sim/types';
 import { judgeLabel } from '../view/beatJudge';
 import { Hud } from '../view/hud';
 import { GameRenderer } from '../view/renderer';
@@ -25,8 +27,12 @@ export class RunScene implements Scene {
   private gameOverTime = 0;
   private readonly sour = new Sourness();
 
-  constructor(private readonly ctx: SceneContext) {
-    this.state = createInitialState(newSeed(), viewport.w);
+  constructor(
+    private readonly ctx: SceneContext,
+    mode: RunMode,
+  ) {
+    const opts = mode === 'rogue' ? rogueRunOptions(ctx.save) : defaultRunOptions('rhythm');
+    this.state = createInitialState(newSeed(), viewport.w, opts);
     this.renderer = new GameRenderer(ctx.textures, { skin: equippedSkin(ctx.save), laser: equippedLaser(ctx.save) });
     this.hud = new Hud(ctx.textures.glyphs);
     this.root.addChild(this.renderer.root, this.hud);
@@ -49,6 +55,7 @@ export class RunScene implements Scene {
       this.gameOverTime += dt;
       if (this.gameOverTime > GAME_OVER_DELAY && (input.menu.includes('confirm') || input.taps.length > 0)) {
         this.ctx.goto(this.ctx.scenes.gameOver({
+            mode: s.mode,
             score: s.score,
             world: s.world,
             stage: s.stage,
@@ -88,7 +95,7 @@ export class RunScene implements Scene {
   private gradeShots(events: readonly SimEvent[]): void {
     const shot = events.find((e) => e.type === 'shot');
     const press = this.ctx.takePressDelta();
-    if (!shot || shot.type !== 'shot') return;
+    if (!shot || shot.type !== 'shot' || this.state.mode !== 'rhythm') return;
     const delta = press === null ? null : press - this.ctx.save.settings.latencyOffsetMs / 1000;
     this.hud.judge(judgeLabel(delta, shot.onBeat));
   }
@@ -106,7 +113,8 @@ export class RunScene implements Scene {
       switch (e.type) {
         case 'shot':
           audio.sfx.laser(e.onBeat);
-          this.sour.onShot(e.onBeat);
+          // Only rhythm runs judge timing; rogue runs keep the music clean.
+          if (this.state.mode === 'rhythm') this.sour.onShot(e.onBeat);
           break;
         case 'enemyKilled':
         case 'partDestroyed':
@@ -117,6 +125,12 @@ export class RunScene implements Scene {
           break;
         case 'playerHit':
           audio.sfx.playerHit();
+          break;
+        case 'shieldHit':
+          audio.sfx.shieldHit();
+          break;
+        case 'graze':
+          audio.sfx.graze();
           break;
         case 'stageClear':
           audio.sfx.stageClear();

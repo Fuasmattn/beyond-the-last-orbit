@@ -97,6 +97,7 @@ export class GameRenderer {
   private readonly ship = new Container();
   private readonly hull: Graphics;
   private readonly flame = new Graphics(FLAME_ART);
+  private readonly shield = new Graphics();
   private readonly enemyViews = new Map<number, Graphics>();
   private readonly bulletViews = new Map<number, Graphics>();
   private readonly bulletPool: Graphics[] = [];
@@ -118,7 +119,7 @@ export class GameRenderer {
     this.hull = new Graphics(SHIP_ART[cosmetics.skin.hull]);
     this.flame.tint = FLAME_COLOR;
     this.flame.position.set(0, 1);
-    this.ship.addChild(this.flame, this.hull);
+    this.ship.addChild(this.flame, this.hull, this.shield);
     this.backdrop.height = FIELD_H;
     this.effects = new Effects(tex.glyphs);
     this.laserBeam.alpha = 0.85;
@@ -174,6 +175,12 @@ export class GameRenderer {
     const blinkOff = p.invuln > 0 && Math.floor(state.time * 20) % 2 === 1;
     this.ship.visible = state.phase !== 'gameOver' && !blinkOff;
     this.hull.tint = color;
+    // Shield charges: a pulsing ring per charge.
+    this.shield.clear();
+    for (let i = 0; i < p.shield; i++) {
+      const r = 10 + i * 3 + Math.sin(state.time * 6) * 0.6;
+      this.shield.circle(0, -p.h / 2, r).stroke({ color: 0x7dff6b, width: 1, alpha: 0.55 });
+    }
     // Flame flickers and stretches while moving up.
     const thrust = 1 + Math.max(0, -p.vy) / 140;
     this.flame.scale.set(1, thrust * (0.7 + 0.3 * Math.sin(state.time * 60)));

@@ -120,6 +120,22 @@ export class Sfx {
     this.tone('sine', 700, 1400, 0.3, 0.04);
   }
 
+  /** Rogue runs: a bullet skimmed past the ship. */
+  graze(): void {
+    this.tone('sine', 2600, 3400, 0.05, 0.035);
+  }
+
+  /** A shield charge absorbed a hit. */
+  shieldHit(): void {
+    this.tone('triangle', 900, 200, 0.25, 0.1);
+    this.burst(0.15, 0.12, 4000, 600);
+  }
+
+  /** Picking a route node or a drafted upgrade. */
+  choose(): void {
+    this.arpeggio([72, 79], 0.05, 0.06);
+  }
+
   menuMove(): void {
     this.tone('square', 660, 660, 0.04, 0.04);
   }

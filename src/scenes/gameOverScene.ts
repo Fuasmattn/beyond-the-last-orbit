@@ -3,6 +3,7 @@ import { MENU_W } from '../data/balance';
 import { INITIALS_LENGTH, InitialsPicker } from '../app/initialsPicker';
 import type { Tap } from '../input/inputFrame';
 import { computeCredits } from '../meta/credits';
+import { creditMultiplier } from '../meta/upgrades';
 import { insertHighscore, qualifiesForHighscore } from '../persist/save';
 import type { HighscoreEntry } from '../persist/schema';
 import { blink } from '../view/anim';
@@ -49,7 +50,10 @@ export class GameOverScene implements Scene {
     private readonly summary: RunSummary,
   ) {
     const g = (this.glyphs = ctx.textures.glyphs);
-    this.earned = computeCredits(summary.score, summary.bossesKilled, summary.perfectStages);
+    this.earned = Math.round(
+      computeCredits(summary.score, summary.bossesKilled, summary.perfectStages) *
+        creditMultiplier(ctx.save, summary.mode),
+    );
     ctx.save.credits += this.earned;
     ctx.persist();
 
@@ -63,8 +67,8 @@ export class GameOverScene implements Scene {
     centerText(reached, 70);
     this.creditsLine = new PixelText(g, '', 0x7dff6b);
 
-    this.picker = qualifiesForHighscore(ctx.save.highscores, summary.score) ? new InitialsPicker() : null;
-    this.heading = new PixelText(g, this.picker ? 'NEW HIGH SCORE! ENTER NAME' : 'HIGH SCORES', 0x7dff6b);
+    this.picker = qualifiesForHighscore(this.table, summary.score) ? new InitialsPicker() : null;
+    this.heading = new PixelText(g, this.picker ? 'NEW HIGH SCORE! ENTER NAME' : this.tableTitle, 0x7dff6b);
     centerText(this.heading, 108);
     for (let i = 0; i < INITIALS_LENGTH; i++) {
       const t = new PixelText(g, 'A');
@@ -128,6 +132,22 @@ export class GameOverScene implements Scene {
     this.root.destroy({ children: true });
   }
 
+  private get tableKey(): 'highscores' | 'rogueHighscores' {
+    return this.summary.mode === 'rogue' ? 'rogueHighscores' : 'highscores';
+  }
+
+  private get tableTitle(): string {
+    return this.summary.mode === 'rogue' ? 'ROGUE HIGH SCORES' : 'RHYTHM HIGH SCORES';
+  }
+
+  private get table(): HighscoreEntry[] {
+    return this.ctx.save[this.tableKey];
+  }
+
+  private set table(list: HighscoreEntry[]) {
+    this.ctx.save[this.tableKey] = list;
+  }
+
   /** Credits count up from 0 with a coin tick. */
   private tickCoins(dt: number): void {
     const shown = Math.floor(this.earned * Math.min(1, this.t / COUNT_UP_TIME));
@@ -164,16 +184,16 @@ export class GameOverScene implements Scene {
       loop: this.summary.loop,
       date: new Date().toISOString().slice(0, 10),
     };
-    this.ctx.save.highscores = insertHighscore(this.ctx.save.highscores, entry);
+    this.table = insertHighscore(this.table, entry);
     this.ctx.persist();
-    this.heading.setText('HIGH SCORES');
+    this.heading.setText(this.tableTitle);
     centerText(this.heading, 108);
     this.showTable(entry);
   }
 
   private showTable(highlight: HighscoreEntry | null): void {
     this.tableLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
-    this.ctx.save.highscores.forEach((e, i) => {
+    this.table.forEach((e, i) => {
       const color = e === highlight ? 0xffe14a : 0xcccccc;
       const t = new PixelText(this.glyphs, formatHighscoreLine(i + 1, e), color);
       t.position.set(TABLE_X, 122 + i * 9);

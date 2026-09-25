@@ -17,6 +17,7 @@ import { GameOverScene } from '../scenes/gameOverScene';
 import { RunScene } from '../scenes/runScene';
 import type { FrameInput, Scene, SceneContext } from '../scenes/scene';
 import { SettingsScene } from '../scenes/settingsScene';
+import { HangarScene } from '../scenes/hangarScene';
 import { ShopScene } from '../scenes/shopScene';
 import { TitleScene } from '../scenes/titleScene';
 import { createBackdrop, type Backdrop } from '../view/backdrops';
@@ -168,9 +169,10 @@ export async function startApp(host: HTMLElement): Promise<void> {
     },
     scenes: {
       title: () => new TitleScene(ctx),
-      run: () => new RunScene(ctx),
+      run: (mode) => new RunScene(ctx, mode),
       gameOver: (summary) => new GameOverScene(ctx, summary),
       shop: () => new ShopScene(ctx),
+      hangar: () => new HangarScene(ctx),
       settings: () => new SettingsScene(ctx),
       calibration: () => new CalibrationScene(ctx),
     },
@@ -179,6 +181,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
   rebuildMenu = () => {
     if (scene instanceof TitleScene) ctx.goto(ctx.scenes.title());
     else if (scene instanceof ShopScene) ctx.goto(ctx.scenes.shop());
+    else if (scene instanceof HangarScene) ctx.goto(ctx.scenes.hangar());
     else if (scene instanceof SettingsScene) ctx.goto(ctx.scenes.settings());
   };
   scene = ctx.scenes.title();

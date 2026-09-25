@@ -94,6 +94,14 @@ export class Effects extends Container {
           this.explode(e.x, e.y, 30, [0x4af2ff, 0xffffff, 0xff3b5c], 90);
           this.shake.add(TRAUMA.playerHit);
           break;
+        case 'graze':
+          this.sparks(e.x, e.y, 3, [0x4af2ff, 0xffffff]);
+          this.popups.spawn(`+${e.points}`, 0x4af2ff, e.x, e.y);
+          break;
+        case 'shieldHit':
+          this.explode(e.x, e.y, 16, [0x7dff6b, 0xffffff], 70);
+          this.shake.add(TRAUMA.part);
+          break;
         case 'bombBurst':
           this.sparks(e.x, e.y, 10, [0xff7a3d]);
           this.shake.add(TRAUMA.bomb);

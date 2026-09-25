@@ -60,20 +60,24 @@ export class BeatTrack extends Container {
 
   /**
    * `beat` null (no audio) hides the rhythm parts. `streak` drives the pips toward the next multiplier step.
+   * `markers` false (rogue runs): only the multiplier and pips are shown, audio or not.
    */
-  update(fieldW: number, beat: number | null, mult: number, streak: number, dt: number): void {
+  update(fieldW: number, beat: number | null, mult: number, streak: number, dt: number, markers = true): void {
     if (fieldW !== this.trackW) this.layout(fieldW);
     const cx = fieldW / 2;
     this.flash = Math.max(0, this.flash - dt);
     this.labelTime = Math.max(0, this.labelTime - dt);
 
-    const rhythm = beat !== null;
-    this.markers.visible = this.gate.visible = this.mult.visible = this.pips.visible = rhythm;
+    const rhythm = markers && beat !== null;
+    this.markers.visible = this.gate.visible = rhythm;
+    this.mult.visible = this.pips.visible = rhythm || !markers;
     this.grade.visible = rhythm && this.labelTime > 0;
-    if (!rhythm) return;
+    if (!this.mult.visible) return;
 
-    this.drawMarkers(cx, beat);
-    this.drawGate(cx, beat);
+    if (rhythm) {
+      this.drawMarkers(cx, beat);
+      this.drawGate(cx, beat);
+    }
 
     this.mult.setText(`X${mult.toFixed(1)}`);
     this.mult.tint = multColor(mult);

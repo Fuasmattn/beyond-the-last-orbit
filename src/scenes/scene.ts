@@ -3,7 +3,7 @@ import type { AudioEngine } from '../audio/engine';
 import type { CompiledSong } from '../audio/song';
 import type { MenuAction, Tap } from '../input/inputFrame';
 import type { SaveData } from '../persist/schema';
-import type { InputFrame } from '../sim/types';
+import type { InputFrame, RunMode } from '../sim/types';
 import type { GameTextures } from '../view/textures';
 
 /** Everything input-related for one fixed sim step. */
@@ -15,6 +15,7 @@ export interface FrameInput {
 }
 
 export interface RunSummary {
+  mode: RunMode;
   score: number;
   world: number;
   stage: number;
@@ -35,9 +36,10 @@ export interface Scene {
 
 export interface SceneFactory {
   title(): Scene;
-  run(): Scene;
+  run(mode: RunMode): Scene;
   gameOver(summary: RunSummary): Scene;
   shop(): Scene;
+  hangar(): Scene;
   settings(): Scene;
   calibration(): Scene;
 }

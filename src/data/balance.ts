@@ -42,7 +42,7 @@ export const ENEMY = {
 
 export const FORMATION = {
   dropStep: 6,
-  edgeMargin: 4,
+  edgeMargin: 8,
 } as const;
 
 export const POINTS = {

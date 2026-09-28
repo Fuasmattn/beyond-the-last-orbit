@@ -76,6 +76,22 @@ never exceeds `fieldW − viewW`.
 is opaque (`black`) so the HUD never sits under the Dynamic Island. No service worker yet (no offline
 play; Chrome no longer requires one to install).
 
+Offline: `scripts/service-worker-plugin.mjs` emits `sw.js` at build time with the bundle and public
+files (~5 MB, mostly audio) precached. Navigations are network first (new deploys show up), all
+other same-origin GETs are cache first. The cache name hashes the build, so a deploy replaces it.
+Leaderboard calls (other origin) are never cached. Only production builds register it.
+
+### Pause on touch
+
+A pause icon sits top-left in the run HUD on touch (score and ships move right). Tapping it toggles
+pause; the touch input treats that corner as a button, so it neither steers nor fires.
+
+### Landscape
+
+Touch views may be wider than the widest field (up to 1000 logical px). The 600 px field is centered;
+stars, planet and grid fill the whole view, and the area past the walls is dimmed with a faint wall
+line. Only aspects wider than ~3:1 letterbox.
+
 ### Readable text on phones
 
 - Menus lay out in `viewport.menuW`: 240 on desktop, 160 on touch (`MENU_W_TOUCH`). On a portrait
@@ -93,8 +109,6 @@ play; Chrome no longer requires one to install).
 ## Non-goals / not changed
 
 - Vertical camera pan (the full height is always visible; enemies arrive from the top).
-- Landscape phones still show side bars when the screen is wider than 600 logical px.
-- No on-screen pause on touch (pause stays on hide/visibility change).
 
 ## Open questions
 
@@ -102,5 +116,4 @@ play; Chrome no longer requires one to install).
 - Single-finger tap fires on release (~80 ms later on screen, verdict uses press time). If that feels
   laggy, alternative: fire on every press, including the one that starts a drag.
 - Should the ship's drag sensitivity (1.25×) change now that the camera also moves?
-- No pause control during a run on touch. Add a pause gesture (e.g. two-finger hold)?
-- Offline play via a service worker (needs cache versioning for deploys).
+- The pause menu itself still uses 1× text on touch.

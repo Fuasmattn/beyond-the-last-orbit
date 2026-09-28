@@ -26,15 +26,16 @@ function settle(s: SimState): void {
 describe('formation spawn and entry', () => {
   it('spawns rows × cols enemies that all fly in', () => {
     const s = createInitialState(1);
-    expect(s.enemies).toHaveLength(ENEMY.rows * s.diff.cols);
-    expect(s.formation.total).toBe(ENEMY.rows * s.diff.cols);
+    expect(s.enemies).toHaveLength(s.diff.rows * s.diff.cols);
+    expect(s.formation.total).toBe(s.diff.rows * s.diff.cols);
     expect(s.enemies.every((e) => e.entry !== null && !inFormation(e))).toBe(true);
   });
 
-  it('puts gunners in the top row and grunts below on stage 1', () => {
+  it('puts gunners in the top row, divers in row 2 and grunts elsewhere on stage 1', () => {
     const s = createInitialState(1);
     expect(s.enemies.filter((e) => e.row === 0).every((e) => e.kind === 'gunner')).toBe(true);
-    expect(s.enemies.filter((e) => e.row > 0).every((e) => e.kind === 'grunt')).toBe(true);
+    expect(s.enemies.filter((e) => e.row === 2).every((e) => e.kind === 'diver')).toBe(true);
+    expect(s.enemies.filter((e) => e.row === 1 || e.row === 3).every((e) => e.kind === 'grunt')).toBe(true);
   });
 
   it('lands every enemy in its slot', () => {

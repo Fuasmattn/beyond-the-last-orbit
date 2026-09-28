@@ -39,6 +39,7 @@ export function runOptionsFor(save: SaveData): RunOptions {
     lives: Math.min(PLAYER.maxLives, PLAYER.startLives + lv('hull')),
     rerolls: lv('insight'),
     beatLock: save.settings.beatLock,
+    starterDraft: true,
   };
 }
 

@@ -53,7 +53,7 @@ describe('step', () => {
     chooseNode(s, reachableLanes(s.rogue)[0]!, []);
     expect(s.stage).toBe(2);
     expect(s.phase).toBe('stageIntro');
-    expect(s.enemies).toHaveLength(ENEMY.rows * s.diff.cols);
+    expect(s.enemies).toHaveLength(s.diff.rows * s.diff.cols);
   });
 
   it('does not fire during stageClear', () => {

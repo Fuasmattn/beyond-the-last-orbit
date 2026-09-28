@@ -274,3 +274,22 @@ describe('per-world elite volleys', () => {
     expect(Math.max(...gaps)).toBeGreaterThanOrEqual(ELITE.wallGap);
   });
 });
+
+describe('starter draft', () => {
+  it('opens a draft before stage 1 and picking resumes the stage intro', () => {
+    const s = createInitialState(7, undefined, { ...defaultRunOptions(), starterDraft: true });
+    expect(s.phase).toBe('draft');
+    expect(s.rogue.offer).toHaveLength(3);
+    expect(s.enemies.length).toBeGreaterThan(0);
+    const events: SimEvent[] = [];
+    expect(chooseBoon(s, 0, events)).toBe(true);
+    expect(s.phase).toBe('stageIntro');
+    expect(s.stage).toBe(1);
+    expect(Object.values(s.rogue.boons).reduce((a, b) => a + b, 0)).toBe(1);
+    expect(s.rogue.starter).toBe(false);
+  });
+
+  it('is off by default', () => {
+    expect(createInitialState(7).phase).toBe('stageIntro');
+  });
+});

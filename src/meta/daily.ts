@@ -23,7 +23,7 @@ export function dailyBoard(day: string): Board {
 
 /** Everyone plays the same ship: no hangar upgrades, no rerolls, no Beat Lock. */
 export function dailyRunOptions(): RunOptions {
-  return defaultRunOptions();
+  return { ...defaultRunOptions(), starterDraft: true };
 }
 
 export function dailyPlayed(save: SaveData, day: string): boolean {

@@ -57,9 +57,9 @@ export const FORMATION = {
   /** Sway approach rate per second toward the current beat side. */
   swayEase: 10,
   /** Fly-in: per-row and per-column launch delays, and flight time. */
-  entryRowDelay: 0.45,
-  entryColDelay: 0.07,
-  entryTime: 1.4,
+  entryRowDelay: 0.3,
+  entryColDelay: 0.05,
+  entryTime: 1.1,
   /** Bars between advances while > 50 % / > 20 % / fewer of the formation survive. */
   advanceBars: [4, 2, 1],
   /** Beats a shape morph takes. */
@@ -92,20 +92,23 @@ export const DIVE = {
 } as const;
 
 export const DIFFICULTY = {
-  k: 18,
+  k: 12,
   loopWeight: 15,
   swayAmp: [8, 22],
   advanceStep: [6, 12],
-  fireRate: [0.7, 2.6],
-  bulletSpeed: [100, 170],
-  diveInterval: [7, 2],
+  fireRate: [1.1, 2.6],
+  bulletSpeed: [110, 170],
+  diveInterval: [4, 1.8],
+  /** Formation rows: fewer while the difficulty scalar is below `fullRowsFrom`. */
+  earlyRows: 4,
+  fullRowsFrom: 3,
 } as const;
 
 export const STAGE = {
   perWorld: 5,
-  introTime: 1.5,
+  introTime: 1.0,
   bossIntroTime: 2.2,
-  clearTime: 3,
+  clearTime: 2.2,
   parTime: 35,
   bossParTime: 60,
   timeBonusPerSec: 50,

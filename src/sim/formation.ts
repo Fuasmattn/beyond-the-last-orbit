@@ -32,7 +32,7 @@ function entryFor(state: SimState, row: number, col: number): Entry {
 }
 
 export function spawnFormation(state: SimState): void {
-  const { cols, d } = state.diff;
+  const { cols, rows, d } = state.diff;
   const special = worldAt(state.world).special;
   state.formation = {
     y: ENEMY.startY,
@@ -42,12 +42,12 @@ export function spawnFormation(state: SimState): void {
     shapeIdx: 0,
     morph: 1,
     beats: 0,
-    total: ENEMY.rows * cols,
-    rows: ENEMY.rows,
+    total: rows * cols,
+    rows,
     cols,
   };
   state.enemies = [];
-  for (let row = 0; row < ENEMY.rows; row++) {
+  for (let row = 0; row < rows; row++) {
     const kind = kindForRow(row, d, special);
     const hp = enemyHp(kind, state.diff);
     for (let col = 0; col < cols; col++) {

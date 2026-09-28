@@ -2,7 +2,7 @@ import { BEAT_TRACK, FIELD_H, FIELD_W_DEFAULT, PLAYER } from '../data/balance';
 import { difficultyFor } from './difficulty';
 import { createRogueState } from './route';
 import { defaultRunOptions, type RunOptions } from './ship';
-import { emptyStageStats, startStage } from './stageFlow';
+import { emptyStageStats, openStarterDraft, startStage } from './stageFlow';
 import type { SimState } from './types';
 
 /** New run at world 1, stage 1, in the stage intro. */
@@ -58,5 +58,6 @@ export function createInitialState(
     rogue: createRogueState(seed, opts.rerolls, 0),
   };
   startStage(state, []);
+  if (opts.starterDraft) openStarterDraft(state);
   return state;
 }

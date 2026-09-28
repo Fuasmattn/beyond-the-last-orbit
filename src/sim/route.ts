@@ -139,6 +139,7 @@ export function createRogueState(seed: number, rerolls: number, world: number): 
     draftRarity: null,
     ambush: false,
     beatNext: false,
+    starter: false,
     rerolls,
     scrap: 0,
     shop: null,

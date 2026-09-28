@@ -293,6 +293,16 @@ export function chooseEvent(state: SimState, index: number, events: SimEvent[]):
   return true;
 }
 
+/** Run opener: a draft before stage 1 (the formation is spawned and waits). */
+export function openStarterDraft(state: SimState): void {
+  const r = state.rogue;
+  r.offer = rollOffer(state, r);
+  if (r.offer.length === 0) return;
+  r.starter = true;
+  state.phase = 'draft';
+  state.phaseTimer = 0;
+}
+
 /** Draft pick; `index` null skips. Returns false if no draft is open or the index is invalid. */
 export function chooseBoon(state: SimState, index: number | null, events: SimEvent[]): boolean {
   const r = state.rogue;
@@ -302,6 +312,13 @@ export function chooseBoon(state: SimState, index: number | null, events: SimEve
   if (id) takeBoon(state, r, id);
   r.offer = [];
   events.push({ type: 'boonTaken', id });
+  if (r.starter) {
+    // Back to the stage-1 intro the run was paused in.
+    r.starter = false;
+    state.phase = 'stageIntro';
+    state.phaseTimer = STAGE.introTime;
+    return true;
+  }
   advanceStage(state, events);
   return true;
 }

@@ -33,8 +33,10 @@ export interface RunOptions {
   rerolls: number;
   /** Every stage is a beat stage. */
   beatLock: boolean;
+  /** Open the run with a pick-1-of-3 draft before stage 1. */
+  starterDraft: boolean;
 }
 
 export function defaultRunOptions(): RunOptions {
-  return { ship: baseShip(), lives: PLAYER.startLives, rerolls: 0, beatLock: false };
+  return { ship: baseShip(), lives: PLAYER.startLives, rerolls: 0, beatLock: false, starterDraft: false };
 }

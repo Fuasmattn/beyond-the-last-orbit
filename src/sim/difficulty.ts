@@ -1,4 +1,4 @@
-import { DIFFICULTY, ELITE, STAGE } from '../data/balance';
+import { DIFFICULTY, ELITE, ENEMY, STAGE } from '../data/balance';
 import type { Difficulty, EnemyKind } from './types';
 
 export function difficultyScalar(world: number, stage: number, loop: number): number {
@@ -20,6 +20,7 @@ export function difficultyFor(world: number, stage: number, loop: number): Diffi
     bulletSpeed: curve(DIFFICULTY.bulletSpeed, d),
     diveInterval: curve(DIFFICULTY.diveInterval, d),
     cols: 8 + Math.min(2, Math.floor(d / 5)),
+    rows: d < DIFFICULTY.fullRowsFrom ? DIFFICULTY.earlyRows : ENEMY.rows,
     hpBonus: loop >= 1 ? 1 : 0,
     bossHpScale: 1 + loop * 0.5,
     elite: false,
@@ -35,9 +36,9 @@ export function eliteDifficulty(world: number, stage: number, loop: number): Dif
 /** Enemy type per formation row; new types appear as difficulty rises. */
 export function kindForRow(row: number, d: number, special: EnemyKind): EnemyKind {
   if (row === 0) return 'gunner';
-  if (row === 1) return d >= 3 ? 'shield' : 'grunt';
-  if (row === 2) return d >= 2 ? 'diver' : 'grunt';
-  if (row === 3) return d >= 4 ? special : 'grunt';
+  if (row === 1) return d >= 2 ? 'shield' : 'grunt';
+  if (row === 2) return d >= 1 ? 'diver' : 'grunt';
+  if (row === 3) return d >= 3 ? special : 'grunt';
   return 'grunt';
 }
 

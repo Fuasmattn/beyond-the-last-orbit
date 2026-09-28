@@ -76,6 +76,8 @@ export interface RogueState {
   ambush: boolean;
   /** The next fight is a beat stage (GHOST SIGNAL). */
   beatNext: boolean;
+  /** The run-opening draft is up; picking starts stage 1 instead of moving along the route. */
+  starter: boolean;
   rerolls: number;
   /** In-run currency. */
   scrap: number;
@@ -274,6 +276,8 @@ export interface Difficulty {
   diveInterval: number;
   cols: number;
   hpBonus: number;
+  /** Formation rows. */
+  rows: number;
   bossHpScale: number;
   /** Rogue elite stage: denser fire, bullet patterns, bonus score. */
   elite: boolean;

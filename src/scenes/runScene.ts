@@ -86,6 +86,7 @@ export class RunScene implements Scene {
     this.root.addChild(this.renderer.root, this.hud, this.route, this.draft, this.event, this.pauseMenu);
     ctx.audio?.sfx.start();
     ctx.audio?.startSong(ctx.songForWorld(this.state.world, this.state.loop));
+    if (this.state.phase === 'draft') this.draft.open('draft');
   }
 
   onHidden(): void {

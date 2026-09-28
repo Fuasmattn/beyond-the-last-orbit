@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DIFFICULTY } from '../../src/data/balance';
+import { DIFFICULTY, ENEMY } from '../../src/data/balance';
 import { difficultyFor, difficultyScalar, enemyHp, kindForRow } from '../../src/sim/difficulty';
 
 describe('difficulty', () => {
@@ -29,12 +29,20 @@ describe('difficulty', () => {
 
   it('introduces enemy types as difficulty rises', () => {
     expect(kindForRow(0, 1, 'phaser')).toBe('gunner');
-    expect(kindForRow(2, 1, 'phaser')).toBe('grunt');
-    expect(kindForRow(2, 2, 'phaser')).toBe('diver');
-    expect(kindForRow(1, 3, 'phaser')).toBe('shield');
-    expect(kindForRow(3, 3, 'phaser')).toBe('grunt');
-    expect(kindForRow(3, 4, 'phaser')).toBe('phaser');
+    expect(kindForRow(2, 0, 'phaser')).toBe('grunt');
+    expect(kindForRow(2, 1, 'phaser')).toBe('diver');
+    expect(kindForRow(1, 1, 'phaser')).toBe('grunt');
+    expect(kindForRow(1, 2, 'phaser')).toBe('shield');
+    expect(kindForRow(3, 2, 'phaser')).toBe('grunt');
+    expect(kindForRow(3, 3, 'phaser')).toBe('phaser');
     expect(kindForRow(4, 99, 'phaser')).toBe('grunt');
+  });
+
+  it('fields four rows on the first two stages and five after', () => {
+    expect(difficultyFor(0, 1, 0).rows).toBe(DIFFICULTY.earlyRows);
+    expect(difficultyFor(0, 2, 0).rows).toBe(DIFFICULTY.earlyRows);
+    expect(difficultyFor(0, 3, 0).rows).toBe(ENEMY.rows);
+    expect(difficultyFor(1, 1, 0).rows).toBe(ENEMY.rows);
   });
 
   it('gives shields and later loops extra hp', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BOSS_POINTS, PLAYER, SIM_DT, STAGE, WARDEN } from '../../src/data/balance';
-import { hitWarden, updateWarden, wardenCore } from '../../src/sim/boss/warden';
+import { hitWarden, laserZone, updateWarden, wardenCore } from '../../src/sim/boss/warden';
 import { startStage } from '../../src/sim/stageFlow';
 import { createInitialState } from '../../src/sim/state';
 import type { Boss, Bullet, SimEvent, SimState } from '../../src/sim/types';
@@ -105,11 +105,29 @@ describe('ORBITAL WARDEN', () => {
     expect(s.player.lives).toBe(PLAYER.startLives - 1);
   });
 
-  it('fires spiral rings on every beat in phase 3', () => {
+  it('fires spiral rings on every other beat in phase 3', () => {
     const { s, b } = ready();
     b.phase = 3;
     updateWarden(s, SIM_DT, 1, []);
+    expect(s.bullets).toHaveLength(0);
+    updateWarden(s, SIM_DT, 1, []);
     expect(s.bullets).toHaveLength(WARDEN.ringCount);
+  });
+
+  it('holds its phase 3 rings while the laser burns', () => {
+    const { s, b } = ready();
+    b.phase = 3;
+    b.laser = { state: 'fire', t: 0, x: 10, dir: 1 };
+    s.player.invuln = 999;
+    updateWarden(s, SIM_DT, 2, []);
+    expect(s.bullets).toHaveLength(0);
+  });
+
+  it('warns over the whole area the beam will sweep', () => {
+    const { s, b } = ready();
+    const zone = laserZone(b, { state: 'warn', t: 0, x: 100, dir: -1 }, s.fieldW);
+    expect(zone.x).toBe(100 - WARDEN.laserSweep - WARDEN.laserW / 2);
+    expect(zone.w).toBe(WARDEN.laserSweep + WARDEN.laserW);
   });
 
   it('dies at zero hp and pays out', () => {

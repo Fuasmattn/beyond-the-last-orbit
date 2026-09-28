@@ -56,6 +56,14 @@ export function laserBox(b: Boss, l: Laser): Box {
   return { x: l.x - WARDEN.laserW / 2, y: top, w: WARDEN.laserW, h: FIELD_H - top };
 }
 
+/** Where the beam will sweep: from its start to its end, beam width included. For the warning. */
+export function laserZone(b: Boss, l: Laser, fieldW: number): Box {
+  const end = clamp(l.x + l.dir * WARDEN.laserSweep, 4, fieldW - 4);
+  const left = Math.min(l.x, end) - WARDEN.laserW / 2;
+  const top = b.y + b.h;
+  return { x: left, y: top, w: Math.abs(end - l.x) + WARDEN.laserW, h: FIELD_H - top };
+}
+
 export function updateWarden(state: SimState, dt: number, beats: number, events: SimEvent[]): void {
   const b = state.boss;
   if (!b || !tickBoss(state, b, dt, WARDEN)) return;
@@ -82,8 +90,10 @@ function onBeat(state: SimState, b: Boss, events: SimEvent[]): void {
     if (n % 8 === 0 && !b.laser) startLaser(state, b, events);
     if (n % 4 === 2) fireSpread(state, cx, cy, 5, WARDEN.spreadAngle, speed);
   } else {
-    fireRing(state, cx, core.y + core.h / 2, WARDEN.ringCount, b.spiralAngle, speed * 0.7);
-    b.spiralAngle += WARDEN.ringSpin;
+    if (n % WARDEN.ringEveryBeats === 0 && b.laser?.state !== 'fire') {
+      fireRing(state, cx, core.y + core.h / 2, WARDEN.ringCount, b.spiralAngle, speed * 0.7);
+      b.spiralAngle += WARDEN.ringSpin;
+    }
     if (n % 12 === 0 && !b.laser) startLaser(state, b, events);
   }
 }

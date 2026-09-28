@@ -138,10 +138,12 @@ export const WARDEN = {
   spreadAngle: 0.3,
   ringCount: 10,
   ringSpin: 0.35,
-  laserWarn: 0.8,
+  /** Phase 3 rings fire every this many beats, and pause while the laser burns. */
+  ringEveryBeats: 2,
+  laserWarn: 1.1,
   laserFire: 1.2,
-  laserSweep: 60,
-  laserW: 8,
+  laserSweep: 40,
+  laserW: 6,
 } as const;
 
 export const HIVE = {

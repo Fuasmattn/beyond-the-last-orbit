@@ -3,7 +3,7 @@ import { viewport } from '../app/viewport';
 import { FIELD_H, PLAYER, WARP } from '../data/balance';
 import type { LaserDef, SkinDef } from '../data/cosmetics';
 import { worldAt, type WorldId } from '../data/worlds';
-import { laserBox } from '../sim/boss/warden';
+import { laserBox, laserZone } from '../sim/boss/warden';
 import type { Boss, BossKind, Bullet, Enemy, SimEvent, SimState } from '../sim/types';
 import { blink } from './anim';
 import { createBackdrop, type Backdrop } from './backdrops';
@@ -112,6 +112,7 @@ export class GameRenderer {
   private readonly laserViews = new Map<number, LaserView>();
   private readonly laserPool: LaserView[] = [];
   private readonly laserWarn = whiteSprite(LASER_COLOR);
+  private readonly laserZone = whiteSprite(LASER_COLOR);
   private readonly laserBeam = whiteSprite(LASER_COLOR);
   private readonly laserCore = whiteSprite(0xffffff);
   private boss: BossViews | null = null;
@@ -131,7 +132,8 @@ export class GameRenderer {
     this.backdrop.height = FIELD_H;
     this.effects = new Effects(tex.glyphs);
     this.laserBeam.alpha = 0.85;
-    this.bossLayer.addChild(this.laserWarn, this.laserBeam, this.laserCore);
+    this.laserZone.alpha = 0.18;
+    this.bossLayer.addChild(this.laserZone, this.laserWarn, this.laserBeam, this.laserCore);
     this.entities.addChild(this.ship);
     this.root.addChild(this.backdrop, this.starfield, this.planetLayer, this.bossLayer, this.entities, this.effects);
   }
@@ -173,7 +175,7 @@ export class GameRenderer {
     this.renderEnemies(state, pulse, worldTint);
     this.renderEnemyBullets(state);
     this.renderPlayerBullets(state, pulse);
-    this.renderBoss(state.boss, state.time, pulse, worldTint);
+    this.renderBoss(state.boss, state.time, pulse, worldTint, state.fieldW);
     this.effects.update(dt, state, skinColor);
   }
 
@@ -316,7 +318,7 @@ export class GameRenderer {
     return this.boss;
   }
 
-  private renderBoss(b: Boss | null, time: number, pulse: number, worldTint: number): void {
+  private renderBoss(b: Boss | null, time: number, pulse: number, worldTint: number, fieldW: number): void {
     this.bossLayer.visible = b !== null;
     if (!b) return;
     const views = this.ensureBossViews(b);
@@ -342,6 +344,7 @@ export class GameRenderer {
 
     const l = b.laser;
     this.laserWarn.visible = l !== null && l.state === 'warn' && blink(time, 8);
+    this.laserZone.visible = l !== null && l.state === 'warn';
     this.laserBeam.visible = l !== null && l.state === 'fire';
     this.laserCore.visible = this.laserBeam.visible;
     if (!l) return;
@@ -349,6 +352,10 @@ export class GameRenderer {
     this.laserWarn.position.set(l.x - 0.5, box.y);
     this.laserWarn.width = 1;
     this.laserWarn.height = box.h;
+    const zone = laserZone(b, l, fieldW);
+    this.laserZone.position.set(zone.x, zone.y);
+    this.laserZone.width = zone.w;
+    this.laserZone.height = zone.h;
     this.laserBeam.position.set(box.x, box.y);
     this.laserBeam.width = box.w;
     this.laserBeam.height = box.h;

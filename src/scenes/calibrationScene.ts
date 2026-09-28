@@ -22,7 +22,7 @@ export class CalibrationScene implements Scene {
     centerText(title, 40);
     const how = new PixelText(
       g,
-      ctx.isTouch ? 'TAP FIRE ON EVERY CLICK' : 'PRESS FIRE ON EVERY CLICK',
+      ctx.isTouch ? 'TAP ON EVERY CLICK' : 'PRESS FIRE ON EVERY CLICK',
       0xcccccc,
     );
     centerText(how, 60);

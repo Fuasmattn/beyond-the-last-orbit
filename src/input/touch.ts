@@ -1,28 +1,33 @@
 import type { ShotJudgement } from '../audio/rhythmJudge';
 import type { Layout } from '../app/layout';
-import { BEAT_TRACK, FIELD_H } from '../data/balance';
 import type { InputFrame } from '../sim/types';
 import type { FireJudge, InputSource, Tap } from './inputFrame';
 
-const FIRE_RADIUS = 26;
-const FIRE_SLOP = 10;
-
-/** Fire button in logical playfield coords: bottom right, just above the beat track. */
-export function fireButton(fieldW: number): { x: number; y: number; r: number } {
-  return { x: fieldW - 36, y: FIELD_H - BEAT_TRACK.h - 30, r: FIRE_RADIUS };
-}
 const DRAG_SENSITIVITY = 1.25;
+/** A steer touch released this quickly without moving far counts as a tap (fire). */
+export const TAP_MAX_MS = 250;
+export const TAP_MAX_MOVE = 10;
 
-export function isInFireButton(lx: number, ly: number, fieldW: number): boolean {
-  const b = fireButton(fieldW);
-  return Math.hypot(lx - b.x, ly - b.y) <= b.r + FIRE_SLOP;
+export function isTap(durationMs: number, movedPx: number): boolean {
+  return durationMs <= TAP_MAX_MS && movedPx < TAP_MAX_MOVE;
 }
 
-/** Relative drag anywhere moves the ship; fire button taps shoot. Multi-touch. Every press is also a menu tap. */
+interface Pointer {
+  x: number;
+  y: number;
+  downX: number;
+  downY: number;
+  downTime: number;
+}
+
+/**
+ * Whole-screen gestures, no touch zones. The first finger steers (relative drag); a quick tap with it
+ * fires on release, judged at the press time. Any finger landing while another steers fires at once.
+ * Every press is also a menu tap.
+ */
 export class TouchInput implements InputSource {
-  private dragPointer: number | null = null;
-  private lastX = 0;
-  private lastY = 0;
+  private readonly pointers = new Map<number, Pointer>();
+  private steer: number | null = null;
   private dx = 0;
   private dy = 0;
   private firePending = false;
@@ -31,41 +36,52 @@ export class TouchInput implements InputSource {
 
   constructor(
     el: HTMLElement,
-    getLayout: () => Layout,
+    private readonly getLayout: () => Layout,
     private readonly judgeFire: FireJudge = () => null,
   ) {
     el.addEventListener('pointerdown', (e) => {
       const l = getLayout();
-      const lx = (e.clientX - l.offsetX) / l.scale;
-      const ly = (e.clientY - l.offsetY) / l.scale;
-      this.taps.push({ x: lx, y: ly });
+      this.taps.push({ x: (e.clientX - l.offsetX) / l.scale, y: (e.clientY - l.offsetY) / l.scale });
       if (e.pointerType === 'mouse') return;
-      if (isInFireButton(lx, ly, l.fieldW)) {
-        if (!this.firePending) {
-          this.firePending = true;
-          this.fireJudgement = this.judgeFire(e.timeStamp);
-        }
-        return;
-      }
-      if (this.dragPointer === null) {
-        this.dragPointer = e.pointerId;
-        this.lastX = e.clientX;
-        this.lastY = e.clientY;
-      }
+      this.pointers.set(e.pointerId, {
+        x: e.clientX,
+        y: e.clientY,
+        downX: e.clientX,
+        downY: e.clientY,
+        downTime: e.timeStamp,
+      });
+      if (this.steer === null) this.steer = e.pointerId;
+      else this.fire(e.timeStamp);
     });
     el.addEventListener('pointermove', (e) => {
-      if (e.pointerId !== this.dragPointer) return;
-      const s = getLayout().scale;
-      this.dx += ((e.clientX - this.lastX) / s) * DRAG_SENSITIVITY;
-      this.dy += ((e.clientY - this.lastY) / s) * DRAG_SENSITIVITY;
-      this.lastX = e.clientX;
-      this.lastY = e.clientY;
+      const p = this.pointers.get(e.pointerId);
+      if (!p) return;
+      if (e.pointerId === this.steer) {
+        const s = this.getLayout().scale;
+        this.dx += ((e.clientX - p.x) / s) * DRAG_SENSITIVITY;
+        this.dy += ((e.clientY - p.y) / s) * DRAG_SENSITIVITY;
+      }
+      p.x = e.clientX;
+      p.y = e.clientY;
     });
-    const end = (e: PointerEvent) => {
-      if (e.pointerId === this.dragPointer) this.dragPointer = null;
+    const end = (e: PointerEvent, cancelled: boolean) => {
+      const p = this.pointers.get(e.pointerId);
+      if (!p) return;
+      this.pointers.delete(e.pointerId);
+      if (e.pointerId !== this.steer) return;
+      const moved = Math.hypot(e.clientX - p.downX, e.clientY - p.downY);
+      if (!cancelled && isTap(e.timeStamp - p.downTime, moved)) this.fire(p.downTime);
+      // A finger still down takes over steering.
+      this.steer = this.pointers.keys().next().value ?? null;
     };
-    el.addEventListener('pointerup', end);
-    el.addEventListener('pointercancel', end);
+    el.addEventListener('pointerup', (e) => end(e, false));
+    el.addEventListener('pointercancel', (e) => end(e, true));
+  }
+
+  private fire(timeStamp: number): void {
+    if (this.firePending) return;
+    this.firePending = true;
+    this.fireJudgement = this.judgeFire(timeStamp);
   }
 
   poll(): InputFrame {

@@ -35,6 +35,8 @@ export class RouteOverlay extends Container {
   private readonly boss: PixelText;
   private readonly beatLabel: PixelText;
   private pick = 0;
+  /** Lane selected by the last tap; tapping it again goes there. Null until a node is tapped. */
+  private tapped: number | null = null;
   private fieldW = 0;
 
   constructor(
@@ -45,7 +47,7 @@ export class RouteOverlay extends Container {
     this.title = new PixelText(glyphs, 'CHOOSE YOUR ROUTE', 0xffe14a);
     this.nodeName = new PixelText(glyphs, '');
     this.desc = new PixelText(glyphs, '', 0xcccccc);
-    this.hint = new PixelText(glyphs, isTouch ? 'TAP A LIT NODE' : 'LEFT/RIGHT  FIRE TO GO', 0x777777);
+    this.hint = new PixelText(glyphs, isTouch ? 'TAP A NODE TWICE TO GO' : 'LEFT/RIGHT  FIRE TO GO', 0x777777);
     this.boss = new PixelText(glyphs, 'BOSS', 0xff3b5c);
     this.beatLabel = new PixelText(glyphs, 'BEAT', BEAT_COLOR);
     this.addChild(this.shade, this.links, this.boxes, this.title, this.nodeName, this.desc, this.hint, this.boss, this.beatLabel);
@@ -55,9 +57,10 @@ export class RouteOverlay extends Container {
   /** Fresh map screen: cursor on the first reachable node. */
   open(): void {
     this.pick = 0;
+    this.tapped = null;
   }
 
-  /** Returns the picked lane, or null. */
+  /** Returns the picked lane, or null. A tap selects a node (showing its info); a second tap on it goes. */
   handle(r: RogueState, menu: readonly MenuAction[], taps: readonly Tap[]): number | null {
     const lanes = reachableLanes(r);
     if (lanes.length === 0) return null;
@@ -66,12 +69,16 @@ export class RouteOverlay extends Container {
       if (a === 'left' || a === 'up') this.pick = (this.pick - 1 + lanes.length) % lanes.length;
       else if (a === 'right' || a === 'down') this.pick = (this.pick + 1) % lanes.length;
       else if (a === 'confirm') return lanes[this.pick]!;
+      this.tapped = null;
     }
     const y = ROW_Y[r.path.length];
     if (y === undefined) return null;
     for (const t of taps) {
       const i = lanes.findIndex((l) => Math.hypot(t.x - this.laneX(l), t.y - y) <= TAP_RADIUS);
-      if (i >= 0) return lanes[i]!;
+      if (i < 0) continue;
+      if (this.tapped === lanes[i]) return lanes[i]!;
+      this.pick = i;
+      this.tapped = lanes[i]!;
     }
     return null;
   }

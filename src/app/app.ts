@@ -34,7 +34,7 @@ import { viewport } from './viewport';
 function browserStore(): KeyValueStore {
   try {
     const s = window.localStorage;
-    s.getItem('space-alliance:probe');
+    s.getItem('beyond-the-last-orbit:probe');
     return s;
   } catch {
     return memoryStore();

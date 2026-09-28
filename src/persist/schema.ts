@@ -1,4 +1,4 @@
-export const SAVE_KEY = 'space-alliance:v1';
+export const SAVE_KEY = 'beyond-the-last-orbit:v1';
 export const SAVE_VERSION = 2;
 export const MAX_HIGHSCORES = 10;
 

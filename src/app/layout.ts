@@ -15,12 +15,14 @@ export interface Layout {
 /**
  * Desktop: fit the fixed-height field to the viewport; the width follows the aspect ratio within limits.
  * Touch: fill the screen by height and make the field wider than the view, so a camera pans across it.
+ * On screens wider than the widest field, the view is wider and the field is centered in it.
  */
 export function computeLayout(viewW: number, viewH: number, touch = false): Layout {
   if (touch) {
-    const visible = clamp((FIELD_H * viewW) / viewH, TOUCH_VIEW.minW, FIELD_W_MAX);
+    const visible = clamp((FIELD_H * viewW) / viewH, TOUCH_VIEW.minW, TOUCH_VIEW.maxW);
     const scale = Math.min(viewH / FIELD_H, viewW / visible);
-    const fieldW = Math.max(Math.ceil(visible), clamp(Math.round(visible * TOUCH_VIEW.overscan), FIELD_W_MIN, FIELD_W_MAX));
+    const overscanned = clamp(Math.round(visible * TOUCH_VIEW.overscan), FIELD_W_MIN, FIELD_W_MAX);
+    const fieldW = Math.min(FIELD_W_MAX, Math.max(Math.ceil(visible), overscanned));
     return {
       fieldW,
       viewW: visible,

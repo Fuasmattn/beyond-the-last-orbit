@@ -1,5 +1,5 @@
 import { Container, Sprite, Texture } from 'pixi.js';
-import { FIELD_H, FIELD_W_MAX } from '../data/balance';
+import { FIELD_H, TOUCH_VIEW } from '../data/balance';
 
 interface Star {
   sprite: Sprite;
@@ -20,6 +20,14 @@ const LAYERS = [
   { count: 25, speed: 32, color: 0xffffff, size: 2, parallax: 0.65 },
 ] as const;
 
+/**
+ * Stars span this x range so every layer covers the widest view, including parallax offsets and
+ * views wider than the field (camera x down to −(maxW − field)/2). Counts are per `SPAN_UNIT` px.
+ */
+const SPAN = { x0: -TOUCH_VIEW.maxW / 2, x1: TOUCH_VIEW.maxW } as const;
+const SPAN_UNIT = 600;
+const randomX = () => Math.floor(SPAN.x0 + Math.random() * (SPAN.x1 - SPAN.x0));
+
 /** Stretch of star streaks per unit of extra speed during warp. */
 const STREAK = 0.35;
 
@@ -32,12 +40,13 @@ export class Starfield extends Container {
       const root = new Container();
       this.addChild(root);
       const stars: Star[] = [];
-      for (let i = 0; i < def.count; i++) {
+      const count = Math.round((def.count * (SPAN.x1 - SPAN.x0)) / SPAN_UNIT);
+      for (let i = 0; i < count; i++) {
         const s = new Sprite(Texture.WHITE);
         s.tint = def.color;
         s.width = 1;
         s.height = def.size;
-        s.x = Math.floor(Math.random() * FIELD_W_MAX);
+        s.x = randomX();
         s.y = Math.random() * FIELD_H;
         root.addChild(s);
         stars.push({ sprite: s, size: def.size });
@@ -59,7 +68,7 @@ export class Starfield extends Container {
         sprite.height = size * (1 + (speedMul - 1) * STREAK);
         if (sprite.y > FIELD_H) {
           sprite.y -= FIELD_H + sprite.height + 2;
-          sprite.x = Math.floor(Math.random() * FIELD_W_MAX);
+          sprite.x = randomX();
         }
       }
     }

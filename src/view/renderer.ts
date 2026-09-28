@@ -44,6 +44,9 @@ const MASTER_PULSE = 1.6;
 const MASTER_BACKDROP = 0x2a0f2e;
 /** Fraction of the camera's pan the planet and grid move on screen. */
 const PLANET_PARALLAX = 0.35;
+/** Past the field walls (views wider than the field): darkened, with a faint wall line. */
+const OUTSIDE_DIM = 0.45;
+const WALL_COLOR = 0x4af2ff;
 
 export interface Cosmetics {
   skin: SkinDef;
@@ -94,6 +97,7 @@ export class GameRenderer {
   private readonly backdrop = whiteSprite(BACKDROP_BASE);
   private readonly starfield = new Starfield();
   private readonly planetLayer = new Container();
+  private readonly outside = new Graphics();
   private readonly bossLayer = new Container();
   private readonly entities = new Container();
   private readonly effects: Effects;
@@ -136,7 +140,15 @@ export class GameRenderer {
     this.laserZone.alpha = 0.18;
     this.bossLayer.addChild(this.laserZone, this.laserWarn, this.laserBeam, this.laserCore);
     this.entities.addChild(this.ship);
-    this.root.addChild(this.backdrop, this.starfield, this.planetLayer, this.bossLayer, this.entities, this.effects);
+    this.root.addChild(
+      this.backdrop,
+      this.starfield,
+      this.planetLayer,
+      this.outside,
+      this.bossLayer,
+      this.entities,
+      this.effects,
+    );
   }
 
   get trauma(): number {
@@ -164,11 +176,13 @@ export class GameRenderer {
     this.backdrop.x = camX;
     this.backdrop.width = viewW;
     this.starfield.pan(camX);
-    this.planetLayer.x = camX * (1 - PLANET_PARALLAX);
+    // A field narrower than the view: the planet spans the view and stays put.
+    this.planetLayer.x = camX < 0 ? camX : camX * (1 - PLANET_PARALLAX);
+    this.renderOutside(state.fieldW, camX, viewW);
     const pulseColor = state.beatMode === 'master' ? MASTER_BACKDROP : BACKDROP_PULSE;
     this.backdrop.tint = lerpColor(BACKDROP_BASE, pulseColor, pulse * 0.6);
     this.starfield.update(dt, warp ? 1 + WARP_SPEED * Math.sin(Math.PI * warpProgress) : 1);
-    this.renderPlanet(state, dt, warp, pulse);
+    this.renderPlanet(state, dt, warp, pulse, Math.max(state.fieldW, viewW));
 
     const worldTint = lerpColor(
       WORLD_TINT[worldAt(state.world).id],
@@ -289,14 +303,27 @@ export class GameRenderer {
     );
   }
 
-  private renderPlanet(state: SimState, dt: number, warp: boolean, pulse: number): void {
+  private renderOutside(fieldW: number, camX: number, viewW: number): void {
+    const g = this.outside.clear();
+    const side = -camX;
+    if (side <= 0) return;
+    g.rect(camX, 0, side, FIELD_H)
+      .rect(fieldW, 0, viewW - fieldW - side, FIELD_H)
+      .fill({ color: 0x000000, alpha: OUTSIDE_DIM })
+      .rect(-1, 0, 1, FIELD_H)
+      .rect(fieldW, 0, 1, FIELD_H)
+      .fill({ color: WALL_COLOR, alpha: 0.35 });
+  }
+
+  /** `width`: the planet and grid span the field, or the whole view when that is wider. */
+  private renderPlanet(state: SimState, dt: number, warp: boolean, pulse: number, width: number): void {
     const id = worldAt(state.world).id;
-    if (id !== this.world || state.fieldW !== this.backdropW) {
+    if (id !== this.world || width !== this.backdropW) {
       this.planet?.root.destroy({ children: true });
-      this.planet = createBackdrop(id, state.fieldW);
+      this.planet = createBackdrop(id, width);
       this.planetLayer.addChild(this.planet.root);
       this.world = id;
-      this.backdropW = state.fieldW;
+      this.backdropW = width;
     }
     this.planet?.update(dt, pulse);
     const target = warp ? 0 : 1;

@@ -46,9 +46,17 @@ describe('computeLayout on touch', () => {
     expect(l.fieldW).toBeLessThanOrEqual(600);
   });
 
+  it('fills landscape past the widest field instead of letterboxing', () => {
+    const l = computeLayout(844, 390, true);
+    expect(l.fieldW).toBe(600);
+    expect(l.viewW * l.scale).toBeCloseTo(844);
+    expect(l.viewW).toBeGreaterThan(l.fieldW);
+    expect(l.offsetX).toBe(0);
+  });
+
   it('letterboxes only extreme aspects', () => {
-    const l = computeLayout(2000, 400, true);
-    expect(l.viewW).toBe(600);
+    const l = computeLayout(3000, 400, true);
+    expect(l.viewW).toBe(1000);
     expect(l.offsetX).toBeGreaterThan(0);
   });
 });

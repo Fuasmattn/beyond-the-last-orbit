@@ -7,8 +7,11 @@ export const MENU_W = 240;
 /** Touch devices use a narrower menu frame so text scales up on phones. */
 export const MENU_W_TOUCH = 160;
 export const FIELD_H = 320;
-/** Touch devices: the visible width fills the screen; the field is `overscan` times wider and the camera pans. */
-export const TOUCH_VIEW = { minW: 120, overscan: 1.3 } as const;
+/**
+ * Touch devices: the visible width fills the screen; the field is `overscan` times wider and the camera pans.
+ * Views wider than the widest field (landscape) show backdrop past the field walls, up to `maxW`.
+ */
+export const TOUCH_VIEW = { minW: 120, maxW: 1000, overscan: 1.3 } as const;
 /** Top edge of the player movement zone (bottom 25 % of the field). */
 export const PLAYER_ZONE_TOP = 240;
 /** Rhythm strip along the bottom edge; the player stays above it. */

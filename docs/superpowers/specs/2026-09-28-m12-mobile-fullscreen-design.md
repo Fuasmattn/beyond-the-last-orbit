@@ -1,0 +1,83 @@
+# M12 — Mobile full screen, camera pan, gesture controls
+
+## Problem
+
+On phones the game is framed like the desktop build: the field is fitted inside the screen
+("contain"), the ship moves inside a tiny playfield, and firing needs a small on-screen button in the
+bottom-right corner. It does not feel like a mobile game.
+
+## Goals
+
+- The run fills the whole screen on touch devices. No letterbox in portrait.
+- The field is **wider than the screen** and a camera follows the ship horizontally. Background
+  layers move slower than the playfield (parallax), so steering reveals the edges of the field.
+- Controls are gestures over the whole screen, no touch zones:
+  - **drag anywhere** moves the ship (relative, both axes),
+  - **tap anywhere** fires,
+  - multi-touch: hold one finger to steer, tap with another to fire.
+- Desktop is unchanged.
+
+## Design
+
+### Layout (`src/app/layout.ts`)
+
+`computeLayout(viewW, viewH, touch)` now returns two widths:
+
+- `viewW` — the logical width that is visible on screen. HUD, overlays and menus lay out in it.
+- `fieldW` — the simulation field width.
+
+Desktop: unchanged (`viewW === fieldW`, contain-fit, width follows the aspect in 140..600).
+
+Touch ("cover" by height): `scale = screenH / FIELD_H`, so the full field height always fits and the
+screen is filled edge to edge. `viewW = screenW / scale`, clamped to 120..600 (only extreme aspects
+letterbox). `fieldW = viewW × TOUCH_OVERSCAN (1.3)`, clamped to 140..600 and never narrower than the
+view. A 390×844 phone sees ~148 logical px of a ~192 px field.
+
+`viewport` carries both widths (`viewport.w` visible, `viewport.fieldW` sim).
+
+### Camera (`src/view/camera.ts`)
+
+Target camera x maps the ship's position linearly onto the pan range:
+`camX = (ship.x / (fieldW − ship.w)) × (fieldW − viewW)`. With the ship at the left wall the view
+shows the left edge, at the right wall the right edge. The ship still moves on screen (at
+`viewW/fieldW` of its field speed) while the world slides under it. The camera eases toward the
+target (rate 12/s) and snaps on the first frame. If the field is narrower than the view (landscape
+with a capped field) the field is centered.
+
+### Parallax (`renderer.ts`, `starfield.ts`)
+
+Layers are shifted so their on-screen motion is a fraction of the camera's:
+
+| layer        | screen motion |
+| ------------ | ------------- |
+| far stars    | 0.2           |
+| mid stars    | 0.4           |
+| near stars   | 0.65          |
+| planet/grid  | 0.35          |
+| entities/fx  | 1.0           |
+
+The base colour fill always covers the visible rect. Every layer stays covered because its offset
+never exceeds `fieldW − viewW`.
+
+### Touch input (`src/input/touch.ts`)
+
+- The first finger down becomes the **steer** pointer. Moves are applied as relative drag.
+- If the steer pointer lifts within 250 ms having moved < 10 css px, it was a **tap** → fire. The
+  rhythm verdict uses the *down* timestamp, so beat timing is not penalised by the release delay.
+- Any finger that lands while a steer pointer is held fires **immediately** on down.
+- When the steer finger lifts and another finger is still down, that finger takes over steering.
+- Every down is still a menu tap (menus, route map, drafts unchanged).
+- The fire button and its view are removed.
+
+## Non-goals / not changed
+
+- Vertical camera pan (the full height is always visible; enemies arrive from the top).
+- Landscape phones still show side bars when the screen is wider than 600 logical px.
+- No on-screen pause on touch (pause stays on hide/visibility change).
+
+## Open questions
+
+- Is 1.3× overscan the right amount of pan? Wider = more room, but more of the field off-screen.
+- Single-finger tap fires on release (~80 ms later on screen, verdict uses press time). If that feels
+  laggy, alternative: fire on every press, including the one that starts a drag.
+- Should the ship's drag sensitivity (1.25×) change now that the camera also moves?

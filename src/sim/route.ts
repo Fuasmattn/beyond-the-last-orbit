@@ -76,6 +76,8 @@ function assignKinds(rng: Rng, row: RouteNode[], rowIdx: number, world: number):
   const pool: Partial<Record<Exclude<NodeKind, 'battle'>, number>> = {
     elite: ROUTE.weights.elite + ROUTE.eliteWeightPerWorld * world,
     cache: ROUTE.weights.cache,
+    shop: ROUTE.weights.shop,
+    signal: ROUTE.weights.signal,
     // No repair before the player has had a chance to get hurt.
     ...(rowIdx > 0 ? { repair: ROUTE.weights.repair } : {}),
   };
@@ -90,9 +92,16 @@ function assignKinds(rng: Rng, row: RouteNode[], rowIdx: number, world: number):
   });
 }
 
+/** Every world has a shop: when the roll had none, one non-battle node off the beat row becomes one. */
+function ensureShop(rng: Rng, rows: RouteNode[][]): void {
+  if (rows.some((row) => row.some((n) => n.kind === 'shop'))) return;
+  const candidates = rows.flatMap((row, i) => (i === BEAT_ROW ? [] : row.filter((n) => n.kind !== 'battle')));
+  if (candidates.length > 0) pick(rng, candidates).kind = 'shop';
+}
+
 /**
  * One world's map: `MAP_ROWS` rows of 2–3 nodes, adjacent-lane links, no crossings. Each row has one
- * battle and otherwise distinct kinds; the beat row holds only fights.
+ * battle and otherwise distinct kinds; the beat row holds only fights; at least one node is a shop.
  */
 export function generateMap(rng: Rng, world: number): RouteMap {
   let lanes: number[][] = [];
@@ -112,6 +121,7 @@ export function generateMap(rng: Rng, world: number): RouteMap {
     }
     assignKinds(rng, row, i, world);
   });
+  ensureShop(rng, rows);
   return { rows };
 }
 
@@ -125,8 +135,15 @@ export function createRogueState(seed: number, rerolls: number, world: number): 
     beat: false,
     boons: {},
     offer: [],
-    draftPending: false,
+    draftsOwed: 0,
+    draftRarity: null,
+    ambush: false,
+    beatNext: false,
     rerolls,
+    scrap: 0,
+    shop: null,
+    event: null,
+    seenEvents: [],
   };
 }
 

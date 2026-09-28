@@ -49,6 +49,7 @@ export const GLYPHS: Record<string, readonly string[]> = {
   '+': ['...', '.#.', '###', '.#.', '...'],
   '<': ['..#', '.#.', '#..', '.#.', '..#'],
   '>': ['#..', '.#.', '..#', '.#.', '#..'],
+  '?': ['###', '..#', '.#.', '...', '.#.'],
 };
 
 export function textWidth(text: string): number {

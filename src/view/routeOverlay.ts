@@ -11,6 +11,8 @@ const NODE_INFO: Record<NodeKind, { letter: string; name: string; desc: string; 
   elite: { letter: 'E', name: 'ELITE', desc: 'HARD FIGHT - THEN UPGRADE', color: 0xff3b5c },
   cache: { letter: 'C', name: 'CACHE', desc: 'FREE UPGRADE - NO SCORE', color: 0xffe14a },
   repair: { letter: 'R', name: 'REPAIR', desc: '+1 SHIP - NO SCORE', color: 0x7dff6b },
+  shop: { letter: 'S', name: 'SHOP', desc: 'SPEND SCRAP ON UPGRADES', color: 0xb8ff4a },
+  signal: { letter: '?', name: 'SIGNAL', desc: 'UNKNOWN - CHOOSE WISELY', color: 0xffb347 },
 };
 
 const START_Y = 238;

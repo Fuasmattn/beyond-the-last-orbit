@@ -273,11 +273,32 @@ export const ELITE = {
 /** Rogue route map: node weights for the non-battle slots (elite gains per world). */
 export const ROUTE = {
   lanes: 3,
-  weights: { elite: 30, cache: 30, repair: 35 },
+  weights: { elite: 30, cache: 25, repair: 30, shop: 25, signal: 30 },
   eliteWeightPerWorld: 10,
   /** Seconds before route/draft overlays accept input, so fire-mashing can't pick by accident. */
   inputDelay: 0.6,
   draftSize: 3,
+} as const;
+
+/** Scrap: in-run currency for SHOP nodes and SIGNAL events. */
+export const SCRAP = { kill: 1, eliteKill: 2, boss: 30 } as const;
+
+/** SHOP node prices in scrap. */
+export const SHOP = {
+  prices: { common: 25, rare: 40, epic: 70, curse: 15 },
+  repair: 30,
+  reroll: 10,
+  rerollStep: 10,
+} as const;
+
+/** SIGNAL events. */
+export const SIGNAL = {
+  distressScrap: 40,
+  derelictScrap: 60,
+  derelictAmbushChance: 0.5,
+  scanScrap: 20,
+  shieldPrice: 30,
+  staticScrap: 25,
 } as const;
 
 /** Enemy bullets passing this close to the ship without hitting score a graze. */

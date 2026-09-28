@@ -149,6 +149,9 @@ export const BOONS: readonly BoonDef[] = [
   },
 ];
 
+/** Rarity order for "at least this rare" offers; curses sit outside it. */
+const RARITY_RANK: Readonly<Record<BoonRarity, number>> = { common: 0, rare: 1, epic: 2, curse: -1 };
+
 export const RARITY_COLOR: Readonly<Record<BoonRarity, number>> = {
   common: 0xffffff,
   rare: 0x4af2ff,
@@ -181,10 +184,12 @@ function rollRarity(rng: { seed: number }, world: number): Exclude<BoonRarity, '
 
 /**
  * Rolls `ROUTE.draftSize` distinct offers from the rogue RNG stream: each slot rolls a rarity, then a boon of that
- * rarity (any rarity when that pool is empty). At most one slot is a curse.
+ * rarity (any rarity when that pool is empty). At most one slot is a curse. `minRarity` drops commons (and
+ * curses) from the pool and bumps every slot's roll to at least that rarity.
  */
-export function rollOffer(state: SimState, r: RogueState): BoonId[] {
-  const pool = offerable(state, r);
+export function rollOffer(state: SimState, r: RogueState, minRarity: BoonRarity | null = null): BoonId[] {
+  const minRank = minRarity ? RARITY_RANK[minRarity] : 0;
+  const pool = offerable(state, r).filter((id) => minRank === 0 || RARITY_RANK[boonDef(id).rarity] >= minRank);
   const offer: BoonId[] = [];
   const take = (rarity: BoonRarity | null): void => {
     let candidates = rarity ? pool.filter((id) => boonDef(id).rarity === rarity) : pool;
@@ -195,8 +200,12 @@ export function rollOffer(state: SimState, r: RogueState): BoonId[] {
     pool.splice(pool.indexOf(id), 1);
     offer.push(id);
   };
-  const curseSlot = nextRandom(r.rng) < BOON.curseChance ? Math.floor(nextRandom(r.rng) * ROUTE.draftSize) : -1;
-  for (let i = 0; i < ROUTE.draftSize; i++) take(i === curseSlot ? 'curse' : rollRarity(r.rng, state.world));
+  const curseSlot =
+    minRank === 0 && nextRandom(r.rng) < BOON.curseChance ? Math.floor(nextRandom(r.rng) * ROUTE.draftSize) : -1;
+  for (let i = 0; i < ROUTE.draftSize; i++) {
+    const rarity = rollRarity(r.rng, state.world);
+    take(i === curseSlot ? 'curse' : RARITY_RANK[rarity] < minRank ? minRarity : rarity);
+  }
   // Curses never fill in for a missing rarity unless the curse slot asked for one.
   return offer;
 }

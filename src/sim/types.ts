@@ -8,8 +8,15 @@ export type BeatMode = 'off' | 'master';
 
 export type BeatRank = 'S' | 'A' | 'B' | 'C';
 
-/** Rogue route map node types. */
-export type NodeKind = 'battle' | 'elite' | 'cache' | 'repair';
+/** Route map node types. */
+export type NodeKind = 'battle' | 'elite' | 'cache' | 'repair' | 'shop' | 'signal';
+
+export type EventId = 'distress' | 'derelict' | 'market' | 'ghost';
+
+export interface ShopState {
+  offer: BoonId[];
+  rerollPrice: number;
+}
 
 export type BoonId =
   | 'twin'
@@ -61,9 +68,20 @@ export interface RogueState {
   boons: Partial<Record<BoonId, number>>;
   /** Upgrades on offer while drafting. */
   offer: BoonId[];
-  /** A draft is owed after the stage-clear screen (elite or boss beaten). */
-  draftPending: boolean;
+  /** Drafts owed after the current node (elite or boss beaten, beat rank, events). */
+  draftsOwed: number;
+  /** Minimum rarity of the next draft's offers (BLACK MARKET). */
+  draftRarity: BoonRarity | null;
+  /** The current fight was forced on the player and owes no draft. */
+  ambush: boolean;
+  /** The next fight is a beat stage (GHOST SIGNAL). */
+  beatNext: boolean;
   rerolls: number;
+  /** In-run currency. */
+  scrap: number;
+  shop: ShopState | null;
+  event: EventId | null;
+  seenEvents: EventId[];
 }
 
 export type EnemyKind = 'grunt' | 'gunner' | 'diver' | 'shield' | 'splitter' | 'phaser' | 'bomber' | 'mini';
@@ -281,8 +299,18 @@ export interface StageResult {
   beatRank: BeatRank | null;
 }
 
-/** `route` / `draft`: rogue runs wait for the player to pick a map node / an upgrade. */
-export type Phase = 'stageIntro' | 'playing' | 'bossDying' | 'stageClear' | 'route' | 'draft' | 'warp' | 'gameOver';
+/** `route` / `draft` / `shop` / `event`: waiting for the player to pick a map node / upgrade / purchase / choice. */
+export type Phase =
+  | 'stageIntro'
+  | 'playing'
+  | 'bossDying'
+  | 'stageClear'
+  | 'route'
+  | 'draft'
+  | 'shop'
+  | 'event'
+  | 'warp'
+  | 'gameOver';
 
 export interface SimState {
   beatMode: BeatMode;
@@ -337,6 +365,9 @@ export type SimEvent =
   | { type: 'boonTaken'; id: BoonId | null }
   | { type: 'repaired'; lives: number; shield: number }
   | { type: 'revived'; lives: number }
+  | { type: 'shopOpen' }
+  | { type: 'eventOpen'; id: EventId }
+  | { type: 'eventResolved'; text: string }
   | { type: 'shrapnel'; x: number; y: number }
   | { type: 'graze'; x: number; y: number; points: number }
   | { type: 'shieldHit'; x: number; y: number; shieldLeft: number }

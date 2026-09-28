@@ -1,13 +1,14 @@
-import { BEAT_STAGE, PLAYER, STAGE, WARP } from '../data/balance';
+import { BEAT_STAGE, PLAYER, SCRAP, SHOP, STAGE, WARP } from '../data/balance';
 import { WORLDS } from '../data/worlds';
 import { spawnBoss } from './boss';
-import { rollOffer, takeBoon } from './boons';
+import { boonDef, rollOffer, takeBoon } from './boons';
 import { difficultyFor, eliteDifficulty } from './difficulty';
 import { spawnFormation } from './formation';
 import { clamp } from './math';
 import { generateMap, nodeAt, reachableLanes } from './route';
 import { clampStreak } from './scoring';
-import type { BeatMode, BeatRank, SimEvent, SimState, StageResult, StageStats } from './types';
+import { canChoose, resolveEvent, rollEvent } from './signal';
+import type { BeatMode, BeatRank, BoonId, SimEvent, SimState, StageResult, StageStats } from './types';
 
 export function emptyStageStats(): StageStats {
   return { shots: 0, hits: 0, onBeatShots: 0, hitsTaken: 0, grazes: 0, time: 0 };
@@ -82,7 +83,10 @@ export function finishStage(state: SimState, events: SimEvent[]): void {
   if (result.perfect) state.run.perfectStages++;
   state.run.stagesCleared++;
   const beatDraft = result.beatRank === 'S' || result.beatRank === 'A';
-  if (state.diff.elite || isBossStage(state.stage) || beatDraft) state.rogue.draftPending = true;
+  const r = state.rogue;
+  if (!r.ambush && (state.diff.elite || isBossStage(state.stage) || beatDraft)) r.draftsOwed++;
+  r.ambush = false;
+  if (isBossStage(state.stage)) r.scrap += SCRAP.boss;
   state.bullets = [];
   state.phase = 'stageClear';
   state.phaseTimer = STAGE.clearTime;
@@ -102,8 +106,19 @@ export function startWarp(state: SimState, events: SimEvent[]): void {
 
 /** After the stage-clear screen: draft / route / boss / next world. */
 export function advanceStage(state: SimState, events: SimEvent[]): void {
-  if (state.rogue.draftPending) openDraft(state, events);
+  if (state.rogue.draftsOwed > 0) openDraft(state, events);
   else continueRoute(state, events);
+}
+
+/** Starts a fight at the current node (elite unless the node says battle). */
+function startFight(state: SimState, events: SimEvent[], kind: 'battle' | 'elite'): void {
+  const r = state.rogue;
+  r.node = kind;
+  if (r.beatNext) {
+    r.beat = true;
+    r.beatNext = false;
+  }
+  startStage(state, events);
 }
 
 function nextWorld(state: SimState, events: SimEvent[]): void {
@@ -142,10 +157,11 @@ function continueRoute(state: SimState, events: SimEvent[]): void {
 
 function openDraft(state: SimState, events: SimEvent[]): void {
   const r = state.rogue;
-  r.draftPending = false;
-  r.offer = rollOffer(state, r);
+  r.draftsOwed = Math.max(0, r.draftsOwed - 1);
+  r.offer = rollOffer(state, r, r.draftRarity);
+  r.draftRarity = null;
   if (r.offer.length === 0) {
-    continueRoute(state, events);
+    advanceStage(state, events);
     return;
   }
   state.phase = 'draft';
@@ -168,20 +184,105 @@ export function chooseNode(state: SimState, lane: number, events: SimEvent[]): b
   switch (node.kind) {
     case 'battle':
     case 'elite':
-      startStage(state, events);
+      startFight(state, events, node.kind);
       break;
     case 'cache':
       openDraft(state, events);
+      break;
+    case 'shop':
+      openShop(state, events);
+      break;
+    case 'signal':
+      openEvent(state, events);
       break;
     case 'repair': {
       const p = state.player;
       if (p.lives < PLAYER.maxLives) p.lives++;
       else p.shield++;
       events.push({ type: 'repaired', lives: p.lives, shield: p.shield });
-      continueRoute(state, events);
+      advanceStage(state, events);
       break;
     }
   }
+  return true;
+}
+
+function openShop(state: SimState, events: SimEvent[]): void {
+  const r = state.rogue;
+  r.shop = { offer: rollOffer(state, r), rerollPrice: SHOP.reroll };
+  state.phase = 'shop';
+  state.phaseTimer = 0;
+  state.bullets = [];
+  state.enemies = [];
+  events.push({ type: 'shopOpen' });
+}
+
+export function shopPrice(id: BoonId): number {
+  return SHOP.prices[boonDef(id).rarity];
+}
+
+/** Buys the shop offer at `index`. False when no shop is open, the index is bad or scrap is short. */
+export function buyShopBoon(state: SimState, index: number, events: SimEvent[]): boolean {
+  const r = state.rogue;
+  const id = r.shop?.offer[index];
+  if (state.phase !== 'shop' || !r.shop || id === undefined || r.scrap < shopPrice(id)) return false;
+  r.scrap -= shopPrice(id);
+  r.shop.offer.splice(index, 1);
+  takeBoon(state, r, id);
+  events.push({ type: 'boonTaken', id });
+  return true;
+}
+
+export function buyShopRepair(state: SimState, events: SimEvent[]): boolean {
+  const r = state.rogue;
+  const p = state.player;
+  if (state.phase !== 'shop' || !r.shop || r.scrap < SHOP.repair || p.lives >= PLAYER.maxLives) return false;
+  r.scrap -= SHOP.repair;
+  p.lives++;
+  events.push({ type: 'repaired', lives: p.lives, shield: p.shield });
+  return true;
+}
+
+export function rerollShop(state: SimState): boolean {
+  const r = state.rogue;
+  if (state.phase !== 'shop' || !r.shop || r.scrap < r.shop.rerollPrice) return false;
+  r.scrap -= r.shop.rerollPrice;
+  r.shop.rerollPrice += SHOP.rerollStep;
+  r.shop.offer = rollOffer(state, r);
+  return true;
+}
+
+export function leaveShop(state: SimState, events: SimEvent[]): boolean {
+  const r = state.rogue;
+  if (state.phase !== 'shop' || !r.shop) return false;
+  r.shop = null;
+  advanceStage(state, events);
+  return true;
+}
+
+function openEvent(state: SimState, events: SimEvent[]): void {
+  const r = state.rogue;
+  r.event = rollEvent(state);
+  state.phase = 'event';
+  state.phaseTimer = 0;
+  state.bullets = [];
+  state.enemies = [];
+  events.push({ type: 'eventOpen', id: r.event });
+}
+
+/** Resolves the open event with choice `index`. False when no event is open or the choice is unaffordable. */
+export function chooseEvent(state: SimState, index: number, events: SimEvent[]): boolean {
+  const r = state.rogue;
+  const id = r.event;
+  if (state.phase !== 'event' || id === null || !canChoose(state, id, index)) return false;
+  r.event = null;
+  const outcome = resolveEvent(state, id, index, events);
+  if (outcome === 'continue') {
+    advanceStage(state, events);
+    return true;
+  }
+  r.ambush = outcome === 'ambush';
+  startFight(state, events, 'elite');
   return true;
 }
 
@@ -194,7 +295,7 @@ export function chooseBoon(state: SimState, index: number | null, events: SimEve
   if (id) takeBoon(state, r, id);
   r.offer = [];
   events.push({ type: 'boonTaken', id });
-  continueRoute(state, events);
+  advanceStage(state, events);
   return true;
 }
 

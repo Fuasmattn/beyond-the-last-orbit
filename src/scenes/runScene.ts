@@ -5,12 +5,22 @@ import { ROUTE } from '../data/balance';
 import { equippedLaser, equippedSkin } from '../data/cosmetics';
 import { runOptionsFor } from '../meta/upgrades';
 import { createInitialState } from '../sim/state';
-import { chooseBoon, chooseNode, rerollDraft } from '../sim/stageFlow';
+import {
+  buyShopBoon,
+  buyShopRepair,
+  chooseBoon,
+  chooseEvent,
+  chooseNode,
+  leaveShop,
+  rerollDraft,
+  rerollShop,
+} from '../sim/stageFlow';
 import { step } from '../sim/step';
 import type { SimEvent, SimState } from '../sim/types';
 import { judgeLabel } from '../view/beatJudge';
 import { cameraTarget, followCamera } from '../view/camera';
 import { DraftOverlay } from '../view/draftOverlay';
+import { EventOverlay } from '../view/eventOverlay';
 import { Hud, inPauseButton } from '../view/hud';
 import { MenuList } from '../view/menuList';
 import { RouteOverlay } from '../view/routeOverlay';
@@ -35,6 +45,7 @@ export class RunScene implements Scene {
   private readonly hud: Hud;
   private readonly route: RouteOverlay;
   private readonly draft: DraftOverlay;
+  private readonly event: EventOverlay;
   private readonly pauseMenu: MenuList;
   private elapsed = 0;
   private pauseBlink = 0;
@@ -50,10 +61,11 @@ export class RunScene implements Scene {
     this.hud = new Hud(ctx.textures.glyphs, ctx.isTouch ? TOUCH_HUD_SCALE : 1, ctx.isTouch);
     this.route = new RouteOverlay(ctx.textures.glyphs, ctx.isTouch);
     this.draft = new DraftOverlay(ctx.textures.glyphs, ctx.isTouch);
+    this.event = new EventOverlay(ctx.textures.glyphs, ctx.isTouch);
     this.pauseMenu = new MenuList(ctx.textures.glyphs, PAUSE_MENU);
     this.pauseMenu.setRows(PAUSE_ITEMS.map((label) => ({ label })));
     this.pauseMenu.visible = false;
-    this.root.addChild(this.renderer.root, this.hud, this.route, this.draft, this.pauseMenu);
+    this.root.addChild(this.renderer.root, this.hud, this.route, this.draft, this.event, this.pauseMenu);
     ctx.audio?.sfx.start();
     ctx.audio?.startSong(ctx.songForWorld(this.state.world, this.state.loop));
   }
@@ -101,7 +113,9 @@ export class RunScene implements Scene {
     this.pick(input, events);
     // Overlays opened by this step or by the pick start with the cursor on the first entry.
     if (events.some((e) => e.type === 'routeOpen')) this.route.open();
-    if (events.some((e) => e.type === 'draftOpen')) this.draft.open();
+    if (events.some((e) => e.type === 'draftOpen')) this.draft.open('draft');
+    if (events.some((e) => e.type === 'shopOpen')) this.draft.open('shop');
+    if (events.some((e) => e.type === 'eventOpen')) this.event.open();
   }
 
   private pick(input: FrameInput, events: SimEvent[]): void {
@@ -121,6 +135,31 @@ export class RunScene implements Scene {
         }
       } else if (pick && chooseBoon(s, pick.type === 'boon' ? pick.index : null, events)) {
         this.ctx.audio?.sfx.choose();
+      } else if (moved) this.ctx.audio?.sfx.menuMove();
+    } else if (s.phase === 'shop') {
+      const pick = this.draft.handle(s.rogue, input.menu, input.taps);
+      const sfx = this.ctx.audio?.sfx;
+      if (!pick) {
+        if (moved) sfx?.menuMove();
+        return;
+      }
+      if (pick.type === 'skip') {
+        if (leaveShop(s, events)) sfx?.choose();
+        return;
+      }
+      const ok =
+        pick.type === 'boon'
+          ? buyShopBoon(s, pick.index, events)
+          : pick.type === 'repair'
+            ? buyShopRepair(s, events)
+            : rerollShop(s);
+      if (ok) sfx?.buy();
+      else sfx?.deny();
+    } else if (s.phase === 'event') {
+      const i = this.event.handle(input.menu, input.taps);
+      if (i !== null) {
+        if (chooseEvent(s, i, events)) this.ctx.audio?.sfx.choose();
+        else this.ctx.audio?.sfx.deny();
       } else if (moved) this.ctx.audio?.sfx.menuMove();
     }
   }
@@ -144,10 +183,13 @@ export class RunScene implements Scene {
     }
     this.elapsed += this.paused ? 0 : elapsed;
     const r = this.state.rogue;
-    this.route.visible = this.state.phase === 'route' && !this.paused;
-    this.draft.visible = this.state.phase === 'draft' && !this.paused;
+    const phase = this.state.phase;
+    this.route.visible = phase === 'route' && !this.paused;
+    this.draft.visible = (phase === 'draft' || phase === 'shop') && !this.paused;
+    this.event.visible = phase === 'event' && !this.paused;
     if (this.route.visible) this.route.update(r, viewport.w, this.elapsed);
     if (this.draft.visible) this.draft.update(r, viewport.w, this.elapsed);
+    if (this.event.visible) this.event.update(this.state, viewport.w, this.elapsed);
   }
 
   destroy(): void {

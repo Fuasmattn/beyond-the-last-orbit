@@ -136,10 +136,10 @@ describe('beat rank', () => {
     const s = beatStage();
     s.stageStats = stats(20, 16);
     finishStage(s, []);
-    expect(s.rogue!.draftPending).toBe(true);
+    expect(s.rogue.draftsOwed).toBe(1);
     const b = beatStage();
     b.stageStats = stats(20, 10);
     finishStage(b, []);
-    expect(b.rogue!.draftPending).toBe(false);
+    expect(b.rogue.draftsOwed).toBe(0);
   });
 });

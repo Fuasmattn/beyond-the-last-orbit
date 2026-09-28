@@ -1,4 +1,4 @@
-import { BOON, ENEMY, PLAYER, POINTS } from '../data/balance';
+import { BOON, ENEMY, PLAYER, POINTS, SCRAP } from '../data/balance';
 import { allocId } from './ids';
 import { hitBoss } from './boss';
 import { overlaps } from './geometry';
@@ -33,6 +33,7 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
       const cy = e.y + e.h / 2;
       if (e.hp <= 0) {
         const points = registerKill(state, POINTS[e.kind], b.mult);
+        state.rogue.scrap += state.diff.elite ? SCRAP.eliteKill : SCRAP.kill;
         events.push({ type: 'enemyKilled', id: e.id, kind: e.kind, x: cx, y: cy, points });
         if (state.ship.shrapnel && !b.ttl) spawnShrapnel(state, cx, cy, b, events);
         if (e.kind === 'splitter') {

@@ -3,7 +3,7 @@ import { GLYPH_H, GLYPHS, textWidth } from '../../src/data/font';
 
 describe('font', () => {
   it('covers A-Z, 0-9 and HUD punctuation with 3x5 glyphs', () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -:.!/%+<>';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -:.!/%+<>?';
     for (const c of chars) {
       const g = GLYPHS[c];
       expect(g, c).toBeDefined();

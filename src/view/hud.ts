@@ -38,6 +38,7 @@ export class Hud extends Container {
   private readonly score: PixelText;
   private readonly stage: PixelText;
   private readonly lives: PixelText;
+  private readonly scrap: PixelText;
   private readonly track: BeatTrack;
   private readonly noAudio: PixelText;
   private readonly banner: PixelText;
@@ -62,6 +63,7 @@ export class Hud extends Container {
     this.score = new PixelText(glyphs);
     this.stage = new PixelText(glyphs);
     this.lives = new PixelText(glyphs, '', 0x4af2ff);
+    this.scrap = new PixelText(glyphs, '', 0xffb347);
     this.track = new BeatTrack(glyphs);
     this.noAudio = new PixelText(glyphs, 'NO AUDIO', 0x777777);
     this.banner = new PixelText(glyphs, '', 0xffe14a);
@@ -75,7 +77,7 @@ export class Hud extends Container {
       t.y = Math.round(138 + 24 * (k - 1) + i * 9 * k);
       this.results.push(t);
     }
-    for (const t of [this.score, this.stage, this.lives, this.noAudio]) t.scale.set(k);
+    for (const t of [this.score, this.stage, this.lives, this.scrap, this.noAudio]) t.scale.set(k);
     this.pauseIcon.visible = pauseButton;
     this.pauseIcon
       .rect(0, 0, PAUSE_ICON.bar, PAUSE_ICON.h)
@@ -87,13 +89,15 @@ export class Hud extends Container {
     this.score.position.set(left, MARGIN);
     this.stage.y = MARGIN;
     this.lives.position.set(left, Math.round(MARGIN + 8 * k));
-    this.noAudio.y = Math.round(MARGIN + 16 * k);
+    this.scrap.position.set(left, Math.round(MARGIN + 16 * k));
+    this.noAudio.y = Math.round(MARGIN + 24 * k);
     this.addChild(
       this.track,
       this.pauseIcon,
       this.score,
       this.stage,
       this.lives,
+      this.scrap,
       this.noAudio,
       this.bossBar,
       this.banner,
@@ -117,6 +121,8 @@ export class Hud extends Container {
             ? 'REPAIRED!'
             : e.type === 'revived'
               ? 'SECOND WIND!'
+              : e.type === 'eventResolved'
+                ? e.text
             : e.type === 'boonTaken' && e.id
               ? `${boonDef(e.id).name}!`
               : null;
@@ -137,6 +143,7 @@ export class Hud extends Container {
     this.track.update(viewport.w, audioOk ? beat : null, state.rhythm.mult, state.rhythm.streak, dt, rhythm, master);
     const shield = state.player.shield > 0 ? `  SHIELD ${state.player.shield}` : '';
     this.lives.setText(`SHIPS ${Math.max(0, state.player.lives)}${shield}`);
+    this.scrap.setText(`SCRAP ${state.rogue.scrap}`);
     this.noAudio.visible = !audioOk && rhythm;
     centerText(this.noAudio, 4, viewport.w);
     this.updateBossBar(state);

@@ -45,7 +45,9 @@ export function step(state: SimState, input: InputFrame, dt: number = SIM_DT): S
 
     case 'route':
     case 'draft':
-      // Waiting for the player's pick (chooseNode / chooseBoon); the ship can still drift around.
+    case 'shop':
+    case 'event':
+      // Waiting for the player's pick (chooseNode / chooseBoon / shop / event); the ship can still drift around.
       updatePlayer(state, noFire, dt, events);
       state.phaseTimer += dt;
       return events;

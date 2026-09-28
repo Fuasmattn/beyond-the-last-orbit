@@ -2,7 +2,7 @@ import { Container, Graphics } from 'pixi.js';
 import { viewport } from '../app/viewport';
 import { INITIALS_LENGTH, InitialsPicker } from '../app/initialsPicker';
 import type { Tap } from '../input/inputFrame';
-import { findEntry } from '../leaderboard/leaderboard';
+import { findEntry, type Board } from '../leaderboard/leaderboard';
 import { computeCredits } from '../meta/credits';
 import { creditMultiplier } from '../meta/upgrades';
 import { insertHighscore, qualifiesForHighscore } from '../persist/save';
@@ -23,6 +23,7 @@ const CONTINUE_DELAY = 0.5;
 const INPUT_DELAY = 0.4;
 const COUNT_UP_TIME = 1.5;
 const COIN_TICK = 0.07;
+const BOARD: Board = 'rogue';
 
 function letterLeft(i: number): number {
   return Math.round(viewport.menuW / 2 + (i - 1) * LETTER_SPACING - 4.5);
@@ -54,8 +55,7 @@ export class GameOverScene implements Scene {
   ) {
     const g = (this.glyphs = ctx.textures.glyphs);
     this.earned = Math.round(
-      computeCredits(summary.score, summary.bossesKilled, summary.perfectStages) *
-        creditMultiplier(ctx.save, summary.mode),
+      computeCredits(summary.score, summary.bossesKilled, summary.perfectStages) * creditMultiplier(ctx.save),
     );
     ctx.save.credits += this.earned;
     ctx.persist();
@@ -143,25 +143,21 @@ export class GameOverScene implements Scene {
     this.root.destroy({ children: true });
   }
 
-  private get tableKey(): 'highscores' | 'rogueHighscores' {
-    return this.summary.mode === 'rogue' ? 'rogueHighscores' : 'highscores';
-  }
-
   private get tableTitle(): string {
-    return this.summary.mode === 'rogue' ? 'HIGH SCORES' : 'BEAT RUN HIGH SCORES';
+    return 'HIGH SCORES';
   }
 
-  /** The shared global table for this mode, or null when disabled or not loaded. */
+  /** The shared global table, or null when disabled or not loaded. */
   private get globalTable(): readonly HighscoreEntry[] | null {
-    return this.ctx.leaderboard.top(this.summary.mode);
+    return this.ctx.leaderboard.top(BOARD);
   }
 
   private get table(): HighscoreEntry[] {
-    return this.ctx.save[this.tableKey];
+    return this.ctx.save.rogueHighscores;
   }
 
   private set table(list: HighscoreEntry[]) {
-    this.ctx.save[this.tableKey] = list;
+    this.ctx.save.rogueHighscores = list;
   }
 
   /** Credits count up from 0 with a coin tick. */
@@ -210,7 +206,7 @@ export class GameOverScene implements Scene {
     }
     this.setHeading('SENDING SCORE...');
     this.tableLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
-    void lb.submit(this.summary.mode, entry).then((ok) => {
+    void lb.submit(BOARD, entry).then((ok) => {
       if (this.destroyed) return;
       const fresh = this.globalTable;
       if (ok && fresh) {

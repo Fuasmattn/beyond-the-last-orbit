@@ -209,7 +209,7 @@ export class GameRenderer {
     const blinkOff = p.invuln > 0 && Math.floor(state.time * 20) % 2 === 1;
     this.ship.visible = state.phase !== 'gameOver' && !blinkOff;
     this.hull.tint = color;
-    this.hitDot.visible = state.mode === 'rogue';
+    this.hitDot.visible = true;
     this.hitDot.position.set(0, -p.h / 2);
     // Shield charges: a pulsing ring per charge.
     this.shield.clear();

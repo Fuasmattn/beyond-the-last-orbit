@@ -10,12 +10,8 @@ const PAGE_TIME = 5;
 const NOTICE_TIME = 3;
 /** Main menu, centered in the frame together with its cursor (8px left of the labels). */
 const MENU = { y: 212, lineH: 14, width: 64 } as const;
-/** The rogue run is the main game; the pure beat run is a secondary mode. */
-const ITEMS = ['START RUN', 'HANGAR', 'SHOP', 'BEAT RUN', 'SETTINGS'] as const;
-const TABLES = [
-  { mode: 'rogue', key: 'rogueHighscores', title: 'HIGH SCORES' },
-  { mode: 'rhythm', key: 'highscores', title: 'BEAT RUN HIGH SCORES' },
-] as const;
+const ITEMS = ['START RUN', 'HANGAR', 'SHOP', 'SETTINGS'] as const;
+const TABLES = [{ mode: 'rogue', key: 'rogueHighscores', title: 'HIGH SCORES' }] as const;
 
 export class TitleScene implements Scene {
   readonly root = new Container();
@@ -141,7 +137,7 @@ export class TitleScene implements Scene {
   private activate(i: number): void {
     this.ctx.audio?.sfx.menuSelect();
     const s = this.ctx.scenes;
-    const next = [() => s.run('rogue'), () => s.hangar(), () => s.shop(), () => s.run('rhythm'), () => s.settings()];
+    const next = [() => s.run(), () => s.hangar(), () => s.shop(), () => s.settings()];
     this.ctx.goto(next[i]!());
   }
 }

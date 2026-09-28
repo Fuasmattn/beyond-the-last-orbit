@@ -56,7 +56,7 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
     }
   }
 
-  if (state.mode === 'rogue' && state.player.invuln <= 0 && state.phase === 'playing') checkGrazes(state, spent, events);
+  if (state.player.invuln <= 0 && state.phase === 'playing') checkGrazes(state, spent, events);
 
   if (state.player.invuln <= 0) {
     for (const e of state.enemies) {

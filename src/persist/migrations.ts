@@ -45,6 +45,7 @@ function sanitizeSettings(v: unknown): Settings {
     guitarTone: v.guitarTone === 'retro' ? 'retro' : 'amp',
     visualOffsetMs: num(v.visualOffsetMs, d.visualOffsetMs, -VISUAL_OFFSET_MAX_MS, VISUAL_OFFSET_MAX_MS),
     muted: bool(v.muted, d.muted),
+    beatLock: bool(v.beatLock, d.beatLock),
   };
 }
 
@@ -67,7 +68,10 @@ function sanitizeUpgrades(v: unknown): Record<string, number> {
   return out;
 }
 
-/** v1 and v2 share a layout; v2 adds `rogueHighscores` and `upgrades` (empty when missing). */
+/**
+ * v1–v3 share a layout: v2 adds `rogueHighscores` and `upgrades` (empty when missing); v3 drops the beat run's
+ * `highscores` table and adds `settings.beatLock`.
+ */
 function sanitize(o: Rec): SaveData {
   const d = defaultSave();
   const owned = Array.isArray(o.owned) ? o.owned.filter((x): x is string => typeof x === 'string') : [];
@@ -75,7 +79,6 @@ function sanitize(o: Rec): SaveData {
   return {
     version: SAVE_VERSION,
     credits: Math.floor(num(o.credits, d.credits, 0)),
-    highscores: sanitizeHighscores(o.highscores),
     rogueHighscores: sanitizeHighscores(o.rogueHighscores),
     upgrades: sanitizeUpgrades(o.upgrades),
     owned: [...new Set([...d.owned, ...owned])],
@@ -93,6 +96,7 @@ export function migrate(raw: unknown): SaveData {
   switch (raw.version) {
     case 1:
     case 2:
+    case 3:
       return sanitize(raw);
     default:
       throw new Error(`unsupported save version ${String(raw.version)}`);

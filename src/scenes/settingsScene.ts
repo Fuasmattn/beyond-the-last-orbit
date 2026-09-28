@@ -27,6 +27,7 @@ const ROWS: readonly { key: Row; label: string }[] = [
   { key: 'crt', label: 'CRT FILTER' },
   { key: 'bloom', label: 'BLOOM' },
   { key: 'shake', label: 'SCREEN SHAKE' },
+  { key: 'beatLock', label: 'BEAT LOCK' },
   { key: 'calibrate', label: 'CALIBRATE TIMING' },
   { key: 'visualOffsetMs', label: 'VISUAL OFFSET' },
   { key: 'back', label: 'BACK' },
@@ -109,6 +110,7 @@ export class SettingsScene implements Scene {
           case 'crt':
           case 'bloom':
           case 'shake':
+          case 'beatLock':
             return { label, value: onOff(s[key]) };
           case 'musicTest':
             return { label, value: `${this.playing ? '> ' : ''}< ${TRACKS[this.track]!.label} >` };

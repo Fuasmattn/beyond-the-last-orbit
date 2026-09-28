@@ -9,7 +9,7 @@ import { step } from '../../src/sim/step';
 import { NO_INPUT, type NodeKind, type SimEvent, type SimState } from '../../src/sim/types';
 
 function rogue(seed = 7, rerolls = 0): SimState {
-  return createInitialState(seed, undefined, { ...defaultRunOptions('rogue'), rerolls });
+  return createInitialState(seed, undefined, { ...defaultRunOptions(), rerolls });
 }
 
 /** Clears the current stage and runs through the stage-clear screen. */
@@ -97,14 +97,6 @@ describe('generateMap', () => {
 });
 
 describe('rogue route flow', () => {
-  it('rhythm runs have no route', () => {
-    const s = createInitialState(1);
-    expect(s.rogue).toBeNull();
-    clearStage(s);
-    expect(s.phase).toBe('stageIntro');
-    expect(s.stage).toBe(2);
-  });
-
   it('opens the route after stage 1 and starts the chosen battle', () => {
     const s = rogue();
     const events = clearStage(s);

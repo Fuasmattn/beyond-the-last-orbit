@@ -1,7 +1,7 @@
 import { BEAT_STAGE, BEAT_TRACK, FIELD_H, HITSTOP, PLAYER, PLAYER_ZONE_TOP } from '../data/balance';
 import { allocId } from './ids';
 import { clamp } from './math';
-import { applyShotRhythm, dropStreakLevel, recordShot, resetRhythm } from './scoring';
+import { applyShotRhythm, dropStreakLevel, recordShot } from './scoring';
 import type { Box, InputFrame, SimEvent, SimState } from './types';
 
 export function updatePlayer(
@@ -75,10 +75,9 @@ function tryFire(state: SimState, input: InputFrame, events: SimEvent[]): void {
   events.push({ type: 'shot', x: cx, y, onBeat, power });
 }
 
-/** What enemy bullets and lasers must touch to hit: the whole hull, or in rogue runs a small center core. */
+/** What enemy bullets and lasers must touch to hit: a small core at the center of the hull. */
 export function hurtbox(state: SimState): Box {
   const p = state.player;
-  if (state.mode !== 'rogue') return p;
   return { x: p.x + (p.w - PLAYER.hurtW) / 2, y: p.y + (p.h - PLAYER.hurtH) / 2, w: PLAYER.hurtW, h: PLAYER.hurtH };
 }
 
@@ -96,8 +95,7 @@ export function hitPlayer(state: SimState, events: SimEvent[]): void {
   }
   p.lives--;
   p.invuln = PLAYER.invulnTime;
-  if (state.mode === 'rogue') dropStreakLevel(state);
-  else resetRhythm(state);
+  dropStreakLevel(state);
   state.stageStats.hitsTaken++;
   state.hitStop = HITSTOP.playerHit;
   state.bullets = state.bullets.filter((b) => b.owner === 'player');

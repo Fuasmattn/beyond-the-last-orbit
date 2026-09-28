@@ -1,5 +1,5 @@
 export const SAVE_KEY = 'beyond-the-last-orbit:v1';
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 export const MAX_HIGHSCORES = 10;
 
 export interface HighscoreEntry {
@@ -25,13 +25,14 @@ export interface Settings {
   guitarTone: 'amp' | 'retro';
   /** Master mute (the speaker toggle on menu screens); volumes are kept. */
   muted: boolean;
+  /** Every stage of a run is a beat stage. */
+  beatLock: boolean;
 }
 
 export interface SaveData {
   version: number;
   credits: number;
-  /** Rhythm-run table. */
-  highscores: HighscoreEntry[];
+  /** Local high score table (fallback for the global one). */
   rogueHighscores: HighscoreEntry[];
   /** Permanent upgrade levels by id (see data/upgrades.ts). */
   upgrades: Record<string, number>;
@@ -44,7 +45,6 @@ export function defaultSave(): SaveData {
   return {
     version: SAVE_VERSION,
     credits: 0,
-    highscores: [],
     rogueHighscores: [],
     upgrades: {},
     owned: ['skin.classic', 'laser.classic'],
@@ -59,6 +59,7 @@ export function defaultSave(): SaveData {
       visualOffsetMs: 0,
       guitarTone: 'amp',
       muted: false,
+      beatLock: false,
     },
   };
 }

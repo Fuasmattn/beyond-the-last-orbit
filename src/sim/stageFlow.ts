@@ -7,7 +7,7 @@ import { spawnFormation } from './formation';
 import { clamp } from './math';
 import { generateMap, nodeAt, reachableLanes } from './route';
 import { clampStreak } from './scoring';
-import type { BeatMode, BeatRank, RunMode, SimEvent, SimState, StageResult, StageStats } from './types';
+import type { BeatMode, BeatRank, SimEvent, SimState, StageResult, StageStats } from './types';
 
 export function emptyStageStats(): StageStats {
   return { shots: 0, hits: 0, onBeatShots: 0, hitsTaken: 0, grazes: 0, time: 0 };
@@ -21,15 +21,13 @@ export function startStage(state: SimState, events: SimEvent[]): void {
   const boss = isBossStage(state.stage);
   state.fieldW = state.nextFieldW;
   state.player.x = clamp(state.player.x, 0, state.fieldW - state.player.w);
-  const elite = !boss && state.rogue?.node === 'elite';
+  const elite = !boss && state.rogue.node === 'elite';
   state.diff = (elite ? eliteDifficulty : difficultyFor)(state.world, state.stage, state.loop);
-  if (state.rogue) {
-    // Beat stages start the x8 climb from zero; leaving one clamps back to the x4 cap.
-    const master = !boss && state.rogue.beat;
-    if (master && state.beatMode !== 'master') state.rhythm.streak = 0;
-    state.beatMode = master ? 'master' : 'off';
-    clampStreak(state);
-  }
+  // Beat stages start the x8 climb from zero; leaving one clamps back to the x4 cap.
+  const master = state.beatLock || (!boss && state.rogue.beat);
+  if (master && state.beatMode !== 'master') state.rhythm.streak = 0;
+  state.beatMode = master ? 'master' : 'off';
+  clampStreak(state);
   state.bullets = [];
   state.enemies = [];
   state.boss = null;
@@ -54,18 +52,13 @@ export function beatRankFor(stats: StageStats): BeatRank {
   return 'C';
 }
 
-export function computeStageResult(
-  stats: StageStats,
-  boss: boolean,
-  mode: RunMode = 'rhythm',
-  beatMode: BeatMode = mode === 'rhythm' ? 'classic' : 'off',
-): StageResult {
+export function computeStageResult(stats: StageStats, boss: boolean, beatMode: BeatMode = 'off'): StageResult {
   const accuracy = stats.shots > 0 ? Math.min(1, stats.hits / stats.shots) : 0;
   const beatPct = stats.shots > 0 ? stats.onBeatShots / stats.shots : 0;
   const noHit = stats.hitsTaken === 0;
   const par = boss ? STAGE.bossParTime : STAGE.parTime;
   const timeBonus = Math.max(0, par - stats.time) * STAGE.timeBonusPerSec;
-  // Rogue stages without judging weigh accuracy only; judged stages weigh accuracy and the beat.
+  // Unjudged stages weigh accuracy only; beat stages weigh accuracy and the beat.
   const rogue = beatMode === 'off';
   const skill = rogue ? accuracy * STAGE.rogueAccuracyBonus : accuracy * 1000 + beatPct * 1000;
   const beatRank = beatMode === 'master' ? beatRankFor(stats) : null;
@@ -83,13 +76,13 @@ export function computeStageResult(
 }
 
 export function finishStage(state: SimState, events: SimEvent[]): void {
-  const result = computeStageResult(state.stageStats, isBossStage(state.stage), state.mode, state.beatMode);
+  const result = computeStageResult(state.stageStats, isBossStage(state.stage), state.beatMode);
   state.result = result;
   state.score += result.bonus;
   if (result.perfect) state.run.perfectStages++;
   state.run.stagesCleared++;
   const beatDraft = result.beatRank === 'S' || result.beatRank === 'A';
-  if (state.rogue && (state.diff.elite || isBossStage(state.stage) || beatDraft)) state.rogue.draftPending = true;
+  if (state.diff.elite || isBossStage(state.stage) || beatDraft) state.rogue.draftPending = true;
   state.bullets = [];
   state.phase = 'stageClear';
   state.phaseTimer = STAGE.clearTime;
@@ -107,19 +100,10 @@ export function startWarp(state: SimState, events: SimEvent[]): void {
   events.push({ type: 'warpStart', world: state.world, loop: state.loop });
 }
 
-/** After the stage-clear screen: next stage (rhythm), or draft / route / boss / next world (rogue). */
+/** After the stage-clear screen: draft / route / boss / next world. */
 export function advanceStage(state: SimState, events: SimEvent[]): void {
-  if (state.rogue) {
-    if (state.rogue.draftPending) openDraft(state, events);
-    else continueRoute(state, events);
-    return;
-  }
-  if (state.stage >= STAGE.perWorld) {
-    nextWorld(state, events);
-    return;
-  }
-  state.stage++;
-  startStage(state, events);
+  if (state.rogue.draftPending) openDraft(state, events);
+  else continueRoute(state, events);
 }
 
 function nextWorld(state: SimState, events: SimEvent[]): void {
@@ -131,23 +115,21 @@ function nextWorld(state: SimState, events: SimEvent[]): void {
     state.loop++;
   }
   const r = state.rogue;
-  if (r) {
-    r.map = generateMap(r.rng, state.world);
-    r.path = [];
-    r.node = 'battle';
-    r.beat = false;
-  }
+  r.map = generateMap(r.rng, state.world);
+  r.path = [];
+  r.node = 'battle';
+  r.beat = false;
   startWarp(state, events);
 }
 
-/** Rogue: the current node is resolved; move on to the map, the boss or the next world. */
+/** The current node is resolved; move on to the map, the boss or the next world. */
 function continueRoute(state: SimState, events: SimEvent[]): void {
   if (state.stage >= STAGE.perWorld) {
     nextWorld(state, events);
   } else if (state.stage === STAGE.perWorld - 1) {
     state.stage++;
-    state.rogue!.node = 'battle';
-    state.rogue!.beat = false;
+    state.rogue.node = 'battle';
+    state.rogue.beat = false;
     startStage(state, events);
   } else {
     state.phase = 'route';
@@ -159,7 +141,7 @@ function continueRoute(state: SimState, events: SimEvent[]): void {
 }
 
 function openDraft(state: SimState, events: SimEvent[]): void {
-  const r = state.rogue!;
+  const r = state.rogue;
   r.draftPending = false;
   r.offer = rollOffer(state, r);
   if (r.offer.length === 0) {
@@ -173,10 +155,10 @@ function openDraft(state: SimState, events: SimEvent[]): void {
   events.push({ type: 'draftOpen' });
 }
 
-/** Rogue route pick. Returns false if the lane is not reachable or no route is open. */
+/** Route pick. Returns false if the lane is not reachable or no route is open. */
 export function chooseNode(state: SimState, lane: number, events: SimEvent[]): boolean {
   const r = state.rogue;
-  if (!r || state.phase !== 'route' || !reachableLanes(r).includes(lane)) return false;
+  if (state.phase !== 'route' || !reachableLanes(r).includes(lane)) return false;
   const node = nodeAt(r, r.path.length, lane)!;
   r.path.push(lane);
   r.node = node.kind;
@@ -203,10 +185,10 @@ export function chooseNode(state: SimState, lane: number, events: SimEvent[]): b
   return true;
 }
 
-/** Rogue draft pick; `index` null skips. Returns false if no draft is open or the index is invalid. */
+/** Draft pick; `index` null skips. Returns false if no draft is open or the index is invalid. */
 export function chooseBoon(state: SimState, index: number | null, events: SimEvent[]): boolean {
   const r = state.rogue;
-  if (!r || state.phase !== 'draft') return false;
+  if (state.phase !== 'draft') return false;
   const id = index === null ? null : r.offer[index];
   if (id === undefined) return false;
   if (id) takeBoon(state, r, id);
@@ -219,7 +201,7 @@ export function chooseBoon(state: SimState, index: number | null, events: SimEve
 /** Spends a reroll on a fresh offer. */
 export function rerollDraft(state: SimState): boolean {
   const r = state.rogue;
-  if (!r || state.phase !== 'draft' || r.rerolls <= 0) return false;
+  if (state.phase !== 'draft' || r.rerolls <= 0) return false;
   r.rerolls--;
   r.offer = rollOffer(state, r);
   return true;

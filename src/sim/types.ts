@@ -1,13 +1,10 @@
 import type { ShapeKind } from './shapes';
 
-/** `rhythm`: linear run scored on the beat. `rogue`: route map, drafted upgrades, streak scoring. */
-export type RunMode = 'rhythm' | 'rogue';
-
 /**
- * How fire timing scores: `off` = not judged (rogue), `classic` = rhythm run (x4),
- * `master` = rogue beat stage (x8, power shots, beat rank).
+ * How fire timing scores: `off` = not judged (hits and grazes build the streak, x4),
+ * `master` = beat stage (only on-beat shots build it, x8, power shots, beat rank).
  */
-export type BeatMode = 'off' | 'classic' | 'master';
+export type BeatMode = 'off' | 'master';
 
 export type BeatRank = 'S' | 'A' | 'B' | 'C';
 
@@ -255,8 +252,9 @@ export interface StageResult {
 export type Phase = 'stageIntro' | 'playing' | 'bossDying' | 'stageClear' | 'route' | 'draft' | 'warp' | 'gameOver';
 
 export interface SimState {
-  mode: RunMode;
   beatMode: BeatMode;
+  /** Every stage is a beat stage (Settings → BEAT LOCK). */
+  beatLock: boolean;
   ship: ShipStats;
   time: number;
   /** Logical playfield width, fixed for the current stage. */
@@ -289,8 +287,7 @@ export interface SimState {
   stageStats: StageStats;
   result: StageResult | null;
   run: { bossesKilled: number; perfectStages: number; stagesCleared: number };
-  /** Rogue runs only. */
-  rogue: RogueState | null;
+  rogue: RogueState;
 }
 
 export type SimEvent =

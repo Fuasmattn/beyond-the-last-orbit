@@ -11,7 +11,7 @@ import { NO_INPUT, type Bullet, type SimEvent, type SimState } from '../../src/s
 const fire = { ...NO_INPUT, firePressed: true };
 
 function withShip(over: Partial<ReturnType<typeof baseShip>>, lives: number = PLAYER.startLives): SimState {
-  return createInitialState(1, undefined, { ...defaultRunOptions('rogue'), ship: { ...baseShip(), ...over }, lives });
+  return createInitialState(1, undefined, { ...defaultRunOptions(), ship: { ...baseShip(), ...over }, lives });
 }
 
 const bolt = (over: Partial<Bullet>): Bullet => ({
@@ -19,12 +19,11 @@ const bolt = (over: Partial<Bullet>): Bullet => ({
 });
 
 describe('run options', () => {
-  it('seeds mode, lives and ship stats', () => {
+  it('seeds lives and ship stats', () => {
     const s = withShip({ maxBullets: 5 }, 4);
-    expect(s.mode).toBe('rogue');
     expect(s.player.lives).toBe(4);
     expect(s.ship.maxBullets).toBe(5);
-    expect(createInitialState(1).mode).toBe('rhythm');
+    expect(createInitialState(1).beatLock).toBe(false);
   });
 });
 

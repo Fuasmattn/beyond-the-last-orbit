@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PLAYER, POINTS } from '../../src/data/balance';
 import { overlaps, resolveCollisions } from '../../src/sim/collision';
+import { hurtbox } from '../../src/sim/player';
 import { createInitialState } from '../../src/sim/state';
 import type { Bullet, SimEvent } from '../../src/sim/types';
 
@@ -54,7 +55,8 @@ describe('resolveCollisions', () => {
   it('enemy bullet hits the player', () => {
     const s = createInitialState(1);
     const p = s.player;
-    s.bullets = [bullet({ owner: 'enemy', x: p.x + 2, y: p.y + 1 })];
+    const h = hurtbox(s);
+    s.bullets = [bullet({ owner: 'enemy', x: h.x + 1, y: h.y + 1 })];
     const events: SimEvent[] = [];
     resolveCollisions(s, events);
     expect(p.lives).toBe(PLAYER.startLives - 1);

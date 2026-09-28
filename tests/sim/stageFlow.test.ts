@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { PLAYER, SIM_DT, STAGE, WARP } from '../../src/data/balance';
 import { WORLDS } from '../../src/data/worlds';
+import { reachableLanes } from '../../src/sim/route';
 import {
   advanceStage,
   checkExtraLife,
+  chooseBoon,
+  chooseNode,
   computeStageResult,
   finishStage,
   startStage,
@@ -14,7 +17,7 @@ import { NO_INPUT, type SimEvent } from '../../src/sim/types';
 
 describe('computeStageResult', () => {
   it('scores accuracy, beat, no-hit and time', () => {
-    const r = computeStageResult({ shots: 10, hits: 8, onBeatShots: 5, hitsTaken: 0, grazes: 0, time: 20 }, false);
+    const r = computeStageResult({ shots: 10, hits: 8, onBeatShots: 5, hitsTaken: 0, grazes: 0, time: 20 }, false, 'master');
     expect(r.accuracy).toBeCloseTo(0.8);
     expect(r.beatPct).toBeCloseTo(0.5);
     expect(r.noHit).toBe(true);
@@ -53,7 +56,13 @@ describe('stage progression', () => {
   it('walks stages, then worlds, then loops', () => {
     const s = createInitialState(1);
     const events: SimEvent[] = [];
-    for (let i = 0; i < STAGE.perWorld * WORLDS.length; i++) advanceStage(s, events);
+    // Always the first reachable node, skip every draft, skip the warp.
+    for (let guard = 0; s.loop === 0 && guard < 200; guard++) {
+      if (s.phase === 'route') chooseNode(s, reachableLanes(s.rogue)[0]!, events);
+      else if (s.phase === 'draft') chooseBoon(s, null, events);
+      else if (s.phase === 'warp') startStage(s, events);
+      else advanceStage(s, events);
+    }
     expect(s.stage).toBe(1);
     expect(s.world).toBe(0);
     expect(s.loop).toBe(1);

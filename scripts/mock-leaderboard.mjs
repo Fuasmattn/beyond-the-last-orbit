@@ -7,7 +7,6 @@ const FAIL = process.env.MOCK_FAIL === '1';
 const rows = [
   { mode: 'rogue', initials: 'ACE', score: 42000, world: 2, stage: 3, loop: 0 },
   { mode: 'rogue', initials: 'BOB', score: 9000, world: 0, stage: 3, loop: 0 },
-  { mode: 'rhythm', initials: 'DJX', score: 15000, world: 1, stage: 2, loop: 0 },
 ].map((r, i) => ({ ...r, created_at: new Date(Date.UTC(2026, 8, 20 + i)).toISOString() }));
 
 const between = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;

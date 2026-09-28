@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COMBO, PLAYER, RHYTHM, SIM_DT } from '../../src/data/balance';
+import { BEAT_STAGE, COMBO, PLAYER, RHYTHM, SIM_DT } from '../../src/data/balance';
 import { hitPlayer, updatePlayer } from '../../src/sim/player';
 import {
   applyShotRhythm,
@@ -8,8 +8,12 @@ import {
   rhythmMultForStreak,
   updateCombo,
 } from '../../src/sim/scoring';
+import { defaultRunOptions } from '../../src/sim/ship';
 import { createInitialState } from '../../src/sim/state';
 import { NO_INPUT } from '../../src/sim/types';
+
+/** A run under beat lock: every stage judges timing. */
+const beatRun = () => createInitialState(1, undefined, { ...defaultRunOptions(), beatLock: true });
 
 describe('rhythm multiplier', () => {
   it('maps streak to multiplier steps with a cap', () => {
@@ -21,48 +25,54 @@ describe('rhythm multiplier', () => {
   });
 
   it('builds on on-beat shots and counts them', () => {
-    const s = createInitialState(1);
+    const s = beatRun();
     for (let i = 0; i < 4; i++) applyShotRhythm(s, true);
     expect(s.rhythm.mult).toBe(1.5);
     expect(s.stats.onBeatShots).toBe(4);
   });
 
-  it('drops one step on an off-beat shot and loses partial progress', () => {
-    const s = createInitialState(1);
-    for (let i = 0; i < 10; i++) applyShotRhythm(s, true); // streak 10 → x2
+  it('drops two levels on an off-beat shot and loses partial progress', () => {
+    const s = beatRun();
+    for (let i = 0; i < 14; i++) applyShotRhythm(s, true); // streak 14 → x2.5
     applyShotRhythm(s, false);
     expect(s.rhythm.streak).toBe(4);
     expect(s.rhythm.mult).toBe(1.5);
-    applyShotRhythm(s, false);
     applyShotRhythm(s, false);
     expect(s.rhythm.streak).toBe(0);
     expect(s.rhythm.mult).toBe(1);
   });
 
-  it('caps the streak at max multiplier so one miss drops just one step', () => {
-    const s = createInitialState(1);
+  it('caps the streak at max multiplier so one miss drops just two levels', () => {
+    const s = beatRun();
     for (let i = 0; i < 100; i++) applyShotRhythm(s, true);
-    expect(s.rhythm.mult).toBe(4);
+    expect(s.rhythm.mult).toBe(BEAT_STAGE.maxMult);
     applyShotRhythm(s, false);
-    expect(s.rhythm.mult).toBe(3.5);
+    expect(s.rhythm.mult).toBe(BEAT_STAGE.maxMult - BEAT_STAGE.offBeatDrop * RHYTHM.multStep);
   });
 
   it('is neutral without audio', () => {
-    const s = createInitialState(1);
+    const s = beatRun();
     applyShotRhythm(s, true);
     applyShotRhythm(s, null);
     expect(s.rhythm.streak).toBe(1);
   });
 
-  it('resets when the player is hit', () => {
+  it('is not judged outside beat stages', () => {
     const s = createInitialState(1);
     for (let i = 0; i < 8; i++) applyShotRhythm(s, true);
+    expect(s.rhythm.streak).toBe(0);
+    expect(s.stats.onBeatShots).toBe(0);
+  });
+
+  it('drops one level when the player is hit', () => {
+    const s = beatRun();
+    for (let i = 0; i < 8; i++) applyShotRhythm(s, true);
     hitPlayer(s, []);
-    expect(s.rhythm).toEqual({ streak: 0, mult: 1 });
+    expect(s.rhythm).toEqual({ streak: 4, mult: 1.5 });
   });
 
   it('captures the multiplier on the fired bullet', () => {
-    const s = createInitialState(1);
+    const s = beatRun();
     for (let i = 0; i < 3; i++) applyShotRhythm(s, true);
     updatePlayer(s, { ...NO_INPUT, firePressed: true, fireOnBeat: true }, SIM_DT, []);
     expect(s.bullets[0]!.mult).toBe(1.5);

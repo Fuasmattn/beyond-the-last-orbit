@@ -1,5 +1,8 @@
 import { MAX_HIGHSCORES, type HighscoreEntry } from '../persist/schema';
-import type { RunMode } from '../sim/types';
+
+/** A high score table; stored in the `mode` column. */
+export type Board = 'rogue';
+export const BOARDS: readonly Board[] = ['rogue'];
 
 /** Supabase project URL and publishable key (`sb_publishable_…`, safe to ship). */
 export interface LeaderboardConfig {
@@ -21,7 +24,7 @@ export function readLeaderboardConfig(env: Record<string, unknown>): Leaderboard
   return { url: url.trim().replace(/\/+$/, ''), key: key.trim() };
 }
 
-export function topUrl(config: LeaderboardConfig, mode: RunMode, limit = MAX_HIGHSCORES): string {
+export function topUrl(config: LeaderboardConfig, mode: Board, limit = MAX_HIGHSCORES): string {
   const q = new URLSearchParams({
     select: COLUMNS,
     mode: `eq.${mode}`,
@@ -49,7 +52,7 @@ export function rowToEntry(row: unknown): HighscoreEntry | null {
  */
 export class Leaderboard {
   version = 0;
-  private readonly tables: Record<RunMode, HighscoreEntry[] | null> = { rogue: null, rhythm: null };
+  private readonly tables: Partial<Record<Board, HighscoreEntry[]>> = {};
 
   constructor(
     private readonly config: LeaderboardConfig | null,
@@ -62,11 +65,11 @@ export class Leaderboard {
   }
 
   /** The global top 10, or null until it has loaded. */
-  top(mode: RunMode): readonly HighscoreEntry[] | null {
-    return this.tables[mode];
+  top(mode: Board): readonly HighscoreEntry[] | null {
+    return this.tables[mode] ?? null;
   }
 
-  async refresh(mode: RunMode): Promise<boolean> {
+  async refresh(mode: Board): Promise<boolean> {
     const c = this.config;
     if (!c) return false;
     try {
@@ -87,7 +90,7 @@ export class Leaderboard {
   }
 
   /** Sends a score, then reloads that table. True only if the score was stored. */
-  async submit(mode: RunMode, entry: HighscoreEntry): Promise<boolean> {
+  async submit(mode: Board, entry: HighscoreEntry): Promise<boolean> {
     const c = this.config;
     if (!c) return false;
     try {

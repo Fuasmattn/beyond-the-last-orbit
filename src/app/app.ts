@@ -11,7 +11,7 @@ import { FrameMonitor } from '../fx/frameMonitor';
 import { mergeInputs, type Tap } from '../input/inputFrame';
 import { KeyboardInput } from '../input/keyboard';
 import { TouchInput } from '../input/touch';
-import { Leaderboard, readLeaderboardConfig } from '../leaderboard/leaderboard';
+import { BOARDS, Leaderboard, readLeaderboardConfig } from '../leaderboard/leaderboard';
 import { loadSave, memoryStore, writeSave, type KeyValueStore } from '../persist/save';
 import { CalibrationScene } from '../scenes/calibrationScene';
 import { GameOverScene } from '../scenes/gameOverScene';
@@ -87,8 +87,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
   const store = browserStore();
   const { data: save, reset } = loadSave(store);
   const leaderboard = new Leaderboard(readLeaderboardConfig(import.meta.env));
-  void leaderboard.refresh('rogue');
-  void leaderboard.refresh('rhythm');
+  for (const board of BOARDS) void leaderboard.refresh(board);
 
   let pressDelta: number | null = null;
   const judgeFire = (timeStamp?: number) => {
@@ -191,7 +190,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
     },
     scenes: {
       title: () => new TitleScene(ctx),
-      run: (mode) => new RunScene(ctx, mode),
+      run: () => new RunScene(ctx),
       gameOver: (summary) => new GameOverScene(ctx, summary),
       shop: () => new ShopScene(ctx),
       hangar: () => new HangarScene(ctx),

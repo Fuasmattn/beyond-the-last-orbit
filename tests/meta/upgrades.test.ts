@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PLAYER } from '../../src/data/balance';
 import { UPGRADES } from '../../src/data/upgrades';
-import { buyUpgrade, creditMultiplier, nextCost, rogueRunOptions, upgradeLevel } from '../../src/meta/upgrades';
+import { buyUpgrade, creditMultiplier, nextCost, runOptionsFor, upgradeLevel } from '../../src/meta/upgrades';
 import { defaultSave } from '../../src/persist/schema';
 
 const def = (id: string) => UPGRADES.find((u) => u.id === id)!;
@@ -32,10 +32,10 @@ describe('buyUpgrade', () => {
   });
 });
 
-describe('rogueRunOptions', () => {
+describe('runOptionsFor', () => {
   it('is the base ship with no upgrades', () => {
-    const o = rogueRunOptions(defaultSave());
-    expect(o.mode).toBe('rogue');
+    const o = runOptionsFor(defaultSave());
+    expect(o.beatLock).toBe(false);
     expect(o.lives).toBe(PLAYER.startLives);
     expect(o.ship.maxBullets).toBe(PLAYER.maxBullets);
     expect(o.rerolls).toBe(0);
@@ -44,15 +44,15 @@ describe('rogueRunOptions', () => {
   it('applies every hangar upgrade', () => {
     const save = defaultSave();
     save.upgrades = { hull: 2, cannon: 1, coolant: 3, thrusters: 2, deflector: 1, insight: 2, salvage: 3 };
-    const o = rogueRunOptions(save);
+    const o = runOptionsFor(save);
     expect(o.lives).toBe(PLAYER.startLives + 2);
     expect(o.ship.maxBullets).toBe(PLAYER.maxBullets + 1);
     expect(o.ship.cooldown).toBeCloseTo(PLAYER.fireCooldown * 0.7);
     expect(o.ship.speed).toBeCloseTo(PLAYER.maxSpeed * 1.16);
     expect(o.ship.worldShield).toBe(1);
     expect(o.rerolls).toBe(2);
-    expect(creditMultiplier(save, 'rogue')).toBeCloseTo(1.45);
-    expect(creditMultiplier(save, 'rhythm')).toBe(1);
+    expect(creditMultiplier(save)).toBeCloseTo(1.45);
+    expect(creditMultiplier(defaultSave())).toBe(1);
   });
 
   it('clamps levels above the definition', () => {

@@ -43,9 +43,9 @@ export function clampStreak(state: SimState): void {
   setStreak(state, state.rhythm.streak);
 }
 
-/** Rogue runs outside beat stages: hits and grazes build the multiplier instead of beat timing. */
+/** Outside beat stages: hits and grazes build the multiplier instead of beat timing. */
 export function bumpStreak(state: SimState): void {
-  if (state.mode !== 'rogue' || state.beatMode !== 'off') return;
+  if (state.beatMode !== 'off') return;
   setStreak(state, state.rhythm.streak + 1);
 }
 
@@ -88,7 +88,7 @@ export function updateCombo(state: SimState, dt: number): void {
   if (c.timer === 0) c.chain = 0;
 }
 
-/** Rogue runs: an enemy bullet skimming past the ship scores and feeds the streak. */
+/** An enemy bullet skimming past the ship scores and feeds the streak. */
 export function registerGraze(state: SimState): number {
   bumpStreak(state);
   const points = Math.round(GRAZE.points * state.rhythm.mult * state.ship.scoreMul);

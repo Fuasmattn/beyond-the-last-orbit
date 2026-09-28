@@ -10,7 +10,7 @@ import { NO_INPUT, type Bullet, type SimEvent, type SimState } from '../../src/s
 import { landFormation } from './helpers';
 
 function rogue(): SimState {
-  const s = landFormation(createInitialState(1, undefined, defaultRunOptions('rogue')));
+  const s = landFormation(createInitialState(1, undefined, defaultRunOptions()));
   s.phase = 'playing';
   return s;
 }
@@ -54,8 +54,8 @@ describe('rogue streak', () => {
     expect(s.player.lives).toBe(PLAYER.startLives - 1);
   });
 
-  it('rhythm runs keep beat scoring and do not grow the streak on hits', () => {
-    const s = landFormation(createInitialState(1));
+  it('beat stages keep beat scoring and do not grow the streak on hits', () => {
+    const s = landFormation(createInitialState(1, undefined, { ...defaultRunOptions(), beatLock: true }));
     const e = s.enemies.find((x) => x.row === 0)!;
     s.bullets = [bullet({ x: e.x + 2, y: e.y + 1 })];
     resolveCollisions(s, []);
@@ -93,13 +93,8 @@ describe('graze', () => {
     expect(events.some((e) => e.type === 'graze')).toBe(false);
   });
 
-  it('does not graze in rhythm runs or while invulnerable', () => {
-    const s = createInitialState(1);
-    s.phase = 'playing';
-    const p = s.player;
-    s.bullets = [bullet({ owner: 'enemy', x: p.x - GRAZE.margin + 1, y: p.y })];
+  it('does not graze while invulnerable', () => {
     const events: SimEvent[] = [];
-    resolveCollisions(s, events);
     const r = rogue();
     r.player.invuln = 1;
     r.bullets = [bullet({ owner: 'enemy', x: r.player.x - GRAZE.margin + 1, y: r.player.y })];
@@ -108,27 +103,26 @@ describe('graze', () => {
   });
 });
 
-describe('rogue hurtbox', () => {
-  it('only the small core takes bullets in rogue runs; the whole hull in rhythm runs', () => {
+describe('hurtbox', () => {
+  it('only the small core takes bullets', () => {
     const s = rogue();
     const p = s.player;
     s.bullets = [bullet({ owner: 'enemy', x: p.x, y: p.y })];
     resolveCollisions(s, []);
     expect(p.lives).toBe(PLAYER.startLives);
-    const r = createInitialState(1);
-    r.phase = 'playing';
-    r.bullets = [bullet({ owner: 'enemy', x: r.player.x, y: r.player.y })];
-    resolveCollisions(r, []);
-    expect(r.player.lives).toBe(PLAYER.startLives - 1);
+    const h = hurtbox(s);
+    s.bullets = [bullet({ owner: 'enemy', x: h.x, y: h.y })];
+    resolveCollisions(s, []);
+    expect(p.lives).toBe(PLAYER.startLives - 1);
   });
 });
 
 describe('rogue stage result', () => {
   it('weights accuracy only and judges perfect by accuracy', () => {
     const stats = { shots: 10, hits: 8, onBeatShots: 0, hitsTaken: 0, grazes: 0, time: STAGE.parTime };
-    const r = computeStageResult(stats, false, 'rogue');
+    const r = computeStageResult(stats, false);
     expect(r.bonus).toBe(0.8 * STAGE.rogueAccuracyBonus + 2000);
     expect(r.perfect).toBe(true);
-    expect(computeStageResult(stats, false, 'rhythm').perfect).toBe(false);
+    expect(computeStageResult(stats, false, 'master').perfect).toBe(false);
   });
 });

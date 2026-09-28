@@ -9,7 +9,8 @@ import {
   WARDEN,
 } from '../../src/data/balance';
 import { WORLDS } from '../../src/data/worlds';
-import { startStage } from '../../src/sim/stageFlow';
+import { reachableLanes } from '../../src/sim/route';
+import { chooseBoon, chooseNode, startStage } from '../../src/sim/stageFlow';
 import { createInitialState } from '../../src/sim/state';
 import { landedState } from './helpers';
 import { step } from '../../src/sim/step';
@@ -47,6 +48,9 @@ describe('step', () => {
     expect(s.phase).toBe('stageClear');
     expect(clear?.type === 'stageClear' ? clear.result.bonus : -1).toBe(s.score);
     for (let t = 0; t < STAGE.clearTime + 0.1; t += SIM_DT) step(s, NO_INPUT);
+    expect(s.phase).toBe('route');
+    s.rogue.map.rows[0]!.forEach((n) => (n.kind = 'battle'));
+    chooseNode(s, reachableLanes(s.rogue)[0]!, []);
     expect(s.stage).toBe(2);
     expect(s.phase).toBe('stageIntro');
     expect(s.enemies).toHaveLength(ENEMY.rows * s.diff.cols);
@@ -112,6 +116,9 @@ describe('step', () => {
     });
     const events: SimEvent[] = [];
     for (let t = 0; t < BOSS_DYING_TIME + STAGE.clearTime + 0.5; t += SIM_DT) events.push(...step(s, NO_INPUT));
+    // A boss kill owes a draft; skipping it moves on to the next world.
+    expect(s.phase).toBe('draft');
+    chooseBoon(s, null, events);
     const types = events.map((e) => e.type);
     expect(types).toContain('bossKilled');
     expect(types).toContain('worldClear');

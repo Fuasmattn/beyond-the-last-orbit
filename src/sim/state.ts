@@ -12,8 +12,8 @@ export function createInitialState(
   opts: RunOptions = defaultRunOptions(),
 ): SimState {
   const state: SimState = {
-    mode: opts.mode,
-    beatMode: opts.mode === 'rhythm' ? 'classic' : 'off',
+    beatMode: 'off',
+    beatLock: opts.beatLock,
     ship: { ...opts.ship },
     time: 0,
     fieldW,
@@ -54,7 +54,7 @@ export function createInitialState(
     stageStats: emptyStageStats(),
     result: null,
     run: { bossesKilled: 0, perfectStages: 0, stagesCleared: 0 },
-    rogue: opts.mode === 'rogue' ? createRogueState(seed, opts.rerolls, 0) : null,
+    rogue: createRogueState(seed, opts.rerolls, 0),
   };
   startStage(state, []);
   return state;

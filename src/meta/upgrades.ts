@@ -25,8 +25,8 @@ export function buyUpgrade(save: SaveData, def: UpgradeDef): UpgradeResult {
   return 'bought';
 }
 
-/** Rogue run start from the hangar levels. */
-export function rogueRunOptions(save: SaveData): RunOptions {
+/** Run start from the hangar levels and settings. */
+export function runOptionsFor(save: SaveData): RunOptions {
   const lv = (id: UpgradeId) => upgradeLevel(save, id);
   const ship = baseShip();
   ship.maxBullets += lv('cannon');
@@ -34,14 +34,15 @@ export function rogueRunOptions(save: SaveData): RunOptions {
   ship.speed *= 1 + UPGRADE_EFFECT.thrustersPerLevel * lv('thrusters');
   ship.worldShield = lv('deflector');
   return {
-    ...defaultRunOptions('rogue'),
+    ...defaultRunOptions(),
     ship,
     lives: Math.min(PLAYER.maxLives, PLAYER.startLives + lv('hull')),
     rerolls: lv('insight'),
+    beatLock: save.settings.beatLock,
   };
 }
 
 /** Credit multiplier for a finished run. */
-export function creditMultiplier(save: SaveData, mode: 'rhythm' | 'rogue'): number {
-  return mode === 'rogue' ? 1 + UPGRADE_EFFECT.salvagePerLevel * upgradeLevel(save, 'salvage') : 1;
+export function creditMultiplier(save: SaveData): number {
+  return 1 + UPGRADE_EFFECT.salvagePerLevel * upgradeLevel(save, 'salvage');
 }

@@ -3,12 +3,11 @@ import { viewport } from '../app/viewport';
 import { Sourness } from '../audio/sourness';
 import { ROUTE } from '../data/balance';
 import { equippedLaser, equippedSkin } from '../data/cosmetics';
-import { rogueRunOptions } from '../meta/upgrades';
-import { defaultRunOptions } from '../sim/ship';
+import { runOptionsFor } from '../meta/upgrades';
 import { createInitialState } from '../sim/state';
 import { chooseBoon, chooseNode, rerollDraft } from '../sim/stageFlow';
 import { step } from '../sim/step';
-import type { RunMode, SimEvent, SimState } from '../sim/types';
+import type { SimEvent, SimState } from '../sim/types';
 import { judgeLabel } from '../view/beatJudge';
 import { cameraTarget, followCamera } from '../view/camera';
 import { DraftOverlay } from '../view/draftOverlay';
@@ -45,12 +44,8 @@ export class RunScene implements Scene {
   private camX: number | null = null;
   private readonly sour = new Sourness();
 
-  constructor(
-    private readonly ctx: SceneContext,
-    mode: RunMode,
-  ) {
-    const opts = mode === 'rogue' ? rogueRunOptions(ctx.save) : defaultRunOptions('rhythm');
-    this.state = createInitialState(newSeed(), viewport.fieldW, opts);
+  constructor(private readonly ctx: SceneContext) {
+    this.state = createInitialState(newSeed(), viewport.fieldW, runOptionsFor(ctx.save));
     this.renderer = new GameRenderer(ctx.textures, { skin: equippedSkin(ctx.save), laser: equippedLaser(ctx.save) });
     this.hud = new Hud(ctx.textures.glyphs, ctx.isTouch ? TOUCH_HUD_SCALE : 1, ctx.isTouch);
     this.route = new RouteOverlay(ctx.textures.glyphs, ctx.isTouch);
@@ -98,7 +93,7 @@ export class RunScene implements Scene {
   }
 
   /**
-   * Route map and draft picks (rogue runs); input is ignored briefly so fire-mashing can't pick.
+   * Route map and draft picks; input is ignored briefly so fire-mashing can't pick.
    * Events raised by a pick (stage intro, warp, repair) are appended to `events` for the views and audio.
    */
   private handleChoices(input: FrameInput, events: SimEvent[]): void {
@@ -111,7 +106,7 @@ export class RunScene implements Scene {
 
   private pick(input: FrameInput, events: SimEvent[]): void {
     const s = this.state;
-    if (!s.rogue || s.phaseTimer < ROUTE.inputDelay) return;
+    if (s.phaseTimer < ROUTE.inputDelay) return;
     const moved = input.menu.some((a) => a !== 'confirm' && a !== 'back');
     if (s.phase === 'route') {
       const lane = this.route.handle(s.rogue, input.menu, input.taps);
@@ -149,10 +144,10 @@ export class RunScene implements Scene {
     }
     this.elapsed += this.paused ? 0 : elapsed;
     const r = this.state.rogue;
-    this.route.visible = r !== null && this.state.phase === 'route' && !this.paused;
-    this.draft.visible = r !== null && this.state.phase === 'draft' && !this.paused;
-    if (r && this.route.visible) this.route.update(r, viewport.w, this.elapsed);
-    if (r && this.draft.visible) this.draft.update(r, viewport.w, this.elapsed);
+    this.route.visible = this.state.phase === 'route' && !this.paused;
+    this.draft.visible = this.state.phase === 'draft' && !this.paused;
+    if (this.route.visible) this.route.update(r, viewport.w, this.elapsed);
+    if (this.draft.visible) this.draft.update(r, viewport.w, this.elapsed);
   }
 
   destroy(): void {
@@ -196,7 +191,6 @@ export class RunScene implements Scene {
     const s = this.state;
     this.ctx.goto(
       this.ctx.scenes.gameOver({
-        mode: s.mode,
         score: s.score,
         world: s.world,
         stage: s.stage,
@@ -220,7 +214,7 @@ export class RunScene implements Scene {
       switch (e.type) {
         case 'shot':
           audio.sfx.laser(e.onBeat);
-          // Only judged stages (rhythm runs, rogue beat stages) sour the music.
+          // Only beat stages sour the music.
           if (this.state.beatMode !== 'off') this.sour.onShot(e.onBeat);
           if (e.power) audio.sfx.powerShot();
           break;

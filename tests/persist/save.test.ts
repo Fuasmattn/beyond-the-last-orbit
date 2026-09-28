@@ -34,7 +34,7 @@ describe('parseSave', () => {
   it('round-trips a valid save', () => {
     const d = defaultSave();
     d.credits = 123;
-    d.highscores = [entry(500)];
+    d.rogueHighscores = [entry(500)];
     expect(parseSave(JSON.stringify(d))).toEqual({ data: d, reset: false });
   });
 
@@ -43,7 +43,7 @@ describe('parseSave', () => {
       JSON.stringify({
         version: 1,
         credits: -5,
-        highscores: [{ bogus: true }, entry(10)],
+        rogueHighscores: [{ bogus: true }, entry(10)],
         owned: ['skin.gold', 7],
         equipped: { skin: 42 },
         settings: { musicVolume: 3, crt: 'yes' },
@@ -51,7 +51,7 @@ describe('parseSave', () => {
     );
     expect(r.reset).toBe(false);
     expect(r.data.credits).toBe(0);
-    expect(r.data.highscores).toEqual([entry(10)]);
+    expect(r.data.rogueHighscores).toEqual([entry(10)]);
     expect(r.data.owned).toContain('skin.gold');
     expect(r.data.owned).toContain('skin.classic');
     expect(r.data.equipped.skin).toBe('skin.classic');
@@ -60,16 +60,24 @@ describe('parseSave', () => {
   });
 });
 
-describe('v1 → v2 migration', () => {
-  it('keeps v1 data and adds empty rogue table and upgrades', () => {
+describe('v1 → v3 migration', () => {
+  it('keeps v1 data, drops the beat run table and adds empty rogue table and upgrades', () => {
     const v1 = { version: 1, credits: 50, highscores: [entry(10)], owned: [], equipped: {}, settings: {} };
     const r = parseSave(JSON.stringify(v1));
     expect(r.reset).toBe(false);
-    expect(r.data.version).toBe(2);
+    expect(r.data.version).toBe(3);
     expect(r.data.credits).toBe(50);
-    expect(r.data.highscores).toEqual([entry(10)]);
+    expect(r.data).not.toHaveProperty('highscores');
     expect(r.data.rogueHighscores).toEqual([]);
     expect(r.data.upgrades).toEqual({});
+    expect(r.data.settings.beatLock).toBe(false);
+  });
+
+  it('keeps v2 rogue scores and reads beatLock', () => {
+    const v2 = { version: 2, credits: 1, rogueHighscores: [entry(10)], settings: { beatLock: true } };
+    const r = parseSave(JSON.stringify(v2));
+    expect(r.data.rogueHighscores).toEqual([entry(10)]);
+    expect(r.data.settings.beatLock).toBe(true);
   });
 
   it('sanitizes upgrade levels', () => {

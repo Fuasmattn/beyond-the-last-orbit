@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BEAT_TRACK, FIELD_H, PLAYER, PLAYER_ZONE_TOP, SIM_DT } from '../../src/data/balance';
 import { hitPlayer, updatePlayer } from '../../src/sim/player';
+import { defaultRunOptions } from '../../src/sim/ship';
 import { createInitialState } from '../../src/sim/state';
 import { NO_INPUT, type InputFrame, type SimEvent } from '../../src/sim/types';
 
@@ -42,7 +43,7 @@ describe('player movement', () => {
 
 describe('player firing', () => {
   it('spawns a bullet and a shot event on press', () => {
-    const s = createInitialState(1);
+    const s = createInitialState(1, undefined, { ...defaultRunOptions(), beatLock: true });
     const events: SimEvent[] = [];
     updatePlayer(s, input({ firePressed: true, fireOnBeat: true }), SIM_DT, events);
     expect(s.bullets).toHaveLength(1);

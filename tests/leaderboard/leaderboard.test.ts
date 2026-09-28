@@ -69,7 +69,6 @@ describe('Leaderboard', () => {
     expect(lb.top('rogue')).toBeNull();
     expect(await lb.refresh('rogue')).toBe(true);
     expect(lb.top('rogue')).toEqual([entry]);
-    expect(lb.top('rhythm')).toBeNull();
     expect(lb.version).toBe(1);
     const init = fetchFn.mock.calls[0]![1]!;
     expect((init.headers as Record<string, string>).apikey).toBe('sb_publishable_x');
@@ -96,19 +95,19 @@ describe('Leaderboard', () => {
       .mockResolvedValueOnce(new Response(null, { status: 201 }))
       .mockResolvedValueOnce(json([row]));
     const lb = new Leaderboard(config, fetchFn);
-    expect(await lb.submit('rhythm', entry)).toBe(true);
+    expect(await lb.submit('rogue', entry)).toBe(true);
     const [url, init] = fetchFn.mock.calls[0]!;
     expect(url).toBe('https://abc.supabase.co/rest/v1/scores');
     expect(init!.method).toBe('POST');
     expect(JSON.parse(init!.body as string)).toEqual({
-      mode: 'rhythm',
+      mode: 'rogue',
       initials: 'ABC',
       score: 1200,
       world: 1,
       stage: 2,
       loop: 0,
     });
-    expect(lb.top('rhythm')).toEqual([entry]);
+    expect(lb.top('rogue')).toEqual([entry]);
   });
 
   it('reports a rejected submit', async () => {

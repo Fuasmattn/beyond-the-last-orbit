@@ -1,5 +1,5 @@
 import { PLAYER } from '../data/balance';
-import type { RunMode, ShipStats } from './types';
+import type { ShipStats } from './types';
 
 export function baseShip(): ShipStats {
   return {
@@ -16,15 +16,16 @@ export function baseShip(): ShipStats {
   };
 }
 
-/** How a run starts: mode plus everything permanent upgrades change. */
+/** How a run starts: everything permanent upgrades and settings change. */
 export interface RunOptions {
-  mode: RunMode;
   ship: ShipStats;
   lives: number;
   /** Draft rerolls for the whole run. */
   rerolls: number;
+  /** Every stage is a beat stage. */
+  beatLock: boolean;
 }
 
-export function defaultRunOptions(mode: RunMode = 'rhythm'): RunOptions {
-  return { mode, ship: baseShip(), lives: PLAYER.startLives, rerolls: 0 };
+export function defaultRunOptions(): RunOptions {
+  return { ship: baseShip(), lives: PLAYER.startLives, rerolls: 0, beatLock: false };
 }

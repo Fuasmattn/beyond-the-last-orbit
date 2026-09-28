@@ -6,6 +6,7 @@ import type { SimEvent, SimState } from '../sim/types';
 import { viewport } from '../app/viewport';
 import type { JudgeLabel } from './beatJudge';
 import { BeatTrack } from './beatTrack';
+import { textWidth } from '../data/font';
 import { centerText, PixelText } from './pixelText';
 
 function pct(v: number): string {
@@ -17,6 +18,14 @@ const RESULT_LINE_DELAY = 0.25;
 const POPUP_TIME = 1.5;
 const BOSS_BAR = { y: 13, h: 3, margin: 40, maxW: 240 } as const;
 const RESULTS_W = 96;
+const MARGIN = 4;
+
+/** Sets `t` to `scale`, shrunk (not below 1) so it fits `width` with margins; then centers it at `y`. */
+function fitCenter(t: PixelText, scale: number, y: number, width: number): void {
+  const w = textWidth(t.text);
+  t.scale.set(w > 0 ? Math.max(1, Math.min(scale, (width - MARGIN * 2) / w)) : scale);
+  centerText(t, Math.round(y), width);
+}
 
 export class Hud extends Container {
   private readonly score: PixelText;
@@ -31,8 +40,13 @@ export class Hud extends Container {
   private readonly bossBar = new Graphics();
   private popupTime = 0;
 
-  constructor(glyphs: Map<string, Texture>) {
+  /** `textScale` enlarges the text (touch screens); layout rows grow with it. */
+  constructor(
+    glyphs: Map<string, Texture>,
+    private readonly textScale = 1,
+  ) {
     super();
+    const k = textScale;
     this.score = new PixelText(glyphs);
     this.stage = new PixelText(glyphs);
     this.lives = new PixelText(glyphs, '', 0x4af2ff);
@@ -44,13 +58,16 @@ export class Hud extends Container {
     this.popup = new PixelText(glyphs, '', 0x7dff6b);
     for (let i = 0; i < RESULT_LINES; i++) {
       const t = new PixelText(glyphs, '', i === RESULT_LINES - 1 ? 0xffe14a : 0xcccccc);
-      t.y = 138 + i * 9;
+      t.scale.set(k);
+      // Starts below the stage-clear sub line, which moves down with the text scale.
+      t.y = Math.round(138 + 24 * (k - 1) + i * 9 * k);
       this.results.push(t);
     }
-    this.score.position.set(4, 4);
-    this.stage.y = 4;
-    this.lives.position.set(4, 12);
-    this.noAudio.y = 4;
+    for (const t of [this.score, this.stage, this.lives, this.noAudio]) t.scale.set(k);
+    this.score.position.set(MARGIN, MARGIN);
+    this.stage.y = MARGIN;
+    this.lives.position.set(MARGIN, Math.round(MARGIN + 8 * k));
+    this.noAudio.y = Math.round(MARGIN + 16 * k);
     this.addChild(
       this.track,
       this.score,
@@ -91,7 +108,7 @@ export class Hud extends Container {
     this.score.setText(`SCORE ${state.score}`);
     const label = `${state.world + 1}-${state.stage}`;
     this.stage.setText(state.loop > 0 ? `L${state.loop + 1} ${label}` : `STAGE ${label}`);
-    this.stage.x = viewport.w - 4 - this.stage.pixelWidth;
+    this.stage.x = Math.round(viewport.w - MARGIN - this.stage.pixelWidth);
     const rhythm = state.beatMode !== 'off';
     const master = state.beatMode === 'master';
     this.track.update(viewport.w, audioOk ? beat : null, state.rhythm.mult, state.rhythm.streak, dt, rhythm, master);
@@ -104,7 +121,7 @@ export class Hud extends Container {
     this.updateResults(state);
     this.popupTime = Math.max(0, this.popupTime - dt);
     this.popup.visible = this.popupTime > 0;
-    centerText(this.popup, 200, viewport.w);
+    fitCenter(this.popup, this.textScale, 200, viewport.w);
   }
 
   private updateBossBar(state: SimState): void {
@@ -114,11 +131,13 @@ export class Hud extends Container {
     const ratio = Math.max(0, b.hp / b.maxHp);
     const w = Math.min(BOSS_BAR.maxW, viewport.w - BOSS_BAR.margin * 2);
     const x = (viewport.w - w) / 2;
+    // Below the score and ships rows.
+    const y = Math.round(BOSS_BAR.y + 16 * (this.textScale - 1));
     this.bossBar
       .clear()
-      .rect(x, BOSS_BAR.y, w, BOSS_BAR.h)
+      .rect(x, y, w, BOSS_BAR.h)
       .fill(0x331018)
-      .rect(x, BOSS_BAR.y, w * ratio, BOSS_BAR.h)
+      .rect(x, y, w * ratio, BOSS_BAR.h)
       .fill(b.phased ? 0x8a7fb5 : 0xff3b5c);
   }
 
@@ -155,8 +174,9 @@ export class Hud extends Container {
     this.banner.setText(banner);
     this.sub.setText(sub);
     this.sub.tint = state.beatMode === 'master' && !paused ? 0xff5ad1 : 0xcccccc;
-    centerText(this.banner, y, viewport.w);
-    centerText(this.sub, y + 20, viewport.w);
+    const k = this.textScale;
+    fitCenter(this.banner, 2 * k, y, viewport.w);
+    fitCenter(this.sub, k, y + 20 * k, viewport.w);
   }
 
   private updateResults(state: SimState): void {
@@ -174,7 +194,7 @@ export class Hud extends Container {
     this.results.forEach((t, i) => {
       t.setText(lines[i] ?? '');
       t.visible = i < shown;
-      t.x = Math.round((viewport.w - RESULTS_W) / 2);
+      t.x = Math.max(MARGIN, Math.round((viewport.w - RESULTS_W * this.textScale) / 2));
     });
   }
 }

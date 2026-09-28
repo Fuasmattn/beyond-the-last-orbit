@@ -22,6 +22,8 @@ const GAME_OVER_DELAY = 1;
 const PAUSE_ITEMS = ['RESUME', 'END RUN'] as const;
 const PAUSE_MENU = { x: 0, y: 0, lineH: 14, width: 44 } as const;
 const PAUSE_MENU_Y = 172;
+/** HUD text is 1.5× on touch screens so it stays readable on phones. */
+const TOUCH_HUD_SCALE = 1.5;
 
 function newSeed(): number {
   return (Math.random() * 2 ** 32) >>> 0;
@@ -50,7 +52,7 @@ export class RunScene implements Scene {
     const opts = mode === 'rogue' ? rogueRunOptions(ctx.save) : defaultRunOptions('rhythm');
     this.state = createInitialState(newSeed(), viewport.fieldW, opts);
     this.renderer = new GameRenderer(ctx.textures, { skin: equippedSkin(ctx.save), laser: equippedLaser(ctx.save) });
-    this.hud = new Hud(ctx.textures.glyphs);
+    this.hud = new Hud(ctx.textures.glyphs, ctx.isTouch ? TOUCH_HUD_SCALE : 1);
     this.route = new RouteOverlay(ctx.textures.glyphs, ctx.isTouch);
     this.draft = new DraftOverlay(ctx.textures.glyphs, ctx.isTouch);
     this.pauseMenu = new MenuList(ctx.textures.glyphs, PAUSE_MENU);

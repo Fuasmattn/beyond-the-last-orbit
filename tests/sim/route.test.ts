@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PLAYER, STAGE } from '../../src/data/balance';
+import { ELITE, PLAYER, STAGE } from '../../src/data/balance';
 import { BOONS } from '../../src/sim/boons';
 import { BEAT_ROW, createRogueState, generateMap, MAP_ROWS, reachableLanes } from '../../src/sim/route';
 import { defaultRunOptions } from '../../src/sim/ship';
@@ -238,7 +238,7 @@ describe('elite volleys', () => {
     s.enemyFireTimer = 999;
     s.player.invuln = 999;
     let bullets = 0;
-    for (let beat = 0; beat < 8; beat++) {
+    for (let beat = 0; beat < 12; beat++) {
       step(s, { ...NO_INPUT, beat: beat + 0.01 });
       bullets = Math.max(bullets, s.bullets.filter((b) => b.owner === 'enemy').length);
     }
@@ -274,9 +274,11 @@ describe('per-world elite volleys', () => {
     const s = eliteAt(0);
     step(s, { ...NO_INPUT, beat: 0.01 });
     step(s, { ...NO_INPUT, beat: 4.01 });
+    expect(s.bullets.filter((b) => b.owner === 'enemy')).toHaveLength(0);
+    step(s, { ...NO_INPUT, beat: 8.01 });
     const xs = s.bullets.filter((b) => b.owner === 'enemy' && b.vx === 0).map((b) => b.x).sort((a, b) => a - b);
     expect(xs.length).toBeGreaterThan(s.fieldW / 20);
     const gaps = xs.slice(1).map((x, i) => x - xs[i]!);
-    expect(Math.max(...gaps)).toBeGreaterThanOrEqual(20);
+    expect(Math.max(...gaps)).toBeGreaterThanOrEqual(ELITE.wallGap);
   });
 });

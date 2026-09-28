@@ -244,10 +244,13 @@ export const ELITE = {
   ringEvery: 4,
   ringCount: 10,
   ringSpeed: 55,
-  /** Earth: a falling wall of bullets with one gap. */
-  wallSpacing: 10,
-  wallGap: 26,
+  /** Earth: a falling wall of bullets with one gap, every `wallEveryBars` bars. */
+  wallEveryBars: 2,
+  wallSpacing: 12,
+  wallGap: 40,
   wallSpeed: 45,
+  /** The gap center lands within this many px of the player, so it is always reachable. */
+  wallGapDrift: 60,
   /** Mars: aimed fan, alternating with rings. */
   fanCount: 5,
   fanSpread: 0.18,

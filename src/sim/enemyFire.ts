@@ -2,6 +2,7 @@ import { ELITE, ENEMY } from '../data/balance';
 import { aimVelocity, spawnBomb, spawnEnemyBullet } from './bullets';
 import { worldAt } from '../data/worlds';
 import { inFormation } from './formation';
+import { clamp } from './math';
 import { fireAimedBurst, fireRing } from './patterns';
 import { nextRandom } from './rng';
 import type { Enemy, SimEvent, SimState } from './types';
@@ -54,9 +55,16 @@ export function updateEliteVolleys(state: SimState, beats: number, events: SimEv
   const end = state.beat.count;
   for (let beat = end - beats + 1; beat <= end; beat++) {
     const phase = ((beat % ELITE.ringEvery) + ELITE.ringEvery) % ELITE.ringEvery;
+    const bar = Math.floor((beat + 1) / ELITE.ringEvery);
+    if (!volleyOnBar(state, bar)) continue;
     if (phase === ELITE.ringEvery - 1) chargeShooter(state);
-    else if (phase === 0) fireVolley(state, Math.floor(beat / ELITE.ringEvery), events);
+    else if (phase === 0) fireVolley(state, bar, events);
   }
+}
+
+/** Earth walls come every `wallEveryBars` bars; the other worlds volley on every bar. */
+function volleyOnBar(state: SimState, bar: number): boolean {
+  return worldAt(state.world).id !== 'earth' || bar % ELITE.wallEveryBars === 0;
 }
 
 function chargeShooter(state: SimState): void {
@@ -92,9 +100,11 @@ function fireVolley(state: SimState, bar: number, events: SimEvent[]): void {
   events.push({ type: 'enemyShot', x: cx, y: cy });
 }
 
-/** A row of slow bullets across the field with one gap at a random spot. */
+/** A row of slow bullets across the field with one gap near the player. */
 function fireWall(state: SimState, y: number): void {
-  const gapCenter = ELITE.wallGap / 2 + nextRandom(state.rng) * (state.fieldW - ELITE.wallGap);
+  const p = state.player;
+  const drift = (nextRandom(state.rng) * 2 - 1) * ELITE.wallGapDrift;
+  const gapCenter = clamp(p.x + p.w / 2 + drift, ELITE.wallGap / 2, state.fieldW - ELITE.wallGap / 2);
   for (let x = ELITE.wallSpacing / 2; x < state.fieldW; x += ELITE.wallSpacing) {
     if (Math.abs(x - gapCenter) < ELITE.wallGap / 2) continue;
     spawnEnemyBullet(state, x, y, 0, ELITE.wallSpeed);

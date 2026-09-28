@@ -17,6 +17,18 @@ function showError(host: HTMLElement, text: string): void {
   host.replaceChildren(msg);
 }
 
+/** Offline play: the build emits sw.js (see scripts/service-worker-plugin.mjs). Dev never registers it, so HMR stays uncached. */
+function registerServiceWorker(): void {
+  if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch((err: unknown) => {
+      console.warn('Service worker registration failed', err);
+    });
+  });
+}
+
+registerServiceWorker();
+
 const host = document.getElementById('app');
 if (!host) throw new Error('#app host element missing');
 

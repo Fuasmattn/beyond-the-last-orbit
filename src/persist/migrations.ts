@@ -69,8 +69,8 @@ function sanitizeUpgrades(v: unknown): Record<string, number> {
 }
 
 /**
- * v1–v3 share a layout: v2 adds `rogueHighscores` and `upgrades` (empty when missing); v3 drops the beat run's
- * `highscores` table and adds `settings.beatLock`.
+ * v1–v4 share a layout: v2 adds `rogueHighscores` and `upgrades` (empty when missing); v3 drops the beat run's
+ * `highscores` table and adds `settings.beatLock`; v4 adds `dailyHighscores` and `dailyPlayed`.
  */
 function sanitize(o: Rec): SaveData {
   const d = defaultSave();
@@ -80,6 +80,8 @@ function sanitize(o: Rec): SaveData {
     version: SAVE_VERSION,
     credits: Math.floor(num(o.credits, d.credits, 0)),
     rogueHighscores: sanitizeHighscores(o.rogueHighscores),
+    dailyHighscores: sanitizeHighscores(o.dailyHighscores),
+    dailyPlayed: /^\d{4}-\d{2}-\d{2}$/.test(String(o.dailyPlayed)) ? String(o.dailyPlayed) : null,
     upgrades: sanitizeUpgrades(o.upgrades),
     owned: [...new Set([...d.owned, ...owned])],
     equipped: {
@@ -97,6 +99,7 @@ export function migrate(raw: unknown): SaveData {
     case 1:
     case 2:
     case 3:
+    case 4:
       return sanitize(raw);
     default:
       throw new Error(`unsupported save version ${String(raw.version)}`);

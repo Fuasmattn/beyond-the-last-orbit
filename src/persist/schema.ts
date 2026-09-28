@@ -1,5 +1,5 @@
 export const SAVE_KEY = 'beyond-the-last-orbit:v1';
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 export const MAX_HIGHSCORES = 10;
 
 export interface HighscoreEntry {
@@ -34,6 +34,10 @@ export interface SaveData {
   credits: number;
   /** Local high score table (fallback for the global one). */
   rogueHighscores: HighscoreEntry[];
+  /** Local daily results; `date` is the day played. */
+  dailyHighscores: HighscoreEntry[];
+  /** Day (`YYYY-MM-DD`) of the last daily attempt; one per day. */
+  dailyPlayed: string | null;
   /** Permanent upgrade levels by id (see data/upgrades.ts). */
   upgrades: Record<string, number>;
   owned: string[];
@@ -46,6 +50,8 @@ export function defaultSave(): SaveData {
     version: SAVE_VERSION,
     credits: 0,
     rogueHighscores: [],
+    dailyHighscores: [],
+    dailyPlayed: null,
     upgrades: {},
     owned: ['skin.classic', 'laser.classic'],
     equipped: { skin: 'skin.classic', laser: 'laser.classic' },

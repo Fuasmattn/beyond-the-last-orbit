@@ -1,9 +1,9 @@
--- Beyond the Last Orbit global leaderboard (M11).
+-- Beyond the Last Orbit global leaderboard (M11, daily boards M16).
 -- Run once in the Supabase dashboard: SQL Editor → New query → paste → Run. Safe to re-run.
 
 create table if not exists public.scores (
   id         bigint generated always as identity primary key,
-  mode       text        not null check (mode in ('rogue', 'rhythm')),
+  mode       text        not null,
   initials   text        not null check (initials ~ '^[A-Z0-9]{3}$'),
   score      integer     not null check (score between 1 and 100000000),
   world      smallint    not null check (world between 0 and 9),
@@ -11,6 +11,11 @@ create table if not exists public.scores (
   loop       smallint    not null check (loop between 0 and 99),
   created_at timestamptz not null default now()
 );
+
+-- Boards: the main run and one per day (`daily:YYYY-MM-DD`). Rows from the retired 'rhythm' run stay valid.
+alter table public.scores drop constraint if exists scores_mode_check;
+alter table public.scores add constraint scores_mode_check
+  check (mode ~ '^(rogue|rhythm|daily:\d{4}-\d{2}-\d{2})$');
 
 create index if not exists scores_top_idx on public.scores (mode, score desc, created_at);
 

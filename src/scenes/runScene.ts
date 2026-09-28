@@ -3,6 +3,7 @@ import { viewport } from '../app/viewport';
 import { Sourness } from '../audio/sourness';
 import { ROUTE } from '../data/balance';
 import { equippedLaser, equippedSkin } from '../data/cosmetics';
+import { dailyBoard, dailyRunOptions, dailySeed, dayKey } from '../meta/daily';
 import { runOptionsFor } from '../meta/upgrades';
 import { createInitialState } from '../sim/state';
 import {
@@ -17,6 +18,7 @@ import {
 } from '../sim/stageFlow';
 import { step } from '../sim/step';
 import type { SimEvent, SimState } from '../sim/types';
+import type { Board } from '../leaderboard/leaderboard';
 import { judgeLabel } from '../view/beatJudge';
 import { cameraTarget, followCamera } from '../view/camera';
 import { DraftOverlay } from '../view/draftOverlay';
@@ -25,7 +27,7 @@ import { Hud, inPauseButton } from '../view/hud';
 import { MenuList } from '../view/menuList';
 import { RouteOverlay } from '../view/routeOverlay';
 import { GameRenderer } from '../view/renderer';
-import type { FrameInput, Scene, SceneContext } from './scene';
+import type { FrameInput, RunKind, Scene, SceneContext } from './scene';
 
 const GAME_OVER_DELAY = 1;
 const PAUSE_ITEMS = ['RESUME', 'END RUN'] as const;
@@ -54,9 +56,23 @@ export class RunScene implements Scene {
   /** Left edge of the view in field coords; the field is wider than the screen on touch. */
   private camX: number | null = null;
   private readonly sour = new Sourness();
+  private readonly board: Board;
 
-  constructor(private readonly ctx: SceneContext) {
-    this.state = createInitialState(newSeed(), viewport.fieldW, runOptionsFor(ctx.save));
+  constructor(
+    private readonly ctx: SceneContext,
+    kind: RunKind,
+  ) {
+    if (kind === 'daily') {
+      // Everyone shares today's seed and ship; the attempt is spent the moment the run starts.
+      const day = dayKey();
+      this.board = dailyBoard(day);
+      ctx.save.dailyPlayed = day;
+      ctx.persist();
+      this.state = createInitialState(dailySeed(day), viewport.fieldW, dailyRunOptions());
+    } else {
+      this.board = 'rogue';
+      this.state = createInitialState(newSeed(), viewport.fieldW, runOptionsFor(ctx.save));
+    }
     this.renderer = new GameRenderer(ctx.textures, { skin: equippedSkin(ctx.save), laser: equippedLaser(ctx.save) });
     this.hud = new Hud(ctx.textures.glyphs, ctx.isTouch ? TOUCH_HUD_SCALE : 1, ctx.isTouch);
     this.route = new RouteOverlay(ctx.textures.glyphs, ctx.isTouch);
@@ -233,6 +249,7 @@ export class RunScene implements Scene {
     const s = this.state;
     this.ctx.goto(
       this.ctx.scenes.gameOver({
+        board: this.board,
         score: s.score,
         world: s.world,
         stage: s.stage,

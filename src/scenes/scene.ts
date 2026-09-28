@@ -2,7 +2,7 @@ import type { Container } from 'pixi.js';
 import type { AudioEngine } from '../audio/engine';
 import type { CompiledSong } from '../audio/song';
 import type { MenuAction, Tap } from '../input/inputFrame';
-import type { Leaderboard } from '../leaderboard/leaderboard';
+import type { Board, Leaderboard } from '../leaderboard/leaderboard';
 import type { SaveData } from '../persist/schema';
 import type { InputFrame } from '../sim/types';
 import type { GameTextures } from '../view/textures';
@@ -15,7 +15,11 @@ export interface FrameInput {
   pause: boolean;
 }
 
+/** Which run to start: the main run, or today's shared-seed daily. */
+export type RunKind = 'rogue' | 'daily';
+
 export interface RunSummary {
+  board: Board;
   score: number;
   world: number;
   stage: number;
@@ -36,7 +40,7 @@ export interface Scene {
 
 export interface SceneFactory {
   title(): Scene;
-  run(): Scene;
+  run(kind: RunKind): Scene;
   gameOver(summary: RunSummary): Scene;
   shop(): Scene;
   hangar(): Scene;

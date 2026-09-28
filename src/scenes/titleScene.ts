@@ -1,6 +1,9 @@
 import { Container } from 'pixi.js';
 import { viewport } from '../app/viewport';
+import type { Board } from '../leaderboard/leaderboard';
+import { dailyBoard, dailyPlayed, dayKey } from '../meta/daily';
 import { formatHighscoreLine, highscoreTableX } from '../view/highscoreTable';
+import type { HighscoreEntry } from '../persist/schema';
 import { MenuList } from '../view/menuList';
 import { centerText, PixelText } from '../view/pixelText';
 import type { FrameInput, Scene, SceneContext } from './scene';
@@ -10,8 +13,9 @@ const PAGE_TIME = 5;
 const NOTICE_TIME = 3;
 /** Main menu, centered in the frame together with its cursor (8px left of the labels). */
 const MENU = { y: 212, lineH: 14, width: 64 } as const;
-const ITEMS = ['START RUN', 'HANGAR', 'SHOP', 'SETTINGS'] as const;
-const TABLES = [{ mode: 'rogue', key: 'rogueHighscores', title: 'HIGH SCORES' }] as const;
+const ITEMS = ['START RUN', 'DAILY RUN', 'HANGAR', 'SHOP', 'SETTINGS'] as const;
+const DAILY_ITEM = 1;
+/** Menu rows are 14px apart; five rows still clear the tables above and the notice below. */
 
 export class TitleScene implements Scene {
   readonly root = new Container();
@@ -23,6 +27,9 @@ export class TitleScene implements Scene {
   private tables: PixelText[][] = [];
   private tableTitles: string[] = [];
   private tablesVersion = -1;
+  private readonly day = dayKey();
+  /** Set when DAILY RUN was picked after today's attempt: the table page jumps to the daily board. */
+  private showDaily = false;
   private readonly menu: MenuList;
   private readonly logo: Container[];
   private logoX = 0;
@@ -51,7 +58,7 @@ export class TitleScene implements Scene {
     this.tableHeader = new PixelText(g, '', 0xff5ad1);
     this.buildTables();
     this.menu = new MenuList(g, { ...MENU, x: centerX(MENU.width) + 4 });
-    this.menu.setRows(ITEMS.map((label) => ({ label })));
+    this.refreshMenu();
 
     this.root.addChild(
       sceneBackground(),
@@ -93,13 +100,14 @@ export class TitleScene implements Scene {
     pink!.x = this.logoX + split;
     cyan!.alpha = pink!.alpha = 0.75;
     if (this.ctx.leaderboard.version !== this.tablesVersion) this.buildTables();
-    // Pages cycle: tagline, then each non-empty highscore table.
-    const pages = [-1, ...TABLES.map((_, i) => i).filter((i) => this.tables[i]!.length > 0)];
-    const page = pages[Math.floor(this.t / PAGE_TIME) % pages.length]!;
+    // Pages cycle: tagline, then each non-empty highscore table (or the daily board when asked for).
+    const pages = [-1, ...this.tableBoards().map((_, i) => i).filter((i) => this.tables[i]!.length > 0)];
+    const page = this.showDaily ? 1 : pages[Math.floor(this.t / PAGE_TIME) % pages.length]!;
     this.tables.forEach((rows, i) => rows.forEach((t) => (t.visible = i === page)));
     this.tableHeader.visible = page >= 0;
     if (page >= 0) {
-      this.tableHeader.setText(this.tableTitles[page]!);
+      const empty = this.tables[page]!.length === 0;
+      this.tableHeader.setText(empty ? `${this.tableTitles[page]!} - NONE YET` : this.tableTitles[page]!);
       centerText(this.tableHeader, 104);
     }
     this.tagline.visible = page < 0;
@@ -114,6 +122,18 @@ export class TitleScene implements Scene {
     this.root.destroy({ children: true });
   }
 
+  private tableBoards(): { board: Board; local: () => HighscoreEntry[]; title: string }[] {
+    const save = this.ctx.save;
+    return [
+      { board: 'rogue', local: () => save.rogueHighscores, title: 'HIGH SCORES' },
+      { board: dailyBoard(this.day), local: () => save.dailyHighscores.filter((e) => e.date === this.day), title: 'DAILY HIGH SCORES' },
+    ];
+  }
+
+  private refreshMenu(): void {
+    this.menu.setRows(ITEMS.map((label, i) => (i === DAILY_ITEM && dailyPlayed(this.ctx.save, this.day) ? { label, value: 'DONE' } : { label })));
+  }
+
   /** Global tables once loaded; until then (or offline) the local ones, marked LOCAL when a server is configured. */
   private buildTables(): void {
     const lb = this.ctx.leaderboard;
@@ -121,10 +141,10 @@ export class TitleScene implements Scene {
     this.tableLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.tables = [];
     this.tableTitles = [];
-    for (const { mode, key, title } of TABLES) {
-      const global = lb.top(mode);
+    for (const { board, local, title } of this.tableBoards()) {
+      const global = lb.top(board);
       this.tableTitles.push(global || !lb.enabled ? title : `LOCAL ${title}`);
-      const rows = (global ?? this.ctx.save[key]).map((e, i) => {
+      const rows = (global ?? local()).map((e, i) => {
         const t = new PixelText(this.ctx.textures.glyphs, formatHighscoreLine(i + 1, e), i === 0 ? 0xffe14a : 0xcccccc);
         t.position.set(highscoreTableX(), 118 + i * 9);
         return t;
@@ -137,7 +157,12 @@ export class TitleScene implements Scene {
   private activate(i: number): void {
     this.ctx.audio?.sfx.menuSelect();
     const s = this.ctx.scenes;
-    const next = [() => s.run(), () => s.hangar(), () => s.shop(), () => s.settings()];
+    if (i === DAILY_ITEM && dailyPlayed(this.ctx.save, this.day)) {
+      // Already played today: show today's board instead.
+      this.showDaily = true;
+      return;
+    }
+    const next = [() => s.run('rogue'), () => s.run('daily'), () => s.hangar(), () => s.shop(), () => s.settings()];
     this.ctx.goto(next[i]!());
   }
 }

@@ -2,7 +2,7 @@ import { Container, Graphics } from 'pixi.js';
 import { viewport } from '../app/viewport';
 import { INITIALS_LENGTH, InitialsPicker } from '../app/initialsPicker';
 import type { Tap } from '../input/inputFrame';
-import { findEntry, type Board } from '../leaderboard/leaderboard';
+import { findEntry } from '../leaderboard/leaderboard';
 import { computeCredits } from '../meta/credits';
 import { creditMultiplier } from '../meta/upgrades';
 import { insertHighscore, qualifiesForHighscore } from '../persist/save';
@@ -23,7 +23,6 @@ const CONTINUE_DELAY = 0.5;
 const INPUT_DELAY = 0.4;
 const COUNT_UP_TIME = 1.5;
 const COIN_TICK = 0.07;
-const BOARD: Board = 'rogue';
 
 function letterLeft(i: number): number {
   return Math.round(viewport.menuW / 2 + (i - 1) * LETTER_SPACING - 4.5);
@@ -143,21 +142,29 @@ export class GameOverScene implements Scene {
     this.root.destroy({ children: true });
   }
 
+  private get daily(): boolean {
+    return this.summary.board !== 'rogue';
+  }
+
   private get tableTitle(): string {
-    return 'HIGH SCORES';
+    return this.daily ? 'DAILY HIGH SCORES' : 'HIGH SCORES';
   }
 
   /** The shared global table, or null when disabled or not loaded. */
   private get globalTable(): readonly HighscoreEntry[] | null {
-    return this.ctx.leaderboard.top(BOARD);
+    return this.ctx.leaderboard.top(this.summary.board);
   }
 
+  /** Local fallback: the main table, or today's daily results. */
   private get table(): HighscoreEntry[] {
-    return this.ctx.save.rogueHighscores;
+    if (!this.daily) return this.ctx.save.rogueHighscores;
+    const day = this.summary.board.slice('daily:'.length);
+    return this.ctx.save.dailyHighscores.filter((e) => e.date === day);
   }
 
   private set table(list: HighscoreEntry[]) {
-    this.ctx.save.rogueHighscores = list;
+    if (this.daily) this.ctx.save.dailyHighscores = list;
+    else this.ctx.save.rogueHighscores = list;
   }
 
   /** Credits count up from 0 with a coin tick. */
@@ -206,7 +213,7 @@ export class GameOverScene implements Scene {
     }
     this.setHeading('SENDING SCORE...');
     this.tableLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
-    void lb.submit(BOARD, entry).then((ok) => {
+    void lb.submit(this.summary.board, entry).then((ok) => {
       if (this.destroyed) return;
       const fresh = this.globalTable;
       if (ok && fresh) {

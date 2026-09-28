@@ -1,8 +1,7 @@
 import { MAX_HIGHSCORES, type HighscoreEntry } from '../persist/schema';
 
-/** A high score table; stored in the `mode` column. */
-export type Board = 'rogue';
-export const BOARDS: readonly Board[] = ['rogue'];
+/** A high score table; stored in the `mode` column. Daily boards are `daily:<YYYY-MM-DD>`. */
+export type Board = 'rogue' | `daily:${string}`;
 
 /** Supabase project URL and publishable key (`sb_publishable_…`, safe to ship). */
 export interface LeaderboardConfig {
@@ -52,7 +51,7 @@ export function rowToEntry(row: unknown): HighscoreEntry | null {
  */
 export class Leaderboard {
   version = 0;
-  private readonly tables: Partial<Record<Board, HighscoreEntry[]>> = {};
+  private readonly tables = new Map<Board, HighscoreEntry[]>();
 
   constructor(
     private readonly config: LeaderboardConfig | null,
@@ -66,7 +65,7 @@ export class Leaderboard {
 
   /** The global top 10, or null until it has loaded. */
   top(mode: Board): readonly HighscoreEntry[] | null {
-    return this.tables[mode] ?? null;
+    return this.tables.get(mode) ?? null;
   }
 
   async refresh(mode: Board): Promise<boolean> {
@@ -80,7 +79,7 @@ export class Leaderboard {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const rows: unknown = await res.json();
       if (!Array.isArray(rows)) throw new Error('unexpected response');
-      this.tables[mode] = rows.map(rowToEntry).filter((e): e is HighscoreEntry => e !== null);
+      this.tables.set(mode, rows.map(rowToEntry).filter((e): e is HighscoreEntry => e !== null));
       this.version++;
       return true;
     } catch (err) {

@@ -11,6 +11,8 @@ The run: hits and grazes (enemy bullets skimming the ship's core, shown as a dot
 - **Beat stages**: stage 3 of every world is a beat stage — only on-beat shots build the multiplier (up to x8), off-beat shots cost two levels, PERFECT shots fire power shots, and a beat rank S/A earns an upgrade draft (S also doubles the stage bonus).
 - **Beat Lock** (Settings): every stage is a beat stage. For players who want the pure rhythm game; best with sound.
 
+**DAILY RUN**: one attempt per day on a seed shared by everyone (same map, drafts and enemy rolls), played with the base ship, with its own global table.
+
 Credits earned per run buy cosmetic ship skins and laser styles (SHOP) and permanent upgrades (HANGAR).
 Credits, upgrades and settings stay in the browser; high scores are also shared on a global leaderboard.
 
@@ -35,7 +37,7 @@ One-time setup after pushing to GitHub: **Settings → Pages → Build and deplo
 Without configuration the game only keeps local high scores. To share them:
 
 1. Create a free project at [supabase.com](https://supabase.com).
-2. **SQL Editor → New query**: paste and run `supabase/leaderboard.sql`.
+2. **SQL Editor → New query**: paste and run `supabase/leaderboard.sql` (re-run it after upgrading to M16: it widens the `mode` check for daily boards).
 3. **Project Settings → API Keys**: copy the project URL and the **publishable** key (`sb_publishable_…`, safe to ship in the page; never use the secret key).
 4. GitHub repo **Settings → Secrets and variables → Actions → Variables**: add `VITE_SUPABASE_URL` and `VITE_SUPABASE_KEY`, then re-run the deploy.
 

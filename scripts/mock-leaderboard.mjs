@@ -7,11 +7,13 @@ const FAIL = process.env.MOCK_FAIL === '1';
 const rows = [
   { mode: 'rogue', initials: 'ACE', score: 42000, world: 2, stage: 3, loop: 0 },
   { mode: 'rogue', initials: 'BOB', score: 9000, world: 0, stage: 3, loop: 0 },
+  { mode: `daily:${new Date().toISOString().slice(0, 10)}`, initials: 'DAY', score: 12000, world: 1, stage: 1, loop: 0 },
 ].map((r, i) => ({ ...r, created_at: new Date(Date.UTC(2026, 8, 20 + i)).toISOString() }));
 
 const between = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
 const valid = (r) =>
-  (r.mode === 'rogue' || r.mode === 'rhythm') &&
+  typeof r.mode === 'string' &&
+  /^(rogue|rhythm|daily:\d{4}-\d{2}-\d{2})$/.test(r.mode) &&
   typeof r.initials === 'string' &&
   /^[A-Z0-9]{3}$/.test(r.initials) &&
   between(r.score, 1, 100_000_000) &&

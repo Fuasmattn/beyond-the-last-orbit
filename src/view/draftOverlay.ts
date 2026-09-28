@@ -28,6 +28,8 @@ export class DraftOverlay extends Container {
   private readonly texts: PixelText[] = [];
   private rows: Row[] = [];
   private sel = 0;
+  /** Row selected by the last tap; tapping it again picks it. Null until a row is tapped. */
+  private tapped: number | null = null;
 
   constructor(
     private readonly glyphs: Map<string, Texture>,
@@ -35,15 +37,17 @@ export class DraftOverlay extends Container {
   ) {
     super();
     this.title = new PixelText(glyphs, 'CHOOSE AN UPGRADE', 0xffe14a);
-    this.hint = new PixelText(glyphs, isTouch ? 'TAP TO PICK' : 'UP/DOWN  FIRE TO PICK', 0x777777);
+    this.hint = new PixelText(glyphs, isTouch ? 'TAP TWICE TO PICK' : 'UP/DOWN  FIRE TO PICK', 0x777777);
     this.addChild(this.panel, this.title, this.hint);
     this.visible = false;
   }
 
   open(): void {
     this.sel = 0;
+    this.tapped = null;
   }
 
+  /** A tap selects a row (highlighting it); a second tap on the same row picks it. */
   handle(r: RogueState, menu: readonly MenuAction[], taps: readonly Tap[]): DraftPick | null {
     this.layoutRows(r);
     const n = this.rows.length;
@@ -51,10 +55,14 @@ export class DraftOverlay extends Container {
       if (a === 'up' || a === 'left') this.sel = (this.sel - 1 + n) % n;
       else if (a === 'down' || a === 'right') this.sel = (this.sel + 1) % n;
       else if (a === 'confirm') return this.rows[this.sel]!.pick;
+      this.tapped = null;
     }
     for (const t of taps) {
-      const row = this.rows.find((x) => t.y >= x.y - 4 && t.y < x.y - 4 + x.h);
-      if (row) return row.pick;
+      const i = this.rows.findIndex((x) => t.y >= x.y - 4 && t.y < x.y - 4 + x.h);
+      if (i < 0) continue;
+      if (this.tapped === i) return this.rows[i]!.pick;
+      this.sel = i;
+      this.tapped = i;
     }
     return null;
   }

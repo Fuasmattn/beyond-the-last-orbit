@@ -19,6 +19,13 @@ const POPUP_TIME = 1.5;
 const BOSS_BAR = { y: 13, h: 3, margin: 40, maxW: 240 } as const;
 const RESULTS_W = 96;
 const MARGIN = 4;
+/** Touch pause button, top-left: hit area in logical px (generous for thumbs) and the drawn icon. */
+const PAUSE_HIT = { w: 30, h: 26 } as const;
+const PAUSE_ICON = { w: 6, h: 7, bar: 2 } as const;
+
+export function inPauseButton(t: { x: number; y: number }): boolean {
+  return t.x >= 0 && t.x <= PAUSE_HIT.w && t.y >= 0 && t.y <= PAUSE_HIT.h;
+}
 
 /** Sets `t` to `scale`, shrunk (not below 1) so it fits `width` with margins; then centers it at `y`. */
 function fitCenter(t: PixelText, scale: number, y: number, width: number): void {
@@ -38,12 +45,17 @@ export class Hud extends Container {
   private readonly popup: PixelText;
   private readonly results: PixelText[] = [];
   private readonly bossBar = new Graphics();
+  private readonly pauseIcon = new Graphics();
   private popupTime = 0;
 
-  /** `textScale` enlarges the text (touch screens); layout rows grow with it. */
+  /**
+   * `textScale` enlarges the text (touch screens); layout rows grow with it.
+   * `pauseButton` shows a tappable pause icon top-left (touch has no pause key); score and ships move right.
+   */
   constructor(
     glyphs: Map<string, Texture>,
     private readonly textScale = 1,
+    pauseButton = false,
   ) {
     super();
     const k = textScale;
@@ -64,12 +76,21 @@ export class Hud extends Container {
       this.results.push(t);
     }
     for (const t of [this.score, this.stage, this.lives, this.noAudio]) t.scale.set(k);
-    this.score.position.set(MARGIN, MARGIN);
+    this.pauseIcon.visible = pauseButton;
+    this.pauseIcon
+      .rect(0, 0, PAUSE_ICON.bar, PAUSE_ICON.h)
+      .rect(PAUSE_ICON.w - PAUSE_ICON.bar, 0, PAUSE_ICON.bar, PAUSE_ICON.h)
+      .fill({ color: 0xffffff, alpha: 0.7 });
+    this.pauseIcon.scale.set(k);
+    this.pauseIcon.position.set(MARGIN, MARGIN);
+    const left = pauseButton ? Math.round(MARGIN + PAUSE_ICON.w * k + 5) : MARGIN;
+    this.score.position.set(left, MARGIN);
     this.stage.y = MARGIN;
-    this.lives.position.set(MARGIN, Math.round(MARGIN + 8 * k));
+    this.lives.position.set(left, Math.round(MARGIN + 8 * k));
     this.noAudio.y = Math.round(MARGIN + 16 * k);
     this.addChild(
       this.track,
+      this.pauseIcon,
       this.score,
       this.stage,
       this.lives,

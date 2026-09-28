@@ -23,6 +23,7 @@ import { ShopScene } from '../scenes/shopScene';
 import { TitleScene } from '../scenes/titleScene';
 import { createBackdrop, type Backdrop } from '../view/backdrops';
 import { beatPulse } from '../view/beatPulse';
+import { inPauseButton } from '../view/hud';
 import { PostFx } from '../view/postfx';
 import { SoundToggle } from '../view/soundToggle';
 import { Starfield } from '../view/starfield';
@@ -149,7 +150,8 @@ export async function startApp(host: HTMLElement): Promise<void> {
   window.addEventListener('resize', applyLayout);
 
   const keyboard = new KeyboardInput(window, judgeFire);
-  const touch = new TouchInput(app.canvas, () => layout, judgeFire);
+  // The run's pause button is a touch area: pressing it neither steers nor fires.
+  const touch = new TouchInput(app.canvas, () => layout, judgeFire, (t) => scene instanceof RunScene && inPauseButton(t));
 
   let scene: Scene;
   const ctx: SceneContext = {

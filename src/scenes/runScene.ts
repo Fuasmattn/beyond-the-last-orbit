@@ -12,7 +12,7 @@ import type { RunMode, SimEvent, SimState } from '../sim/types';
 import { judgeLabel } from '../view/beatJudge';
 import { cameraTarget, followCamera } from '../view/camera';
 import { DraftOverlay } from '../view/draftOverlay';
-import { Hud } from '../view/hud';
+import { Hud, inPauseButton } from '../view/hud';
 import { MenuList } from '../view/menuList';
 import { RouteOverlay } from '../view/routeOverlay';
 import { GameRenderer } from '../view/renderer';
@@ -52,7 +52,7 @@ export class RunScene implements Scene {
     const opts = mode === 'rogue' ? rogueRunOptions(ctx.save) : defaultRunOptions('rhythm');
     this.state = createInitialState(newSeed(), viewport.fieldW, opts);
     this.renderer = new GameRenderer(ctx.textures, { skin: equippedSkin(ctx.save), laser: equippedLaser(ctx.save) });
-    this.hud = new Hud(ctx.textures.glyphs, ctx.isTouch ? TOUCH_HUD_SCALE : 1);
+    this.hud = new Hud(ctx.textures.glyphs, ctx.isTouch ? TOUCH_HUD_SCALE : 1, ctx.isTouch);
     this.route = new RouteOverlay(ctx.textures.glyphs, ctx.isTouch);
     this.draft = new DraftOverlay(ctx.textures.glyphs, ctx.isTouch);
     this.pauseMenu = new MenuList(ctx.textures.glyphs, PAUSE_MENU);
@@ -69,7 +69,8 @@ export class RunScene implements Scene {
 
   update(input: FrameInput, dt: number): void {
     const s = this.state;
-    if (input.pause && s.phase !== 'gameOver') {
+    const pauseTap = this.ctx.isTouch && !this.paused && input.taps.some(inPauseButton);
+    if ((input.pause || pauseTap) && s.phase !== 'gameOver') {
       this.setPaused(!this.paused);
       this.pauseMenu.selected = 0;
       return;

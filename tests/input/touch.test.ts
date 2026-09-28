@@ -4,15 +4,20 @@ import { isTap, TouchInput } from '../../src/input/touch';
 
 type Handler = (e: PointerEvent) => void;
 
-function setup(scale = 2) {
+function setup(scale = 2, reserved?: (t: { x: number; y: number }) => boolean) {
   const handlers = new Map<string, Handler>();
   const el = { addEventListener: (type: string, h: Handler) => handlers.set(type, h) } as unknown as HTMLElement;
   const layout: Layout = { fieldW: 200, viewW: 150, scale, offsetX: 0, offsetY: 0 };
   const judged: number[] = [];
-  const input = new TouchInput(el, () => layout, (t) => {
-    judged.push(t ?? -1);
-    return { onBeat: true, perfect: false };
-  });
+  const input = new TouchInput(
+    el,
+    () => layout,
+    (t) => {
+      judged.push(t ?? -1);
+      return { onBeat: true, perfect: false };
+    },
+    reserved,
+  );
   const send = (type: string, id: number, x: number, y: number, timeStamp: number) =>
     handlers.get(type)!({ pointerId: id, pointerType: 'touch', clientX: x, clientY: y, timeStamp } as PointerEvent);
   return { input, judged, send };
@@ -65,6 +70,18 @@ describe('TouchInput', () => {
     // The firing finger does not steer.
     send('pointermove', 2, 350, 200, 50);
     expect(input.poll().dragX).toBe(0);
+  });
+
+  it('presses on a reserved button are menu taps only', () => {
+    const { input, send } = setup(1, (t) => t.x < 20 && t.y < 20);
+    send('pointerdown', 1, 5, 5, 0);
+    send('pointerup', 1, 5, 5, 50);
+    expect(input.poll().firePressed).toBe(false);
+    expect(input.consumeTaps()).toEqual([{ x: 5, y: 5 }]);
+    // Steering still starts with the next finger elsewhere.
+    send('pointerdown', 2, 100, 100, 100);
+    send('pointermove', 2, 110, 100, 116);
+    expect(input.poll().dragX).toBeCloseTo(12.5);
   });
 
   it('hands steering to a remaining finger when the steer finger lifts', () => {

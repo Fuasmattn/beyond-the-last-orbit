@@ -38,11 +38,14 @@ export class TouchInput implements InputSource {
     el: HTMLElement,
     private readonly getLayout: () => Layout,
     private readonly judgeFire: FireJudge = () => null,
+    /** Buttons (e.g. pause) in logical coords: presses there are only menu taps, never steer or fire. */
+    private readonly reserved: (tap: Tap) => boolean = () => false,
   ) {
     el.addEventListener('pointerdown', (e) => {
       const l = getLayout();
-      this.taps.push({ x: (e.clientX - l.offsetX) / l.scale, y: (e.clientY - l.offsetY) / l.scale });
-      if (e.pointerType === 'mouse') return;
+      const tap = { x: (e.clientX - l.offsetX) / l.scale, y: (e.clientY - l.offsetY) / l.scale };
+      this.taps.push(tap);
+      if (e.pointerType === 'mouse' || this.reserved(tap)) return;
       this.pointers.set(e.pointerId, {
         x: e.clientX,
         y: e.clientY,

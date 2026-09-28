@@ -12,8 +12,8 @@ const TABLE_X = 82;
 /** The rogue run is the main game; the pure beat run is a secondary mode. */
 const ITEMS = ['START RUN', 'HANGAR', 'SHOP', 'BEAT RUN', 'SETTINGS'] as const;
 const TABLES = [
-  { key: 'rogueHighscores', title: 'HIGH SCORES' },
-  { key: 'highscores', title: 'BEAT RUN HIGH SCORES' },
+  { mode: 'rogue', key: 'rogueHighscores', title: 'HIGH SCORES' },
+  { mode: 'rhythm', key: 'highscores', title: 'BEAT RUN HIGH SCORES' },
 ] as const;
 
 export class TitleScene implements Scene {
@@ -22,7 +22,10 @@ export class TitleScene implements Scene {
   private readonly notice: PixelText;
   private readonly credits: PixelText;
   private readonly tableHeader: PixelText;
-  private readonly tables: PixelText[][] = [];
+  private readonly tableLayer = new Container();
+  private tables: PixelText[][] = [];
+  private tableTitles: string[] = [];
+  private tablesVersion = -1;
   private readonly menu: MenuList;
   private readonly logo: PixelText[];
   private logoX = 0;
@@ -44,15 +47,7 @@ export class TitleScene implements Scene {
     this.notice = new PixelText(g, ctx.notice ?? '', 0xff5a5a);
     centerText(this.notice, 296);
     this.tableHeader = new PixelText(g, '', 0xff5ad1);
-    for (const { key } of TABLES) {
-      this.tables.push(
-        ctx.save[key].map((e, i) => {
-          const t = new PixelText(g, formatHighscoreLine(i + 1, e), i === 0 ? 0xffe14a : 0xcccccc);
-          t.position.set(TABLE_X, 118 + i * 9);
-          return t;
-        }),
-      );
-    }
+    this.buildTables();
     this.menu = new MenuList(g, { x: 92, y: 212, lineH: 14, width: 64 });
     this.menu.setRows(ITEMS.map((label) => ({ label })));
 
@@ -61,7 +56,7 @@ export class TitleScene implements Scene {
       ...this.logo,
       this.tagline,
       this.tableHeader,
-      ...this.tables.flat(),
+      this.tableLayer,
       this.menu,
       this.credits,
       this.notice,
@@ -95,13 +90,14 @@ export class TitleScene implements Scene {
     cyan!.x = this.logoX - split;
     pink!.x = this.logoX + split;
     cyan!.alpha = pink!.alpha = 0.75;
+    if (this.ctx.leaderboard.version !== this.tablesVersion) this.buildTables();
     // Pages cycle: tagline, then each non-empty highscore table.
     const pages = [-1, ...TABLES.map((_, i) => i).filter((i) => this.tables[i]!.length > 0)];
     const page = pages[Math.floor(this.t / PAGE_TIME) % pages.length]!;
     this.tables.forEach((rows, i) => rows.forEach((t) => (t.visible = i === page)));
     this.tableHeader.visible = page >= 0;
     if (page >= 0) {
-      this.tableHeader.setText(TABLES[page]!.title);
+      this.tableHeader.setText(this.tableTitles[page]!);
       centerText(this.tableHeader, 104);
     }
     this.tagline.visible = page < 0;
@@ -114,6 +110,26 @@ export class TitleScene implements Scene {
 
   destroy(): void {
     this.root.destroy({ children: true });
+  }
+
+  /** Global tables once loaded; until then (or offline) the local ones, marked LOCAL when a server is configured. */
+  private buildTables(): void {
+    const lb = this.ctx.leaderboard;
+    this.tablesVersion = lb.version;
+    this.tableLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.tables = [];
+    this.tableTitles = [];
+    for (const { mode, key, title } of TABLES) {
+      const global = lb.top(mode);
+      this.tableTitles.push(global || !lb.enabled ? title : `LOCAL ${title}`);
+      const rows = (global ?? this.ctx.save[key]).map((e, i) => {
+        const t = new PixelText(this.ctx.textures.glyphs, formatHighscoreLine(i + 1, e), i === 0 ? 0xffe14a : 0xcccccc);
+        t.position.set(TABLE_X, 118 + i * 9);
+        return t;
+      });
+      if (rows.length > 0) this.tableLayer.addChild(...rows);
+      this.tables.push(rows);
+    }
   }
 
   private activate(i: number): void {

@@ -2,6 +2,7 @@ import { Container, Graphics } from 'pixi.js';
 import { MENU_W } from '../data/balance';
 import { INITIALS_LENGTH, InitialsPicker } from '../app/initialsPicker';
 import type { Tap } from '../input/inputFrame';
+import { findEntry } from '../leaderboard/leaderboard';
 import { computeCredits } from '../meta/credits';
 import { creditMultiplier } from '../meta/upgrades';
 import { insertHighscore, qualifiesForHighscore } from '../persist/save';
@@ -40,10 +41,12 @@ export class GameOverScene implements Scene {
   private readonly heading: PixelText;
   private readonly prompt: PixelText;
   private readonly creditsLine: PixelText;
+  private readonly status: PixelText;
   private readonly tableLayer = new Container();
   private readonly earned: number;
   private t = 0;
   private coinTimer = 0;
+  private destroyed = false;
 
   constructor(
     private readonly ctx: SceneContext,
@@ -67,8 +70,12 @@ export class GameOverScene implements Scene {
     centerText(reached, 70);
     this.creditsLine = new PixelText(g, '', 0x7dff6b);
 
-    this.picker = qualifiesForHighscore(this.table, summary.score) ? new InitialsPicker() : null;
-    this.heading = new PixelText(g, this.picker ? 'NEW HIGH SCORE! ENTER NAME' : this.tableTitle, 0x7dff6b);
+    const global = this.globalTable;
+    const qualifies =
+      qualifiesForHighscore(this.table, summary.score) ||
+      (global !== null && qualifiesForHighscore(global, summary.score));
+    this.picker = qualifies ? new InitialsPicker() : null;
+    this.heading = new PixelText(g, 'NEW HIGH SCORE! ENTER NAME', 0x7dff6b);
     centerText(this.heading, 108);
     for (let i = 0; i < INITIALS_LENGTH; i++) {
       const t = new PixelText(g, 'A');
@@ -81,6 +88,7 @@ export class GameOverScene implements Scene {
     this.okBox.rect(OK_BOX.x, OK_BOX.y, OK_BOX.w, OK_BOX.h).stroke({ color: 0x7dff6b, width: 1 });
     this.help = new PixelText(g, ctx.isTouch ? 'TAP TOP OR BOTTOM OF A LETTER' : 'UP/DOWN CHANGE  FIRE NEXT', 0x888888);
     centerText(this.help, 196);
+    this.status = new PixelText(g, '', 0xff5a5a);
     this.prompt = new PixelText(g, ctx.isTouch ? 'TAP TO CONTINUE' : 'PRESS FIRE TO CONTINUE');
     centerText(this.prompt, 290);
 
@@ -97,9 +105,10 @@ export class GameOverScene implements Scene {
       this.ok,
       this.help,
       this.tableLayer,
+      this.status,
       this.prompt,
     );
-    if (!this.picker) this.showTable(null);
+    if (!this.picker) this.showBestTable();
     this.refresh();
   }
 
@@ -129,6 +138,7 @@ export class GameOverScene implements Scene {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.root.destroy({ children: true });
   }
 
@@ -138,6 +148,11 @@ export class GameOverScene implements Scene {
 
   private get tableTitle(): string {
     return this.summary.mode === 'rogue' ? 'HIGH SCORES' : 'BEAT RUN HIGH SCORES';
+  }
+
+  /** The shared global table for this mode, or null when disabled or not loaded. */
+  private get globalTable(): readonly HighscoreEntry[] | null {
+    return this.ctx.leaderboard.top(this.summary.mode);
   }
 
   private get table(): HighscoreEntry[] {
@@ -186,15 +201,52 @@ export class GameOverScene implements Scene {
     };
     this.table = insertHighscore(this.table, entry);
     this.ctx.persist();
-    this.heading.setText(this.tableTitle);
-    centerText(this.heading, 108);
-    this.showTable(entry);
+    const lb = this.ctx.leaderboard;
+    const global = this.globalTable;
+    if (!lb.enabled || (global !== null && !qualifiesForHighscore(global, entry.score))) {
+      this.showLocalTable(entry);
+      return;
+    }
+    this.setHeading('SENDING SCORE...');
+    this.tableLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
+    void lb.submit(this.summary.mode, entry).then((ok) => {
+      if (this.destroyed) return;
+      const fresh = this.globalTable;
+      if (ok && fresh) {
+        this.setHeading(this.tableTitle);
+        this.showTable(fresh, entry);
+      } else {
+        this.showLocalTable(entry);
+        this.status.setText('COULD NOT REACH SERVER');
+        centerText(this.status, 220);
+      }
+    });
   }
 
-  private showTable(highlight: HighscoreEntry | null): void {
+  /** No new entry: the global table when loaded, else the local one. */
+  private showBestTable(): void {
+    const global = this.globalTable;
+    if (global) {
+      this.setHeading(this.tableTitle);
+      this.showTable(global, null);
+    } else this.showLocalTable(null);
+  }
+
+  private showLocalTable(highlight: HighscoreEntry | null): void {
+    this.setHeading(this.ctx.leaderboard.enabled ? `LOCAL ${this.tableTitle}` : this.tableTitle);
+    this.showTable(this.table, highlight);
+  }
+
+  private setHeading(text: string): void {
+    this.heading.setText(text);
+    centerText(this.heading, 108);
+  }
+
+  private showTable(list: readonly HighscoreEntry[], highlight: HighscoreEntry | null): void {
     this.tableLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
-    this.table.forEach((e, i) => {
-      const color = e === highlight ? 0xffe14a : 0xcccccc;
+    const mine = highlight ? findEntry(list, highlight) : -1;
+    list.forEach((e, i) => {
+      const color = i === mine ? 0xffe14a : 0xcccccc;
       const t = new PixelText(this.glyphs, formatHighscoreLine(i + 1, e), color);
       t.position.set(TABLE_X, 122 + i * 9);
       this.tableLayer.addChild(t);
@@ -226,6 +278,7 @@ export class GameOverScene implements Scene {
     this.okBox.visible = editing;
     this.help.visible = editing;
     this.tableLayer.visible = !editing;
+    this.status.visible = !editing;
     this.prompt.visible = !editing && blink(this.t, 1);
   }
 }

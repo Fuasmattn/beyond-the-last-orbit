@@ -11,6 +11,7 @@ import { FrameMonitor } from '../fx/frameMonitor';
 import { mergeInputs, type Tap } from '../input/inputFrame';
 import { KeyboardInput } from '../input/keyboard';
 import { TouchInput } from '../input/touch';
+import { Leaderboard, readLeaderboardConfig } from '../leaderboard/leaderboard';
 import { loadSave, memoryStore, writeSave, type KeyValueStore } from '../persist/save';
 import { CalibrationScene } from '../scenes/calibrationScene';
 import { GameOverScene } from '../scenes/gameOverScene';
@@ -79,6 +80,9 @@ export async function startApp(host: HTMLElement): Promise<void> {
 
   const store = browserStore();
   const { data: save, reset } = loadSave(store);
+  const leaderboard = new Leaderboard(readLeaderboardConfig(import.meta.env));
+  void leaderboard.refresh('rogue');
+  void leaderboard.refresh('rhythm');
 
   let pressDelta: number | null = null;
   const judgeFire = (timeStamp?: number) => {
@@ -145,6 +149,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
     textures,
     audio,
     save,
+    leaderboard,
     isTouch,
     notice: reset ? 'SAVE DATA WAS RESET' : null,
     songForWorld,
@@ -204,6 +209,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
       },
       audio,
       save,
+      leaderboard,
       app,
     };
   }

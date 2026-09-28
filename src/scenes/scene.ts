@@ -2,6 +2,7 @@ import type { Container } from 'pixi.js';
 import type { AudioEngine } from '../audio/engine';
 import type { CompiledSong } from '../audio/song';
 import type { MenuAction, Tap } from '../input/inputFrame';
+import type { Leaderboard } from '../leaderboard/leaderboard';
 import type { SaveData } from '../persist/schema';
 import type { InputFrame, RunMode } from '../sim/types';
 import type { GameTextures } from '../view/textures';
@@ -48,6 +49,8 @@ export interface SceneContext {
   readonly textures: GameTextures;
   readonly audio: AudioEngine | null;
   readonly save: SaveData;
+  /** Shared global high scores; credits and upgrades stay in `save`. */
+  readonly leaderboard: Leaderboard;
   readonly isTouch: boolean;
   readonly scenes: SceneFactory;
   readonly metronome: CompiledSong;

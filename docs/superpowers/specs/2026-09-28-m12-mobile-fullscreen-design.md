@@ -69,6 +69,27 @@ never exceeds `fieldW − viewW`.
 - Every down is still a menu tap (menus, route map, drafts unchanged).
 - The fire button and its view are removed.
 
+### Installable (PWA)
+
+`public/manifest.webmanifest` (standalone, fullscreen override, portrait, black) plus icons rendered by
+`scripts/make-icons.mjs`. iOS meta tags make "Add to Home Screen" launch full screen; the status bar
+is opaque (`black`) so the HUD never sits under the Dynamic Island. No service worker yet (no offline
+play; Chrome no longer requires one to install).
+
+### Readable text on phones
+
+- Menus lay out in `viewport.menuW`: 240 on desktop, 160 on touch (`MENU_W_TOUCH`). On a portrait
+  phone the frame is drawn ~1.5× larger than before. Long touch hints are shortened or wrapped.
+- In-run HUD text is 1.5× on touch; banners shrink to fit the visible width when needed.
+
+### Sound hint and toggle
+
+- A speaker toggle sits top-left on the title and settings screens. Before audio has started it
+  blinks "TAP FOR SOUND"; afterwards it reads SOUND ON / SOUND OFF and a tap toggles mute
+  (`settings.muted`, volumes are kept). The tap that starts audio never toggles.
+- Audio unlock sets `navigator.audioSession.type = 'playback'` so iPhones in silent mode still play,
+  and resumes a context that iOS interrupted (calls, backgrounding) on the next touch.
+
 ## Non-goals / not changed
 
 - Vertical camera pan (the full height is always visible; enemies arrive from the top).
@@ -81,3 +102,5 @@ never exceeds `fieldW − viewW`.
 - Single-finger tap fires on release (~80 ms later on screen, verdict uses press time). If that feels
   laggy, alternative: fire on every press, including the one that starts a drag.
 - Should the ship's drag sensitivity (1.25×) change now that the camera also moves?
+- No pause control during a run on touch. Add a pause gesture (e.g. two-finger hold)?
+- Offline play via a service worker (needs cache versioning for deploys).

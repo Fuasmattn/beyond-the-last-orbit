@@ -13,12 +13,14 @@ Two run types, each with its own highscore table:
 - **Beat run** (secondary) — the original pure rhythm game: linear stages, multiplier from on-beat shots, no upgrades. Best with sound.
 
 Credits earned per run buy cosmetic ship skins and laser styles (SHOP) and permanent upgrades for the main run (HANGAR).
+Credits, upgrades and settings stay in the browser; high scores are also shared on a global leaderboard.
 
 ## Run
 
 ```bash
 npm install
 npm run dev        # http://localhost:5173
+npm run dev:leaderboard  # http://localhost:5174 with a mock global leaderboard
 npm test           # unit tests (Vitest)
 npm run build      # typecheck + production build in dist/
 ```
@@ -28,6 +30,17 @@ npm run build      # typecheck + production build in dist/
 `.github/workflows/deploy.yml` typechecks, tests and builds every push and pull request, and deploys `main` to GitHub Pages (the build's base path follows the Pages URL, e.g. `/<repo>/`).
 
 One-time setup after pushing to GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+
+### Global leaderboard (Supabase)
+
+Without configuration the game only keeps local high scores. To share them:
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. **SQL Editor → New query**: paste and run `supabase/leaderboard.sql`.
+3. **Project Settings → API Keys**: copy the project URL and the **publishable** key (`sb_publishable_…`, safe to ship in the page; never use the secret key).
+4. GitHub repo **Settings → Secrets and variables → Actions → Variables**: add `VITE_SUPABASE_URL` and `VITE_SUPABASE_KEY`, then re-run the deploy.
+
+For local builds, put the same two values in `.env.local`. Remove bad rows in the Supabase **Table Editor**.
 
 ## Controls
 
@@ -47,6 +60,7 @@ Calibrate your audio/input latency under **Settings → Calibrate timing** (impo
 - `src/data` — tuning (`balance.ts`), worlds, songs, sprites, cosmetics
 - `src/view`, `src/fx` — PixiJS rendering, particles, post-FX
 - `src/scenes` — title, run, game over, shop, settings, calibration
+- `src/leaderboard`, `supabase/` — global high score client and table
 - `docs/superpowers` — design spec and per-milestone implementation plans
 - `docs/research` — background research (roguelite structure, bullet-hell/rhythm hybrids, rhythm timing)
 

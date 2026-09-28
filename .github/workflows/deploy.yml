@@ -57,6 +57,10 @@ jobs:
         uses: actions/configure-pages@v5
       # Project sites live under /<repo>/; base_path is empty for user sites and custom domains.
       - run: npm run build -- --base "${{ steps.pages.outputs.base_path }}/"
+        env:
+          # Global leaderboard (see README). Unset = local high scores only.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ vars.VITE_SUPABASE_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

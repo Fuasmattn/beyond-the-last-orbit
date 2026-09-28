@@ -10,6 +10,7 @@ import { chooseBoon, chooseNode, rerollDraft } from '../sim/stageFlow';
 import { step } from '../sim/step';
 import type { RunMode, SimEvent, SimState } from '../sim/types';
 import { judgeLabel } from '../view/beatJudge';
+import { cameraTarget, followCamera } from '../view/camera';
 import { DraftOverlay } from '../view/draftOverlay';
 import { Hud } from '../view/hud';
 import { MenuList } from '../view/menuList';
@@ -38,6 +39,8 @@ export class RunScene implements Scene {
   private pauseBlink = 0;
   private paused = false;
   private gameOverTime = 0;
+  /** Left edge of the view in field coords; the field is wider than the screen on touch. */
+  private camX: number | null = null;
   private readonly sour = new Sourness();
 
   constructor(
@@ -45,7 +48,7 @@ export class RunScene implements Scene {
     mode: RunMode,
   ) {
     const opts = mode === 'rogue' ? rogueRunOptions(ctx.save) : defaultRunOptions('rhythm');
-    this.state = createInitialState(newSeed(), viewport.w, opts);
+    this.state = createInitialState(newSeed(), viewport.fieldW, opts);
     this.renderer = new GameRenderer(ctx.textures, { skin: equippedSkin(ctx.save), laser: equippedLaser(ctx.save) });
     this.hud = new Hud(ctx.textures.glyphs);
     this.route = new RouteOverlay(ctx.textures.glyphs, ctx.isTouch);
@@ -80,7 +83,7 @@ export class RunScene implements Scene {
       }
       return;
     }
-    s.nextFieldW = viewport.w;
+    s.nextFieldW = viewport.fieldW;
     const events = step(s, input.sim);
     this.handleChoices(input, events);
     this.gradeShots(events);
@@ -126,10 +129,13 @@ export class RunScene implements Scene {
 
   render(elapsed: number): void {
     const beat = this.ctx.audio?.currentBeat() ?? null;
-    this.renderer.render(this.state, this.paused ? 0 : elapsed, beat);
+    const p = this.state.player;
+    const target = cameraTarget(p.x, p.w, this.state.fieldW, viewport.w);
+    this.camX = followCamera(this.camX, target, this.paused ? 0 : elapsed);
+    this.renderer.render(this.state, this.paused ? 0 : elapsed, beat, this.camX, viewport.w);
     const shakeOn = this.ctx.save.settings.shake;
     const off = shakeOn ? this.renderer.shakeOffset(this.state.time) : { x: 0, y: 0 };
-    this.renderer.root.position.set(Math.round(off.x), Math.round(off.y));
+    this.renderer.root.position.set(Math.round(off.x) - this.camX, Math.round(off.y));
     this.ctx.setAberration(shakeOn ? this.renderer.trauma : 0);
     this.hud.update(this.state, this.paused, beat, this.ctx.audio !== null, elapsed);
     this.pauseMenu.visible = this.paused;

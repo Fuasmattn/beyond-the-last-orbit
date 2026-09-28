@@ -23,7 +23,6 @@ import { ShopScene } from '../scenes/shopScene';
 import { TitleScene } from '../scenes/titleScene';
 import { createBackdrop, type Backdrop } from '../view/backdrops';
 import { beatPulse } from '../view/beatPulse';
-import { FireButtonView } from '../view/fireButton';
 import { PostFx } from '../view/postfx';
 import { Starfield } from '../view/starfield';
 import { loadTextures } from '../view/textures';
@@ -109,30 +108,29 @@ export async function startApp(host: HTMLElement): Promise<void> {
   const menuStars = new Starfield();
   let menuPlanet: Backdrop | null = null;
   sceneLayer.addChild(menuBackdrop);
-  // Clip everything (planets, streaks, off-field bullets) to the playfield.
+  const isTouch = window.matchMedia('(pointer: coarse)').matches;
+  // Clip everything (planets, streaks, off-field bullets) to the visible part of the playfield.
   const fieldMask = new Graphics();
   game.addChild(sceneLayer, fieldMask);
   sceneLayer.mask = fieldMask;
 
-  const isTouch = window.matchMedia('(pointer: coarse)').matches;
-  const fireButton = isTouch ? new FireButtonView() : null;
-  if (fireButton) game.addChild(fireButton);
   app.stage.addChild(game);
   const postFx = new PostFx(game, window.devicePixelRatio || 1);
   app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-  let layout: Layout = computeLayout(window.innerWidth, window.innerHeight);
+  let layout: Layout = computeLayout(window.innerWidth, window.innerHeight, isTouch);
   // Menus lay themselves out once; rebuild them when the field width changes. Runs adopt it at the next stage.
   let rebuildMenu: (() => void) | null = null;
   const applyLayout = () => {
-    layout = computeLayout(window.innerWidth, window.innerHeight);
-    const widthChanged = layout.fieldW !== viewport.w;
-    viewport.w = layout.fieldW;
+    layout = computeLayout(window.innerWidth, window.innerHeight, isTouch);
+    const widthChanged = layout.viewW !== viewport.w;
+    viewport.w = layout.viewW;
+    viewport.fieldW = layout.fieldW;
     game.scale.set(layout.scale);
     game.position.set(layout.offsetX, layout.offsetY);
-    fieldMask.clear().rect(0, 0, layout.fieldW, FIELD_H).fill(0xffffff);
+    fieldMask.clear().rect(0, 0, layout.viewW, FIELD_H).fill(0xffffff);
     menuPlanet?.root.destroy({ children: true });
-    menuPlanet = createBackdrop('earth', layout.fieldW);
+    menuPlanet = createBackdrop('earth', layout.viewW);
     menuBackdrop.removeChildren();
     menuBackdrop.addChild(menuStars, menuPlanet.root);
     postFx.setScale(layout.scale);
@@ -222,9 +220,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
       console.info('Performance: reduced post-FX');
     }
     loop.advance(elapsed, () => {
-      const touchFrame = touch.poll();
-      if (touchFrame.firePressed) fireButton?.press();
-      const sim = mergeInputs([keyboard.poll(), touchFrame]);
+      const sim = mergeInputs([keyboard.poll(), touch.poll()]);
       sim.beat = audio?.simBeat() ?? null;
       const input: FrameInput = {
         sim,
@@ -243,7 +239,6 @@ export async function startApp(host: HTMLElement): Promise<void> {
       menuPlanet?.update(elapsed, pulse);
     }
     scene.render(elapsed);
-    fireButton?.update(elapsed, pulse);
     postFx.update(elapsed);
   });
 }

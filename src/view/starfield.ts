@@ -7,14 +7,17 @@ interface Star {
 }
 
 interface Layer {
+  root: Container;
   stars: Star[];
   speed: number;
+  parallax: number;
 }
 
+/** `parallax`: fraction of the camera's pan the layer moves on screen (far stars move least). */
 const LAYERS = [
-  { count: 100, speed: 6, color: 0x3a4466, size: 1 },
-  { count: 60, speed: 14, color: 0x8899bb, size: 1 },
-  { count: 25, speed: 32, color: 0xffffff, size: 2 },
+  { count: 100, speed: 6, color: 0x3a4466, size: 1, parallax: 0.2 },
+  { count: 60, speed: 14, color: 0x8899bb, size: 1, parallax: 0.4 },
+  { count: 25, speed: 32, color: 0xffffff, size: 2, parallax: 0.65 },
 ] as const;
 
 /** Stretch of star streaks per unit of extra speed during warp. */
@@ -26,6 +29,8 @@ export class Starfield extends Container {
   constructor() {
     super();
     for (const def of LAYERS) {
+      const root = new Container();
+      this.addChild(root);
       const stars: Star[] = [];
       for (let i = 0; i < def.count; i++) {
         const s = new Sprite(Texture.WHITE);
@@ -34,11 +39,16 @@ export class Starfield extends Container {
         s.height = def.size;
         s.x = Math.floor(Math.random() * FIELD_W_MAX);
         s.y = Math.random() * FIELD_H;
-        this.addChild(s);
+        root.addChild(s);
         stars.push({ sprite: s, size: def.size });
       }
-      this.layers.push({ stars, speed: def.speed });
+      this.layers.push({ root, stars, speed: def.speed, parallax: def.parallax });
     }
+  }
+
+  /** Offsets the layers for a camera at `camX` inside a parent that is shifted by `-camX`. */
+  pan(camX: number): void {
+    for (const layer of this.layers) layer.root.x = camX * (1 - layer.parallax);
   }
 
   /** `speedMul` > 1 streaks the stars (warp). */

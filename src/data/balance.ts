@@ -5,6 +5,8 @@ export const FIELD_W_DEFAULT = 240;
 /** Menus are laid out in a fixed MENU_W × FIELD_H frame that the app centers and scales to fit. */
 export const MENU_W = 240;
 export const FIELD_H = 320;
+/** Touch devices: the visible width fills the screen; the field is `overscan` times wider and the camera pans. */
+export const TOUCH_VIEW = { minW: 120, overscan: 1.3 } as const;
 /** Top edge of the player movement zone (bottom 25 % of the field). */
 export const PLAYER_ZONE_TOP = 240;
 /** Rhythm strip along the bottom edge; the player stays above it. */

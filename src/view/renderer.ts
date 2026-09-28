@@ -1,5 +1,4 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
-import { viewport } from '../app/viewport';
 import { FIELD_H, PLAYER, WARP } from '../data/balance';
 import type { LaserDef, SkinDef } from '../data/cosmetics';
 import { worldAt, type WorldId } from '../data/worlds';
@@ -43,6 +42,8 @@ const ENEMY_PULSE = 0.18;
 const FLAME_COLOR = 0x9ff6ff;
 const MASTER_PULSE = 1.6;
 const MASTER_BACKDROP = 0x2a0f2e;
+/** Fraction of the camera's pan the planet and grid move on screen. */
+const PLANET_PARALLAX = 0.35;
 
 export interface Cosmetics {
   skin: SkinDef;
@@ -151,12 +152,19 @@ export class GameRenderer {
     if (events.some((e) => e.type === 'shot')) this.recoil = RECOIL_TIME;
   }
 
-  render(state: SimState, dt: number, beat: number | null): void {
+  /**
+   * `camX` is the left edge of the view in field coords (the caller shifts `root` by `-camX`), `viewW` its width.
+   * Background layers are offset so they pan slower than the field.
+   */
+  render(state: SimState, dt: number, beat: number | null, camX = 0, viewW = state.fieldW): void {
     // Beat stages thump harder so the rhythm is felt even with the sound low.
     const pulse = Math.min(1, beatPulse(beat) * (state.beatMode === 'master' ? MASTER_PULSE : 1));
     const warp = state.phase === 'warp';
     const warpProgress = warp ? 1 - state.phaseTimer / WARP.time : 0;
-    this.backdrop.width = viewport.w;
+    this.backdrop.x = camX;
+    this.backdrop.width = viewW;
+    this.starfield.pan(camX);
+    this.planetLayer.x = camX * (1 - PLANET_PARALLAX);
     const pulseColor = state.beatMode === 'master' ? MASTER_BACKDROP : BACKDROP_PULSE;
     this.backdrop.tint = lerpColor(BACKDROP_BASE, pulseColor, pulse * 0.6);
     this.starfield.update(dt, warp ? 1 + WARP_SPEED * Math.sin(Math.PI * warpProgress) : 1);
@@ -283,12 +291,12 @@ export class GameRenderer {
 
   private renderPlanet(state: SimState, dt: number, warp: boolean, pulse: number): void {
     const id = worldAt(state.world).id;
-    if (id !== this.world || viewport.w !== this.backdropW) {
+    if (id !== this.world || state.fieldW !== this.backdropW) {
       this.planet?.root.destroy({ children: true });
-      this.planet = createBackdrop(id, viewport.w);
+      this.planet = createBackdrop(id, state.fieldW);
       this.planetLayer.addChild(this.planet.root);
       this.world = id;
-      this.backdropW = viewport.w;
+      this.backdropW = state.fieldW;
     }
     this.planet?.update(dt, pulse);
     const target = warp ? 0 : 1;

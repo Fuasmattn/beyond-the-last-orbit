@@ -45,7 +45,14 @@ export class TouchInput implements InputSource {
       const l = getLayout();
       const tap = { x: (e.clientX - l.offsetX) / l.scale, y: (e.clientY - l.offsetY) / l.scale };
       this.taps.push(tap);
-      if (e.pointerType === 'mouse' || this.reserved(tap)) return;
+      if (e.pointerType === 'mouse') return;
+      // The first finger of a new gesture: fingers still tracked lost their up/cancel event
+      // (e.g. to an OS gesture), so forget them rather than letting a dead finger hold steering.
+      if (e.isPrimary) {
+        this.pointers.clear();
+        this.steer = null;
+      }
+      if (this.reserved(tap)) return;
       this.pointers.set(e.pointerId, {
         x: e.clientX,
         y: e.clientY,

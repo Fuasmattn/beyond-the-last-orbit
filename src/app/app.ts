@@ -126,6 +126,11 @@ export async function startApp(host: HTMLElement): Promise<void> {
   app.stage.addChild(game);
   const postFx = new PostFx(game, window.devicePixelRatio || 1);
   app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  // iOS: cancelling the touch's default action stops long-press selection, the magnifier and callouts,
+  // which would otherwise cancel the pointer stream mid-drag. Pointer events still fire.
+  app.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('selectstart', (e) => e.preventDefault());
+  window.addEventListener('touchend', unlockAudio);
 
   let layout: Layout = computeLayout(window.innerWidth, window.innerHeight, isTouch);
   // Menus lay themselves out once; rebuild them when the field width changes. Runs adopt it at the next stage.

@@ -18,8 +18,8 @@ function setup(scale = 2, reserved?: (t: { x: number; y: number }) => boolean) {
     },
     reserved,
   );
-  const send = (type: string, id: number, x: number, y: number, timeStamp: number) =>
-    handlers.get(type)!({ pointerId: id, pointerType: 'touch', clientX: x, clientY: y, timeStamp } as PointerEvent);
+  const send = (type: string, id: number, x: number, y: number, timeStamp: number, isPrimary = id === 1) =>
+    handlers.get(type)!({ pointerId: id, pointerType: 'touch', clientX: x, clientY: y, timeStamp, isPrimary } as PointerEvent);
   return { input, judged, send };
 }
 
@@ -82,6 +82,17 @@ describe('TouchInput', () => {
     send('pointerdown', 2, 100, 100, 100);
     send('pointermove', 2, 110, 100, 116);
     expect(input.poll().dragX).toBeCloseTo(12.5);
+  });
+
+  it('recovers when a finger never reported lifting', () => {
+    const { input, send } = setup(1);
+    send('pointerdown', 1, 100, 500, 0);
+    // The OS swallowed pointerup/pointercancel for finger 1. A new gesture starts with finger 3.
+    send('pointerdown', 3, 200, 500, 1000, true);
+    send('pointermove', 3, 210, 500, 1016);
+    const f = input.poll();
+    expect(f.dragX).toBeCloseTo(12.5);
+    expect(f.firePressed).toBe(false);
   });
 
   it('hands steering to a remaining finger when the steer finger lifts', () => {

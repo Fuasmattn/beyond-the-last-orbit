@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BOSS_POINTS, DREAD, SIM_DT, STAGE } from '../../src/data/balance';
-import { dreadCore, hitDreadnought, updateDreadnought } from '../../src/sim/boss/dreadnought';
+import { curtainGapX, dreadCore, hitDreadnought, updateDreadnought } from '../../src/sim/boss/dreadnought';
 import { startStage } from '../../src/sim/stageFlow';
 import { createInitialState } from '../../src/sim/state';
 import type { Boss, Bullet, SimEvent, SimState } from '../../src/sim/types';
@@ -64,11 +64,20 @@ describe('ARES DREADNOUGHT', () => {
   it('fires bullet curtains with a gap in phase 3', () => {
     const { s, b } = ready();
     b.phase = 3;
-    updateDreadnought(s, SIM_DT, 2, []);
+    updateDreadnought(s, SIM_DT, DREAD.curtainEvery - 1, []);
+    expect(s.bullets).toHaveLength(0);
+    updateDreadnought(s, SIM_DT, 1, []);
     const xs = s.bullets.map((x) => x.x + x.w / 2).sort((a, c) => a - c);
     expect(xs.length).toBeGreaterThan(5);
     const gaps = xs.slice(1).map((x, i) => x - xs[i]!);
     expect(Math.max(...gaps)).toBeGreaterThanOrEqual(2 * DREAD.gapNarrow);
+  });
+
+  it('keeps consecutive curtain gaps within reach', () => {
+    for (let n = 0; n < 200; n += DREAD.curtainEvery) {
+      const shift = Math.abs(curtainGapX(n + DREAD.curtainEvery, 427) - curtainGapX(n, 427));
+      expect(shift).toBeLessThanOrEqual(40);
+    }
   });
 
   it('dies and pays world-scaled points', () => {

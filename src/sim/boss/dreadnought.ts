@@ -52,7 +52,7 @@ export function dreadCore(b: Boss): Box {
 
 /** Horizontal center of the curtain gap for a given beat count. */
 export function curtainGapX(beatCount: number, fieldW: number): number {
-  return fieldW / 2 + Math.sin(beatCount * 0.4) * Math.min(80, fieldW / 2 - 30);
+  return fieldW / 2 + Math.sin(beatCount * DREAD.gapDrift) * Math.min(80, fieldW / 2 - 30);
 }
 
 export function updateDreadnought(state: SimState, dt: number, beats: number, events: SimEvent[]): void {
@@ -87,9 +87,9 @@ function onBeat(state: SimState, b: Boss, events: SimEvent[]): void {
   } else if (b.phase === 2) {
     if (n % 4 === 2) fireSpread(state, cx, cy, 5, DREAD.spreadAngle, state.diff.bulletSpeed);
     if (n % 8 === 0) dropBombs(state, b);
-  } else if (n % 2 === 0) {
-    // Gaps open wide on the downbeat.
-    curtain(state, b, n % 4 === 0);
+  } else if (n % DREAD.curtainEvery === 0) {
+    // Every other curtain opens wide.
+    curtain(state, b, n % (2 * DREAD.curtainEvery) === 0);
   }
 }
 

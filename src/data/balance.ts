@@ -161,9 +161,9 @@ export const HIVE = {
   escortVx: 25,
   escortVy: 35,
   phaseEvery: 4,
-  ringCount: 12,
+  ringCount: 10,
   ringSpin: 0.26,
-  swarmEvery: 4,
+  swarmEvery: 6,
   swarmSpeed: 90,
   burstSpread: 0.15,
 } as const;
@@ -190,10 +190,15 @@ export const DREAD = {
     [48, 18],
   ],
   spreadAngle: 0.25,
-  curtainStep: 14,
+  /** Phase 3: a curtain every `curtainEvery` beats; every other one opens wide. */
+  curtainEvery: 4,
+  curtainStep: 16,
   curtainSpeed: 70,
-  gapNarrow: 20,
-  gapWide: 34,
+  /** Half-widths of the curtain gap. */
+  gapNarrow: 26,
+  gapWide: 40,
+  /** Gap center drift per beat (rad of a sine sweep); keeps the next gap within reach. */
+  gapDrift: 0.12,
 } as const;
 
 export const RHYTHM = {
@@ -244,7 +249,7 @@ export const ELITE = {
   burstSpread: 0.22,
   /** Every `ringEvery` beats (one bar) a formation enemy fires the world's volley; it flashes one beat before. */
   ringEvery: 4,
-  ringCount: 10,
+  ringCount: 8,
   ringSpeed: 55,
   /** Earth: a falling wall of bullets with one gap, every `wallEveryBars` bars. */
   wallEveryBars: 2,
@@ -255,7 +260,7 @@ export const ELITE = {
   wallGapDrift: 60,
   /** Mars: aimed fan, alternating with rings. */
   fanCount: 5,
-  fanSpread: 0.18,
+  fanSpread: 0.24,
 } as const;
 
 /** Rogue route map: node weights for the non-battle slots (elite gains per world). */

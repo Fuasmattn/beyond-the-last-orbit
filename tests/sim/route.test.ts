@@ -267,7 +267,7 @@ describe('per-world elite volleys', () => {
     expect(s.enemies.filter((e) => e.charging)).toHaveLength(1);
     step(s, { ...NO_INPUT, beat: 4.01 });
     expect(s.enemies.some((e) => e.charging)).toBe(false);
-    expect(s.bullets.filter((b) => b.owner === 'enemy').length).toBeGreaterThanOrEqual(10);
+    expect(s.bullets.filter((b) => b.owner === 'enemy').length).toBeGreaterThanOrEqual(ELITE.ringCount);
   });
 
   it('Earth fires a wall with a gap', () => {

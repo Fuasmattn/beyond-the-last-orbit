@@ -41,7 +41,7 @@ Moon has no bars; the Hive and the Moon/Mars elites were thinned out the same wa
 | Dreadnought curtain cadence | every 2 beats, wide on the downbeat | every 4 beats, wide every other curtain |
 | Curtain gap (full width) | 40 / 68 px | 52 / 80 px |
 | Curtain bullet step | 14 px | 16 px |
-| Curtain gap drift | `sin(beat · 0.4)` | `sin(beat · 0.2)` — at most ~40 px between curtains |
+| Curtain gap drift | `sin(beat · 0.4)` | `sin(beat · 0.12)` — at most ~40 px between curtains |
 | Hive phased ring | 12 bullets | 10 bullets |
 | Hive phase 3 diver pair | every 4 beats | every 6 beats |
 | Moon/Mars elite ring | 10 bullets | 8 bullets |

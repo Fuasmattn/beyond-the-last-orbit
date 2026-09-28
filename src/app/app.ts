@@ -1,7 +1,7 @@
 import { Application, Container, Graphics, TextureSource } from 'pixi.js';
 import { AudioEngine } from '../audio/engine';
 import { compileSong, type CompiledSong } from '../audio/song';
-import { FIELD_H, FX, MAX_STEPS_PER_FRAME, MENU_W, SIM_DT } from '../data/balance';
+import { FIELD_H, FX, MAX_STEPS_PER_FRAME, MENU_W, MENU_W_TOUCH, SIM_DT } from '../data/balance';
 import { EARTH_SONG } from '../data/songs/earth';
 import { MARS_SONG } from '../data/songs/mars';
 import { METRONOME_SONG } from '../data/songs/metronome';
@@ -24,6 +24,7 @@ import { TitleScene } from '../scenes/titleScene';
 import { createBackdrop, type Backdrop } from '../view/backdrops';
 import { beatPulse } from '../view/beatPulse';
 import { PostFx } from '../view/postfx';
+import { SoundToggle } from '../view/soundToggle';
 import { Starfield } from '../view/starfield';
 import { loadTextures } from '../view/textures';
 import { FixedLoop } from './fixedLoop';
@@ -40,19 +41,24 @@ function browserStore(): KeyValueStore {
   }
 }
 
-/** Menus use a fixed MENU_W × FIELD_H design frame, centered and shrunk to fit narrow fields. */
+/** Screens that show the speaker toggle: the first screen, and where volumes live. */
+function showsSoundToggle(scene: Scene): boolean {
+  return scene instanceof TitleScene || scene instanceof SettingsScene;
+}
+
+/** Menus use a `viewport.menuW × FIELD_H` design frame, centered and shrunk to fit narrow fields. */
 function menuFrame(scene: Scene): boolean {
   return !(scene instanceof RunScene);
 }
 
 function menuScale(): number {
-  return Math.min(1, viewport.w / MENU_W);
+  return Math.min(1, viewport.w / viewport.menuW);
 }
 
 function frameMenu(scene: Scene): void {
   const k = menuScale();
   scene.root.scale.set(k);
-  scene.root.position.set(Math.round((viewport.w - MENU_W * k) / 2), Math.round((FIELD_H - FIELD_H * k) / 2));
+  scene.root.position.set(Math.round((viewport.w - viewport.menuW * k) / 2), Math.round((FIELD_H - FIELD_H * k) / 2));
 }
 
 function toMenu(scene: Scene, t: Tap): Tap {
@@ -114,6 +120,8 @@ export async function startApp(host: HTMLElement): Promise<void> {
   game.addChild(sceneLayer, fieldMask);
   sceneLayer.mask = fieldMask;
 
+  const soundToggle = new SoundToggle(textures.glyphs, isTouch ? 2 : 1);
+  game.addChild(soundToggle);
   app.stage.addChild(game);
   const postFx = new PostFx(game, window.devicePixelRatio || 1);
   app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -126,6 +134,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
     const widthChanged = layout.viewW !== viewport.w;
     viewport.w = layout.viewW;
     viewport.fieldW = layout.fieldW;
+    viewport.menuW = isTouch ? MENU_W_TOUCH : MENU_W;
     game.scale.set(layout.scale);
     game.position.set(layout.offsetX, layout.offsetY);
     fieldMask.clear().rect(0, 0, layout.viewW, FIELD_H).fill(0xffffff);
@@ -158,7 +167,8 @@ export async function startApp(host: HTMLElement): Promise<void> {
       return d;
     },
     applySettings: () => {
-      audio?.setVolumes(save.settings.musicVolume, save.settings.sfxVolume);
+      const on = save.settings.muted ? 0 : 1;
+      audio?.setVolumes(save.settings.musicVolume * on, save.settings.sfxVolume * on);
       audio?.setVisualOffset(save.settings.visualOffsetMs);
       audio?.setGuitarTone(save.settings.guitarTone);
       postFx.configure(save.settings);
@@ -214,6 +224,20 @@ export async function startApp(host: HTMLElement): Promise<void> {
 
   const monitor = new FrameMonitor(FX.degrade.windowMs, FX.degrade.maxAvgMs, FX.degrade.stallMs);
   const loop = new FixedLoop(SIM_DT, MAX_STEPS_PER_FRAME);
+  // A tap that starts audio only starts it; the toggle reacts once sound was already running.
+  let soundReady = false;
+  let uiTime = 0;
+  const toggleSound = (taps: Tap[]): Tap[] => {
+    if (!audio || !showsSoundToggle(scene)) return taps;
+    const rest = taps.filter((t) => !soundToggle.hit(t));
+    if (rest.length < taps.length && soundReady) {
+      save.settings.muted = !save.settings.muted;
+      ctx.applySettings();
+      ctx.persist();
+      if (!save.settings.muted) audio.sfx.menuSelect();
+    }
+    return rest;
+  };
   app.ticker.add((ticker) => {
     const elapsed = Math.min(ticker.deltaMS / 1000, 0.25);
     if (!document.hidden && monitor.push(ticker.deltaMS) && postFx.degrade()) {
@@ -225,7 +249,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
       const input: FrameInput = {
         sim,
         menu: keyboard.consumeMenu(),
-        taps: menuFrame(scene) ? touch.consumeTaps().map((t) => toMenu(scene, t)) : touch.consumeTaps(),
+        taps: menuFrame(scene) ? toggleSound(touch.consumeTaps()).map((t) => toMenu(scene, t)) : touch.consumeTaps(),
         pause: keyboard.consumePause(),
       };
       scene.update(input, SIM_DT);
@@ -239,6 +263,10 @@ export async function startApp(host: HTMLElement): Promise<void> {
       menuPlanet?.update(elapsed, pulse);
     }
     scene.render(elapsed);
+    uiTime += elapsed;
+    soundToggle.visible = audio !== null && showsSoundToggle(scene);
+    if (soundToggle.visible) soundToggle.update(save.settings.muted, audio!.isUnlocked, viewport.w, uiTime);
+    soundReady = audio?.isUnlocked ?? false;
     postFx.update(elapsed);
   });
 }

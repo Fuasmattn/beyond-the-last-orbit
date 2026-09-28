@@ -36,6 +36,7 @@ export class AudioEngine {
   private playing: Playing | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private unlocked = false;
+  private paused = false;
   private readonly warbleIn: GainNode;
   private readonly warbleDepth: GainNode;
   private sour = 0;
@@ -79,11 +80,22 @@ export class AudioEngine {
     }
   }
 
-  /** Call from inside a user-gesture handler. */
+  /** True once a user gesture has started audio. */
+  get isUnlocked(): boolean {
+    return this.unlocked;
+  }
+
+  /**
+   * Call from inside a user-gesture handler. Also resumes a context iOS interrupted (calls, backgrounding).
+   * The 'playback' audio session keeps sound on when the iPhone's silent switch is set (Safari 16.4+).
+   */
   unlock(): void {
-    if (this.unlocked) return;
-    this.unlocked = true;
-    void this.ctx.resume();
+    if (!this.unlocked) {
+      this.unlocked = true;
+      const session = (navigator as { audioSession?: { type: string } }).audioSession;
+      if (session) session.type = 'playback';
+    }
+    if (this.ctx.state !== 'running' && !this.paused) void this.ctx.resume();
   }
 
   /**
@@ -153,6 +165,7 @@ export class AudioEngine {
   }
 
   setPaused(paused: boolean): void {
+    this.paused = paused;
     if (!this.unlocked) return;
     // The clock stops while suspended; re-anchor from scratch rather than decaying the old offset.
     this.sync.reset();

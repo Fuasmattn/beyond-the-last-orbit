@@ -44,6 +44,7 @@ function sanitizeSettings(v: unknown): Settings {
     latencyOffsetMs: num(v.latencyOffsetMs, d.latencyOffsetMs, -300, 300),
     guitarTone: v.guitarTone === 'retro' ? 'retro' : 'amp',
     visualOffsetMs: num(v.visualOffsetMs, d.visualOffsetMs, -VISUAL_OFFSET_MAX_MS, VISUAL_OFFSET_MAX_MS),
+    muted: bool(v.muted, d.muted),
   };
 }
 

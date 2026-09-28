@@ -23,6 +23,8 @@ export interface Settings {
   visualOffsetMs: number;
   /** Soundtrack guitars: modeled amp (default) or the original retro synth. */
   guitarTone: 'amp' | 'retro';
+  /** Master mute (the speaker toggle on menu screens); volumes are kept. */
+  muted: boolean;
 }
 
 export interface SaveData {
@@ -56,6 +58,7 @@ export function defaultSave(): SaveData {
       latencyOffsetMs: 0,
       visualOffsetMs: 0,
       guitarTone: 'amp',
+      muted: false,
     },
   };
 }

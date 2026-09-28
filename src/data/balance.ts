@@ -4,6 +4,8 @@ export const FIELD_W_MAX = 600;
 export const FIELD_W_DEFAULT = 240;
 /** Menus are laid out in a fixed MENU_W × FIELD_H frame that the app centers and scales to fit. */
 export const MENU_W = 240;
+/** Touch devices use a narrower menu frame so text scales up on phones. */
+export const MENU_W_TOUCH = 160;
 export const FIELD_H = 320;
 /** Touch devices: the visible width fills the screen; the field is `overscan` times wider and the camera pans. */
 export const TOUCH_VIEW = { minW: 120, overscan: 1.3 } as const;

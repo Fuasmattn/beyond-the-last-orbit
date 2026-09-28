@@ -28,9 +28,25 @@ The two "bars" in world 1 (Earth):
 | Laser sweep / width | 60 px / 8 px | 40 px / 6 px |
 | Warden phase 3 ring | every beat | every other beat, none while the laser burns |
 
-Moon and Mars elite volleys and the other bosses are unchanged; they come later in the run.
+## Moon and Mars pass
+
+Owner follow-up: "yes, give moon and mars the same pass".
+
+The Mars bar is the **Dreadnought phase 3 curtain**: a full-width bullet row every 2 beats (0.75 s at 160 BPM,
+~52 px apart when falling), gap 40 px (68 on the downbeat) and the gap center moving up to ~60 px per curtain.
+Moon has no bars; the Hive and the Moon/Mars elites were thinned out the same way.
+
+| | Before | After |
+|---|---|---|
+| Dreadnought curtain cadence | every 2 beats, wide on the downbeat | every 4 beats, wide every other curtain |
+| Curtain gap (full width) | 40 / 68 px | 52 / 80 px |
+| Curtain bullet step | 14 px | 16 px |
+| Curtain gap drift | `sin(beat · 0.4)` | `sin(beat · 0.2)` — at most ~40 px between curtains |
+| Hive phased ring | 12 bullets | 10 bullets |
+| Hive phase 3 diver pair | every 4 beats | every 6 beats |
+| Moon/Mars elite ring | 10 bullets | 8 bullets |
+| Mars elite fan spread | 0.18 rad | 0.24 rad |
 
 ## Open for playtest
 
-- Whether Moon/Mars elites and the Hive/Dreadnought need the same pass.
 - Whether the wall should still aim near the player on later loops, or drift back to random for challenge.

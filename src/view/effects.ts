@@ -102,6 +102,12 @@ export class Effects extends Container {
           this.sparks(e.x, e.y, 3, [0x4af2ff, 0xffffff]);
           this.popups.spawn(`+${e.points}`, 0x4af2ff, e.x, e.y);
           break;
+        case 'bulletCancel': {
+          for (const s of e.spots) this.sparks(s.x, s.y, 3, [0xffe14a, 0xffffff]);
+          const mid = e.spots.reduce((acc, s) => ({ x: acc.x + s.x / e.spots.length, y: acc.y + s.y / e.spots.length }), { x: 0, y: 0 });
+          this.popups.spawn(`CANCEL +${e.points}`, 0xffe14a, mid.x, mid.y);
+          break;
+        }
         case 'shieldHit':
           this.explode(e.x, e.y, 16, [0x7dff6b, 0xffffff], 70);
           this.shake.add(TRAUMA.part);

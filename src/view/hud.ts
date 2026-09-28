@@ -112,6 +112,12 @@ export class Hud extends Container {
     this.track.judge(label);
   }
 
+  /** Short centered callout (upgrade taken, extra ship, multiplier step). */
+  say(text: string): void {
+    this.popup.setText(text);
+    this.popupTime = POPUP_TIME;
+  }
+
   notify(events: readonly SimEvent[]): void {
     for (const e of events) {
       const text =
@@ -126,10 +132,7 @@ export class Hud extends Container {
             : e.type === 'boonTaken' && e.id
               ? `${boonDef(e.id).name}!`
               : null;
-      if (text) {
-        this.popup.setText(text);
-        this.popupTime = POPUP_TIME;
-      }
+      if (text) this.say(text);
     }
   }
 

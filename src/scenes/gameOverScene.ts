@@ -66,7 +66,14 @@ export class GameOverScene implements Scene {
     centerText(score, 58);
     const loop = summary.loop > 0 ? `LOOP ${summary.loop + 1} ` : '';
     const reached = new PixelText(g, `REACHED ${loop}${summary.world + 1}-${summary.stage}`, 0xcccccc);
-    centerText(reached, 70);
+    centerText(reached, 68);
+    // Stat card: what the run was made of.
+    const acc = Math.round(summary.accuracy * 100);
+    const stats1 = new PixelText(g, `ACC ${acc}%  ${summary.kills} KILLS  ${summary.grazes} GRAZES`, 0x9ff6ff);
+    centerText(stats1, 78);
+    const rank = summary.bestBeatRank ?? '-';
+    const stats2 = new PixelText(g, `BEAT RANK ${rank}  ${summary.upgrades} UPGRADES`, 0x9ff6ff);
+    centerText(stats2, 88);
     this.creditsLine = new PixelText(g, '', 0x7dff6b);
 
     const global = this.globalTable;
@@ -97,6 +104,8 @@ export class GameOverScene implements Scene {
       title,
       score,
       reached,
+      stats1,
+      stats2,
       this.creditsLine,
       this.heading,
       ...this.letters,
@@ -171,7 +180,7 @@ export class GameOverScene implements Scene {
   private tickCoins(dt: number): void {
     const shown = Math.floor(this.earned * Math.min(1, this.t / COUNT_UP_TIME));
     this.creditsLine.setText(`CREDITS +${shown}  TOTAL ${this.ctx.save.credits - this.earned + shown}`);
-    centerText(this.creditsLine, 84);
+    centerText(this.creditsLine, 98);
     if (shown >= this.earned) return;
     this.coinTimer -= dt;
     if (this.coinTimer <= 0) {

@@ -73,6 +73,8 @@ describe('LUNAR HIVE', () => {
     const { s, b } = ready();
     updateHive(s, SIM_DT, HIVE.escortEvery, []);
     b.hp = 1;
+    // Escort fire still in the air would be cancelled for bonus points; keep the kill payout exact.
+    s.bullets = [];
     hitHive(s, coreBullet(b), []);
     expect(s.phase).toBe('bossDying');
     expect(s.enemies).toHaveLength(0);

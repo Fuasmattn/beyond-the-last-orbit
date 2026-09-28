@@ -6,7 +6,7 @@ import { difficultyFor, eliteDifficulty } from './difficulty';
 import { spawnFormation } from './formation';
 import { clamp } from './math';
 import { generateMap, nodeAt, reachableLanes } from './route';
-import { clampStreak } from './scoring';
+import { cancelBullets, clampStreak } from './scoring';
 import { canChoose, resolveEvent, rollEvent } from './signal';
 import type { BeatMode, BeatRank, BoonId, SimEvent, SimState, StageResult, StageStats } from './types';
 
@@ -76,10 +76,17 @@ export function computeStageResult(stats: StageStats, boss: boolean, beatMode: B
   };
 }
 
+const RANK_ORDER: readonly BeatRank[] = ['C', 'B', 'A', 'S'];
+
 export function finishStage(state: SimState, events: SimEvent[]): void {
+  cancelBullets(state, events);
   const result = computeStageResult(state.stageStats, isBossStage(state.stage), state.beatMode);
   state.result = result;
   state.score += result.bonus;
+  if (result.beatRank) {
+    const best = state.run.bestBeatRank;
+    if (!best || RANK_ORDER.indexOf(result.beatRank) > RANK_ORDER.indexOf(best)) state.run.bestBeatRank = result.beatRank;
+  }
   if (result.perfect) state.run.perfectStages++;
   state.run.stagesCleared++;
   const beatDraft = result.beatRank === 'S' || result.beatRank === 'A';

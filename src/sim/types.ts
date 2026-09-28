@@ -349,7 +349,14 @@ export interface SimState {
   stats: { shots: number; hits: number; onBeatShots: number };
   stageStats: StageStats;
   result: StageResult | null;
-  run: { bossesKilled: number; perfectStages: number; stagesCleared: number };
+  run: {
+    bossesKilled: number;
+    perfectStages: number;
+    stagesCleared: number;
+    kills: number;
+    grazes: number;
+    bestBeatRank: BeatRank | null;
+  };
   rogue: RogueState;
 }
 
@@ -370,6 +377,7 @@ export type SimEvent =
   | { type: 'eventResolved'; text: string }
   | { type: 'shrapnel'; x: number; y: number }
   | { type: 'graze'; x: number; y: number; points: number }
+  | { type: 'bulletCancel'; count: number; points: number; spots: { x: number; y: number }[] }
   | { type: 'shieldHit'; x: number; y: number; shieldLeft: number }
   | { type: 'formationInvaded' }
   | { type: 'split'; id: number; x: number; y: number }

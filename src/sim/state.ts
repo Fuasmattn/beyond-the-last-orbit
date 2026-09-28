@@ -54,7 +54,7 @@ export function createInitialState(
     stats: { shots: 0, hits: 0, onBeatShots: 0 },
     stageStats: emptyStageStats(),
     result: null,
-    run: { bossesKilled: 0, perfectStages: 0, stagesCleared: 0 },
+    run: { bossesKilled: 0, perfectStages: 0, stagesCleared: 0, kills: 0, grazes: 0, bestBeatRank: null },
     rogue: createRogueState(seed, opts.rerolls, 0),
   };
   startStage(state, []);

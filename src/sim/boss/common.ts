@@ -1,4 +1,5 @@
 import { BOSS_DYING_TIME, BOSS_POINTS, HITSTOP } from '../../data/balance';
+import { cancelBullets } from '../scoring';
 import { aimVelocity, spawnEnemyBullet } from '../bullets';
 import type { Boss, Box, SimEvent, SimState } from '../types';
 
@@ -84,7 +85,7 @@ export function killBoss(state: SimState, events: SimEvent[]): void {
   state.phase = 'bossDying';
   state.phaseTimer = BOSS_DYING_TIME;
   state.run.bossesKilled++;
-  state.bullets = state.bullets.filter((x) => x.owner === 'player');
+  cancelBullets(state, events);
   state.enemies = [];
   events.push({ type: 'bossKilled', x: b.x + b.w / 2, y: b.y + b.h / 2, points });
 }

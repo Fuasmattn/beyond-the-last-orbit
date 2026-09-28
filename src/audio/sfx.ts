@@ -142,6 +142,11 @@ export class Sfx {
     this.burst(0.15, 0.12, 4000, 600);
   }
 
+  /** The multiplier reached a whole step. */
+  multUp(): void {
+    this.arpeggio([84, 91], 0.04, 0.05);
+  }
+
   /** Picking a route node or a drafted upgrade. */
   choose(): void {
     this.arpeggio([72, 79], 0.05, 0.06);

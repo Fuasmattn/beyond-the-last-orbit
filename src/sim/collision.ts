@@ -34,6 +34,7 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
       if (e.hp <= 0) {
         const points = registerKill(state, POINTS[e.kind], b.mult);
         state.rogue.scrap += state.diff.elite ? SCRAP.eliteKill : SCRAP.kill;
+        state.run.kills++;
         events.push({ type: 'enemyKilled', id: e.id, kind: e.kind, x: cx, y: cy, points });
         if (state.ship.shrapnel && !b.ttl) spawnShrapnel(state, cx, cy, b, events);
         if (e.kind === 'splitter') {

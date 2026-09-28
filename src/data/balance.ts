@@ -301,6 +301,9 @@ export const SIGNAL = {
   staticScrap: 25,
 } as const;
 
+/** Stage clear: every enemy bullet left on screen scores this × the multiplier. */
+export const CANCEL = { points: 5 } as const;
+
 /** Enemy bullets passing this close to the ship without hitting score a graze. */
 export const GRAZE = { margin: 8, points: 10 } as const;
 

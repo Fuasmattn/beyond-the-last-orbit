@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { BEAT_STAGE, COMBO, PLAYER, RHYTHM, SIM_DT } from '../../src/data/balance';
+import { BEAT_STAGE, CANCEL, COMBO, PLAYER, RHYTHM, SIM_DT } from '../../src/data/balance';
 import { hitPlayer, updatePlayer } from '../../src/sim/player';
 import {
   applyShotRhythm,
+  cancelBullets,
   comboMult,
   registerKill,
   rhythmMultForStreak,
@@ -10,7 +11,8 @@ import {
 } from '../../src/sim/scoring';
 import { defaultRunOptions } from '../../src/sim/ship';
 import { createInitialState } from '../../src/sim/state';
-import { NO_INPUT } from '../../src/sim/types';
+import { finishStage } from '../../src/sim/stageFlow';
+import { NO_INPUT, type SimEvent } from '../../src/sim/types';
 
 /** A run under beat lock: every stage judges timing. */
 const beatRun = () => createInitialState(1, undefined, { ...defaultRunOptions(), beatLock: true });
@@ -115,5 +117,42 @@ describe('kill combo', () => {
     const s = createInitialState(1);
     registerKill(s, 20, 1.5);
     expect(s.score).toBe(30);
+  });
+});
+
+describe('bullet cancel', () => {
+  it('turns leftover enemy bullets into points on stage clear', () => {
+    const s = createInitialState(1);
+    s.rhythm.mult = 2;
+    s.bullets = [
+      { id: 1, x: 10, y: 10, w: 2, h: 6, vx: 0, vy: 50, owner: 'enemy', onBeat: false, mult: 1 },
+      { id: 2, x: 30, y: 40, w: 2, h: 6, vx: 0, vy: 50, owner: 'enemy', onBeat: false, mult: 1 },
+      { id: 3, x: 50, y: 40, w: 2, h: 6, vx: 0, vy: -50, owner: 'player', onBeat: false, mult: 1 },
+    ];
+    const events: SimEvent[] = [];
+    cancelBullets(s, events);
+    expect(s.score).toBe(2 * CANCEL.points * 2);
+    expect(s.bullets.map((b) => b.id)).toEqual([3]);
+    const e = events.find((x) => x.type === 'bulletCancel');
+    expect(e && e.type === 'bulletCancel' ? [e.count, e.points, e.spots.length] : null).toEqual([2, 20, 2]);
+    cancelBullets(s, events);
+    expect(events.filter((x) => x.type === 'bulletCancel')).toHaveLength(1);
+  });
+
+  it('runs on stage clear and counts kills, grazes and the best beat rank for the run', () => {
+    const s = createInitialState(1);
+    s.bullets = [{ id: 1, x: 10, y: 10, w: 2, h: 6, vx: 0, vy: 50, owner: 'enemy', onBeat: false, mult: 1 }];
+    const events: SimEvent[] = [];
+    finishStage(s, events);
+    expect(events.some((x) => x.type === 'bulletCancel')).toBe(true);
+    expect(s.bullets).toEqual([]);
+    expect(s.run.bestBeatRank).toBeNull();
+    s.beatMode = 'master';
+    s.stageStats = { shots: 20, hits: 20, onBeatShots: 16, hitsTaken: 0, grazes: 0, time: 10 };
+    finishStage(s, events);
+    expect(s.run.bestBeatRank).toBe('A');
+    s.stageStats = { shots: 20, hits: 20, onBeatShots: 10, hitsTaken: 0, grazes: 0, time: 10 };
+    finishStage(s, events);
+    expect(s.run.bestBeatRank).toBe('A');
   });
 });

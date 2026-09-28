@@ -1,5 +1,5 @@
-import { BEAT_STAGE, COMBO, ELITE, GRAZE, RHYTHM } from '../data/balance';
-import type { Bullet, SimState } from './types';
+import { BEAT_STAGE, CANCEL, COMBO, ELITE, GRAZE, RHYTHM } from '../data/balance';
+import type { Bullet, SimEvent, SimState } from './types';
 
 export function rhythmMultForStreak(streak: number, maxMult: number = RHYTHM.maxMult): number {
   return Math.min(maxMult, 1 + RHYTHM.multStep * Math.floor(streak / RHYTHM.shotsPerStep));
@@ -94,6 +94,17 @@ export function registerGraze(state: SimState): number {
   const points = Math.round(GRAZE.points * state.ship.grazeMul * state.rhythm.mult * state.ship.scoreMul);
   state.score += points;
   state.stageStats.grazes++;
+  state.run.grazes++;
   if (state.ship.chargeGrazes > 0) state.charge = Math.min(state.ship.chargeGrazes, state.charge + 1);
   return points;
+}
+
+/** Stage clear: enemy bullets still in the air turn into points (bullet cancel), then vanish. */
+export function cancelBullets(state: SimState, events: SimEvent[]): void {
+  const spots = state.bullets.filter((b) => b.owner === 'enemy').map((b) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 }));
+  state.bullets = state.bullets.filter((b) => b.owner === 'player');
+  if (spots.length === 0) return;
+  const points = Math.round(spots.length * CANCEL.points * state.rhythm.mult * state.ship.scoreMul);
+  state.score += points;
+  events.push({ type: 'bulletCancel', count: spots.length, points, spots });
 }

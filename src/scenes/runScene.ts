@@ -55,6 +55,8 @@ export class RunScene implements Scene {
   private gameOverTime = 0;
   /** Left edge of the view in field coords; the field is wider than the screen on touch. */
   private camX: number | null = null;
+  /** Last whole multiplier called out. */
+  private multStep = 1;
   private readonly sour = new Sourness();
   private readonly board: Board;
 
@@ -113,6 +115,7 @@ export class RunScene implements Scene {
     const events = step(s, input.sim);
     this.handleChoices(input, events);
     this.gradeShots(events);
+    this.calloutMultiplier();
     this.hud.notify(events);
     this.renderer.notify(events);
     this.playEvents(events);
@@ -213,6 +216,17 @@ export class RunScene implements Scene {
     this.root.destroy({ children: true });
   }
 
+  /** Reaching a whole multiplier (x2, x3, …) gets a callout; dropping back is silent. */
+  private calloutMultiplier(): void {
+    const mult = this.state.rhythm.mult;
+    const whole = Math.floor(mult);
+    if (whole > this.multStep && whole >= 2 && mult === whole) {
+      this.hud.say(`X${whole}!`);
+      this.ctx.audio?.sfx.multUp();
+    }
+    if (whole !== this.multStep) this.multStep = whole;
+  }
+
   /** Shows PERFECT/GOOD/OFF on the beat track, using the press timing measured at input time. */
   private gradeShots(events: readonly SimEvent[]): void {
     const shot = events.find((e) => e.type === 'shot');
@@ -256,6 +270,11 @@ export class RunScene implements Scene {
         loop: s.loop,
         bossesKilled: s.run.bossesKilled,
         perfectStages: s.run.perfectStages,
+        accuracy: s.stats.shots > 0 ? Math.min(1, s.stats.hits / s.stats.shots) : 0,
+        kills: s.run.kills,
+        grazes: s.run.grazes,
+        bestBeatRank: s.run.bestBeatRank,
+        upgrades: Object.values(s.rogue.boons).reduce((a, b) => a + b, 0),
       }),
     );
   }

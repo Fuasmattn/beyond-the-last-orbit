@@ -4,7 +4,7 @@ import type { CompiledSong } from '../audio/song';
 import type { MenuAction, Tap } from '../input/inputFrame';
 import type { Board, Leaderboard } from '../leaderboard/leaderboard';
 import type { SaveData } from '../persist/schema';
-import type { InputFrame } from '../sim/types';
+import type { BeatRank, InputFrame } from '../sim/types';
 import type { GameTextures } from '../view/textures';
 
 /** Everything input-related for one fixed sim step. */
@@ -26,6 +26,12 @@ export interface RunSummary {
   loop: number;
   bossesKilled: number;
   perfectStages: number;
+  accuracy: number;
+  kills: number;
+  grazes: number;
+  bestBeatRank: BeatRank | null;
+  /** Boons taken (stacks counted). */
+  upgrades: number;
 }
 
 export interface Scene {

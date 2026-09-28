@@ -1,4 +1,4 @@
-# Space Alliance
+# Beyond the Last Orbit
 
 Neon arcade rhythm shooter with a procedurally synthesized 70s/80s heavy-metal soundtrack. Enemy formations fly in, sway on every beat and morph into new shapes every few bars. Shots fired on the beat build a score multiplier (up to x4); shots off the beat make the music go sour. The beat track along the bottom shows markers converging on the beat and grades every shot PERFECT / GOOD / OFF.
 

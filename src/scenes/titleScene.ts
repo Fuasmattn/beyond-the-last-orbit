@@ -27,20 +27,25 @@ export class TitleScene implements Scene {
   private tableTitles: string[] = [];
   private tablesVersion = -1;
   private readonly menu: MenuList;
-  private readonly logo: PixelText[];
+  private readonly logo: Container[];
   private logoX = 0;
   private t = 0;
 
   constructor(private readonly ctx: SceneContext) {
     const g = ctx.textures.glyphs;
     // Chromatic-split neon logo: cyan and pink ghosts drift around a white core.
+    // Two lines: the full title is too wide for MENU_W at the logo scale.
     this.logo = ([0x4af2ff, 0xff3d9a, 0xffffff] as const).map((color) => {
-      const t = new PixelText(g, 'SPACE ALLIANCE', color);
-      t.scale.set(3);
-      centerText(t, 48);
-      return t;
+      const top = new PixelText(g, 'BEYOND THE', color);
+      top.scale.set(2);
+      centerText(top, 34);
+      const bottom = new PixelText(g, 'LAST ORBIT', color);
+      bottom.scale.set(3);
+      centerText(bottom, 48);
+      const logo = new Container();
+      logo.addChild(top, bottom);
+      return logo;
     });
-    this.logoX = this.logo[2]!.x;
     this.tagline = new PixelText(g, 'DEFEND THE ORBIT. KEEP THE BEAT.', 0x4af2ff);
     centerText(this.tagline, 86);
     this.credits = new PixelText(g, '', 0x7dff6b);

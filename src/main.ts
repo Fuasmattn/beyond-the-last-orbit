@@ -21,7 +21,7 @@ const host = document.getElementById('app');
 if (!host) throw new Error('#app host element missing');
 
 if (!hasWebGL()) {
-  showError(host, 'Space Alliance needs WebGL. Please use a current browser with hardware acceleration enabled.');
+  showError(host, 'Beyond the Last Orbit needs WebGL. Please use a current browser with hardware acceleration enabled.');
 } else {
   startApp(host).catch((err: unknown) => {
     console.error(err);

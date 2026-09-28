@@ -1,4 +1,4 @@
--- Space Alliance global leaderboard (M11).
+-- Beyond the Last Orbit global leaderboard (M11).
 -- Run once in the Supabase dashboard: SQL Editor → New query → paste → Run. Safe to re-run.
 
 create table if not exists public.scores (

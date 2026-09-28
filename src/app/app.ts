@@ -265,7 +265,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
     scene.render(elapsed);
     uiTime += elapsed;
     soundToggle.visible = audio !== null && showsSoundToggle(scene);
-    if (soundToggle.visible) soundToggle.update(save.settings.muted, audio!.isUnlocked, viewport.w, uiTime);
+    if (soundToggle.visible) soundToggle.update(save.settings.muted, audio!.isUnlocked, uiTime);
     soundReady = audio?.isUnlocked ?? false;
     postFx.update(elapsed);
   });

@@ -1,5 +1,4 @@
 import { Container, Graphics, type Texture } from 'pixi.js';
-import { FIELD_H } from '../data/balance';
 import type { Tap } from '../input/inputFrame';
 import { blink } from './anim';
 import { PixelText } from './pixelText';
@@ -7,12 +6,12 @@ import { PixelText } from './pixelText';
 const ON = 0x7dff6b;
 const OFF = 0xff5a5a;
 const HINT = 0xffe14a;
-/** Icon box in logical px (before `scale`), anchored to the bottom-right corner of the screen. */
+/** Icon box in logical px (before `scale`), anchored to the top-left corner of the screen. */
 const ICON = { w: 11, h: 7, margin: 4 } as const;
 /** Taps this far around the icon and label still hit. */
 const SLOP = 6;
 
-/** Speaker icon with a label, bottom-right on menu screens. Before audio starts it asks for a tap. */
+/** Speaker icon with a label, top-left on menu screens. Before audio starts it asks for a tap. */
 export class SoundToggle extends Container {
   private readonly icon = new Graphics();
   private readonly status: PixelText;
@@ -30,11 +29,11 @@ export class SoundToggle extends Container {
     this.addChild(this.icon, this.status, this.hint);
   }
 
-  /** `unlocked`: audio has started (a gesture happened). `viewW`: visible logical width. */
-  update(muted: boolean, unlocked: boolean, viewW: number, time: number): void {
+  /** `unlocked`: audio has started (a gesture happened). */
+  update(muted: boolean, unlocked: boolean, time: number): void {
     const s = this.iconScale;
-    const x = viewW - ICON.margin - ICON.w * s;
-    const y = FIELD_H - ICON.margin - ICON.h * s;
+    const x = ICON.margin;
+    const y = ICON.margin;
     const color = muted ? OFF : ON;
     this.icon.clear().position.set(x, y);
     this.icon
@@ -53,9 +52,10 @@ export class SoundToggle extends Container {
     this.status.tint = color;
     const text = unlocked ? this.status : this.hint;
     const textY = Math.round(y + (ICON.h * s) / 2 - 2.5);
-    this.status.position.set(Math.round(x - 4 - this.status.pixelWidth), textY);
-    this.hint.position.set(Math.round(x - 4 - this.hint.pixelWidth), textY);
-    this.box = { x: text.x, y, w: viewW - text.x, h: ICON.h * s + ICON.margin };
+    const textX = Math.round(x + ICON.w * s + 4);
+    this.status.position.set(textX, textY);
+    this.hint.position.set(textX, textY);
+    this.box = { x: 0, y: 0, w: textX + text.pixelWidth, h: y + ICON.h * s };
   }
 
   hit(t: Tap): boolean {

@@ -238,6 +238,7 @@ export class RunScene implements Scene {
           audio.sfx.stageClear();
           break;
         case 'extraLife':
+        case 'revived':
           audio.sfx.extraLife();
           break;
         case 'dive':

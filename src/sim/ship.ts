@@ -1,4 +1,4 @@
-import { PLAYER } from '../data/balance';
+import { GRAZE, PLAYER } from '../data/balance';
 import type { ShipStats } from './types';
 
 export function baseShip(): ShipStats {
@@ -13,6 +13,15 @@ export function baseShip(): ShipStats {
     scoreMul: 1,
     shieldMax: 0,
     worldShield: 0,
+    grazeMargin: GRAZE.margin,
+    grazeMul: 1,
+    hurtScale: 1,
+    bounce: 0,
+    chargeGrazes: 0,
+    shrapnel: false,
+    overdrive: false,
+    revives: 0,
+    fragileStreak: false,
   };
 }
 

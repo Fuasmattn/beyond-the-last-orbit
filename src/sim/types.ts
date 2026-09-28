@@ -20,7 +20,18 @@ export type BoonId =
   | 'deflector'
   | 'bounty'
   | 'afterburner'
-  | 'nanorepair';
+  | 'nanorepair'
+  | 'magnet'
+  | 'charge'
+  | 'ricochet'
+  | 'shrapnel'
+  | 'overdrive'
+  | 'secondwind'
+  | 'glasscannon'
+  | 'berserk'
+  | 'hotzone';
+
+export type BoonRarity = 'common' | 'rare' | 'epic' | 'curse';
 
 export interface RouteNode {
   lane: number;
@@ -124,8 +135,12 @@ export interface Bullet extends Box {
   pierced?: number[];
   /** Player side bolts (twin/spread): not capped and not counted for accuracy. */
   extra?: boolean;
-  /** Player power shot (PERFECT in a beat stage). */
+  /** Player power shot (PERFECT in a beat stage, or a full GRAZE CHARGE). */
   power?: boolean;
+  /** Player side bolts: wall bounces left (RICOCHET). */
+  bounce?: number;
+  /** Seconds left before the bullet expires (SHRAPNEL fragments). */
+  ttl?: number;
   /** Enemy bullets: entered the graze margin (scores once it leaves without hitting). */
   nearMiss?: boolean;
   /** Enemy bullets: already scored a graze. */
@@ -148,6 +163,24 @@ export interface ShipStats {
   shieldMax: number;
   /** Shield charges restored at the start of every world. */
   worldShield: number;
+  /** Graze margin around the core (px). */
+  grazeMargin: number;
+  /** Graze point multiplier. */
+  grazeMul: number;
+  /** Core hurtbox scale. */
+  hurtScale: number;
+  /** Wall bounces for side bolts. */
+  bounce: number;
+  /** GRAZE CHARGE: grazes per power shot (0 = off). */
+  chargeGrazes: number;
+  /** Kills throw two fragments. */
+  shrapnel: boolean;
+  /** +1 damage at BOON.overdriveMult and above. */
+  overdrive: boolean;
+  /** Revives left (SECOND WIND). */
+  revives: number;
+  /** A hit resets the multiplier instead of dropping a level (BERSERK). */
+  fragileStreak: boolean;
 }
 
 export interface Player extends Box {
@@ -282,6 +315,8 @@ export interface SimState {
   /** `last`: last whole beat seen (null = resync); `count`: beats crossed so far. */
   beat: { last: number | null; count: number };
   rhythm: { streak: number; mult: number };
+  /** GRAZE CHARGE: grazes banked toward the next power shot. */
+  charge: number;
   combo: { chain: number; timer: number };
   stats: { shots: number; hits: number; onBeatShots: number };
   stageStats: StageStats;
@@ -301,6 +336,8 @@ export type SimEvent =
   | { type: 'draftOpen' }
   | { type: 'boonTaken'; id: BoonId | null }
   | { type: 'repaired'; lives: number; shield: number }
+  | { type: 'revived'; lives: number }
+  | { type: 'shrapnel'; x: number; y: number }
   | { type: 'graze'; x: number; y: number; points: number }
   | { type: 'shieldHit'; x: number; y: number; shieldLeft: number }
   | { type: 'formationInvaded' }

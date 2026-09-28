@@ -91,8 +91,9 @@ export function updateCombo(state: SimState, dt: number): void {
 /** An enemy bullet skimming past the ship scores and feeds the streak. */
 export function registerGraze(state: SimState): number {
   bumpStreak(state);
-  const points = Math.round(GRAZE.points * state.rhythm.mult * state.ship.scoreMul);
+  const points = Math.round(GRAZE.points * state.ship.grazeMul * state.rhythm.mult * state.ship.scoreMul);
   state.score += points;
   state.stageStats.grazes++;
+  if (state.ship.chargeGrazes > 0) state.charge = Math.min(state.ship.chargeGrazes, state.charge + 1);
   return points;
 }

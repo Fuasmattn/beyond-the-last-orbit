@@ -115,6 +115,8 @@ export class Hud extends Container {
           ? 'EXTRA SHIP!'
           : e.type === 'repaired'
             ? 'REPAIRED!'
+            : e.type === 'revived'
+              ? 'SECOND WIND!'
             : e.type === 'boonTaken' && e.id
               ? `${boonDef(e.id).name}!`
               : null;

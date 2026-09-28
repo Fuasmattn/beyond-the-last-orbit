@@ -7,8 +7,16 @@ export function moveBullets(state: SimState, dt: number): void {
   for (const b of state.bullets) {
     b.x += b.vx * dt;
     b.y += b.vy * dt;
+    if (b.ttl !== undefined) b.ttl -= dt;
+    // RICOCHET: side bolts bounce off the field walls.
+    if (b.bounce && (b.x < 0 || b.x + b.w > state.fieldW)) {
+      b.bounce--;
+      b.vx = -b.vx;
+      b.x = b.x < 0 ? 0 : state.fieldW - b.w;
+    }
   }
-  const inField = (b: Bullet) => b.y + b.h > 0 && b.y < FIELD_H && b.x + b.w > 0 && b.x < state.fieldW;
+  const inField = (b: Bullet) =>
+    b.y + b.h > 0 && b.y < FIELD_H && b.x + b.w > 0 && b.x < state.fieldW && (b.ttl === undefined || b.ttl > 0);
   if (state.beatMode === 'off' && state.phase === 'playing') {
     // A primary bolt that leaves the field without hitting anything breaks the streak by a level.
     for (const b of state.bullets) {

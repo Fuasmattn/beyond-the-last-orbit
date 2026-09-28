@@ -1,10 +1,11 @@
-import { ENEMY, GRAZE, POINTS } from '../data/balance';
+import { BOON, ENEMY, PLAYER, POINTS } from '../data/balance';
+import { allocId } from './ids';
 import { hitBoss } from './boss';
 import { overlaps } from './geometry';
 import { hitPlayer, hurtbox } from './player';
 import { recordHit, registerGraze, registerKill } from './scoring';
 import { spawnMini } from './specials';
-import type { Box, SimEvent, SimState } from './types';
+import type { Box, Bullet, SimEvent, SimState } from './types';
 
 export { overlaps } from './geometry';
 
@@ -33,6 +34,7 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
       if (e.hp <= 0) {
         const points = registerKill(state, POINTS[e.kind], b.mult);
         events.push({ type: 'enemyKilled', id: e.id, kind: e.kind, x: cx, y: cy, points });
+        if (state.ship.shrapnel && !b.ttl) spawnShrapnel(state, cx, cy, b, events);
         if (e.kind === 'splitter') {
           spawnMini(state, cx, cy, -1);
           spawnMini(state, cx, cy, 1);
@@ -79,7 +81,7 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
  */
 function checkGrazes(state: SimState, spent: ReadonlySet<number>, events: SimEvent[]): void {
   const h = hurtbox(state);
-  const m = GRAZE.margin;
+  const m = state.ship.grazeMargin;
   const zone: Box = { x: h.x - m, y: h.y - m, w: h.w + m * 2, h: h.h + m * 2 };
   for (const b of state.bullets) {
     if (b.owner !== 'enemy' || b.grazed || spent.has(b.id)) continue;
@@ -92,4 +94,26 @@ function checkGrazes(state: SimState, spent: ReadonlySet<number>, events: SimEve
     const points = registerGraze(state);
     events.push({ type: 'graze', x: b.x + b.w / 2, y: b.y + b.h / 2, points });
   }
+}
+
+/** SHRAPNEL: two short-lived fragments fly diagonally up from a kill, carrying the bolt's damage. */
+function spawnShrapnel(state: SimState, cx: number, cy: number, from: Bullet, events: SimEvent[]): void {
+  for (const dir of [-1, 1] as const) {
+    state.bullets.push({
+      id: allocId(state),
+      x: cx - PLAYER.bulletW / 2,
+      y: cy - PLAYER.bulletH / 2,
+      w: PLAYER.bulletW,
+      h: PLAYER.bulletH,
+      vx: Math.sin(BOON.shrapnelAngle) * BOON.shrapnelSpeed * dir,
+      vy: -Math.cos(BOON.shrapnelAngle) * BOON.shrapnelSpeed,
+      owner: 'player',
+      onBeat: from.onBeat,
+      mult: from.mult,
+      damage: state.ship.damage,
+      extra: true,
+      ttl: BOON.shrapnelTtl,
+    });
+  }
+  events.push({ type: 'shrapnel', x: cx, y: cy });
 }

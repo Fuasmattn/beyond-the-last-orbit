@@ -1,7 +1,7 @@
 import { Container, Graphics, type Texture } from 'pixi.js';
 import { FIELD_H } from '../data/balance';
 import type { MenuAction, Tap } from '../input/inputFrame';
-import { boonDef } from '../sim/boons';
+import { boonDef, RARITY_COLOR, type BoonDef } from '../sim/boons';
 import type { RogueState } from '../sim/types';
 import { blink } from './anim';
 import { centerText, PixelText } from './pixelText';
@@ -10,9 +10,18 @@ import { centerText, PixelText } from './pixelText';
 export type DraftPick = { type: 'boon'; index: number } | { type: 'reroll' } | { type: 'skip' };
 
 const TOP = 70;
-const CARD_H = 30;
+const CARD_H = 38;
 const ROW_H = 16;
 const MAX_W = 150;
+
+/** Third card line: the synergy partner (green when owned), or CURSE. */
+function cardTag(def: BoonDef, r: RogueState): { text: string; color: number } | null {
+  if (def.rarity === 'curse') return { text: 'CURSE', color: RARITY_COLOR.curse };
+  if (!def.synergy?.length) return null;
+  const owned = def.synergy.find((id) => (r.boons[id] ?? 0) > 0);
+  const partner = boonDef(owned ?? def.synergy[0]!);
+  return { text: `WITH ${partner.name}`, color: owned ? 0x7dff6b : 0x666a88 };
+}
 
 interface Row {
   pick: DraftPick;
@@ -89,8 +98,10 @@ export class DraftOverlay extends Container {
         const id = r.offer[row.pick.index]!;
         const def = boonDef(id);
         const owned = r.boons[id] ?? 0;
-        text(owned > 0 ? `${def.name} LV${owned + 1}` : def.name, on ? 0xffe14a : 0xffffff, row.y + 2);
+        text(owned > 0 ? `${def.name} LV${owned + 1}` : def.name, on ? 0xffe14a : RARITY_COLOR[def.rarity], row.y + 2);
         text(def.desc, 0xcccccc, row.y + 12);
+        const tag = cardTag(def, r);
+        if (tag) text(tag.text, tag.color, row.y + 22);
       } else if (row.pick.type === 'reroll') {
         text(`REROLL  ${r.rerolls} LEFT`, on ? 0xffe14a : 0x4af2ff, row.y + 1);
       } else {

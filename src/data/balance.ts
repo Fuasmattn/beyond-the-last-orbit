@@ -280,8 +280,34 @@ export const ROUTE = {
   draftSize: 3,
 } as const;
 
-/** Rogue runs: enemy bullets passing this close to the ship without hitting score a graze. */
+/** Enemy bullets passing this close to the ship without hitting score a graze. */
 export const GRAZE = { margin: 8, points: 10 } as const;
+
+/** Draft boons (M14): rarity odds and the numbers behind the behaviour boons. */
+export const BOON = {
+  /** Draft-slot rarity weights at world 1; epic grows per world. */
+  rarityWeights: { common: 60, rare: 30, epic: 8 },
+  epicWeightPerWorld: 4,
+  /** Chance that one slot of a draft holds a curse. */
+  curseChance: 0.2,
+  /** MAGNET: extra graze margin per level (px). */
+  magnetMargin: 6,
+  /** GRAZE CHARGE: grazes per power shot. */
+  chargeGrazes: 10,
+  /** SHRAPNEL fragments: speed, lifetime and the angle from straight up. */
+  shrapnelSpeed: 150,
+  shrapnelTtl: 0.35,
+  shrapnelAngle: 0.7,
+  /** OVERDRIVE: bolts get +1 damage from this multiplier up. */
+  overdriveMult: 4,
+  /** GLASS CANNON damage; BERSERK cooldown factor; HOT ZONE core scale and graze points. */
+  glassDamage: 2,
+  berserkCooldown: 0.6,
+  hotZoneScale: 1.6,
+  hotZoneGrazeMul: 3,
+  /** SECOND WIND: invulnerability after the revive (s). */
+  reviveInvuln: 2.5,
+} as const;
 
 export const COMBO = {
   window: 1,

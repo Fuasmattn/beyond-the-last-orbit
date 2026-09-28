@@ -1,5 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
-import { MENU_W } from '../data/balance';
+import { viewport } from '../app/viewport';
 import {
   cosmeticsOf,
   equippedLaser,
@@ -17,15 +17,17 @@ import { MenuList } from '../view/menuList';
 import { SHIP_ART } from '../view/vectorArt';
 import { centerText, PixelText } from '../view/pixelText';
 import type { FrameInput, Scene, SceneContext } from './scene';
-import { inRect, sceneBackground, type Rect } from './ui';
+import { centerX, inRect, menuListLayout, narrowMenu, sceneBackground, type Rect } from './ui';
 
 const TABS: readonly CosmeticKind[] = ['skin', 'laser'];
 const TAB_LABEL: Record<CosmeticKind, string> = { skin: 'SHIP SKINS', laser: 'LASERS' };
-const TAB_RECT: Record<CosmeticKind, Rect> = {
-  skin: { x: 30, y: 26, w: 70, h: 12 },
-  laser: { x: 140, y: 26, w: 70, h: 12 },
+const TAB = { y: 26, w: 70, h: 12 } as const;
+/** Tab left edges: spread apart on the full frame, side by side on the narrow one. */
+const TAB_X: Record<CosmeticKind, { full: number; narrow: number }> = {
+  skin: { full: 30, narrow: 6 },
+  laser: { full: 140, narrow: 84 },
 };
-const PREVIEW: Rect = { x: 60, y: 44, w: 120, h: 84 };
+const PREVIEW = { y: 44, w: 120, h: 84 } as const;
 const BACK: Rect = { x: 4, y: 300, w: 40, h: 14 };
 const MESSAGE_TIME = 1.5;
 const FIRE_EVERY = 0.35;
@@ -50,6 +52,7 @@ export class ShopScene implements Scene {
   private readonly credits: PixelText;
   private readonly message: PixelText;
   private readonly tabs: Record<CosmeticKind, PixelText>;
+  private readonly tabRect: Record<CosmeticKind, Rect>;
   private readonly tabUnderline = new Graphics();
   private readonly ship: Graphics;
   private readonly previewLayer = new Container();
@@ -61,6 +64,10 @@ export class ShopScene implements Scene {
 
   constructor(private readonly ctx: SceneContext) {
     const g = ctx.textures.glyphs;
+    const narrow = narrowMenu();
+    const tabRect = (k: CosmeticKind): Rect => ({ ...TAB, x: narrow ? TAB_X[k].narrow : TAB_X[k].full });
+    this.tabRect = { skin: tabRect('skin'), laser: tabRect('laser') };
+    const preview: Rect = { ...PREVIEW, x: centerX(PREVIEW.w) };
     const title = new PixelText(g, 'SHOP', 0xffe14a);
     title.scale.set(2);
     title.position.set(6, 4);
@@ -70,17 +77,17 @@ export class ShopScene implements Scene {
       laser: new PixelText(g, TAB_LABEL.laser),
     };
     for (const k of TABS) {
-      const r = TAB_RECT[k];
+      const r = this.tabRect[k];
       this.tabs[k].position.set(r.x + Math.round((r.w - this.tabs[k].pixelWidth) / 2), r.y + 3);
     }
     const frame = new Graphics()
-      .rect(PREVIEW.x, PREVIEW.y, PREVIEW.w, PREVIEW.h)
+      .rect(preview.x, preview.y, preview.w, preview.h)
       .fill(0x0b0f22)
-      .rect(PREVIEW.x, PREVIEW.y, PREVIEW.w, PREVIEW.h)
+      .rect(preview.x, preview.y, preview.w, preview.h)
       .stroke({ color: 0x333a55, width: 1 });
     this.ship = new Graphics(SHIP_ART.arrow);
-    this.ship.position.set(PREVIEW.x + PREVIEW.w / 2, PREVIEW.y + PREVIEW.h - 6);
-    this.list = new MenuList(g, { x: 28, y: 140, lineH: 14, width: 184 });
+    this.ship.position.set(preview.x + preview.w / 2, preview.y + preview.h - 6);
+    this.list = new MenuList(g, menuListLayout({ x: 28, y: 140, lineH: 14, width: 184 }));
     this.message = new PixelText(g, '');
     const hint = new PixelText(
       g,
@@ -138,9 +145,9 @@ export class ShopScene implements Scene {
     );
     this.list.refresh(this.t);
     this.credits.setText(`CREDITS ${this.ctx.save.credits}`);
-    this.credits.position.set(MENU_W - 4 - this.credits.pixelWidth, 6);
+    this.credits.position.set(viewport.menuW - 4 - this.credits.pixelWidth, 6);
     for (const k of TABS) this.tabs[k].tint = k === this.tab ? 0xffe14a : 0x666666;
-    const r = TAB_RECT[this.tab];
+    const r = this.tabRect[this.tab];
     this.tabUnderline.clear().rect(r.x, r.y + r.h, r.w, 1).fill(0xffe14a);
 
     const skin = this.previewSkin();
@@ -193,7 +200,7 @@ export class ShopScene implements Scene {
       return true;
     }
     for (const k of TABS) {
-      if (inRect(tap, TAB_RECT[k])) {
+      if (inRect(tap, this.tabRect[k])) {
         this.switchTab(k);
         return false;
       }

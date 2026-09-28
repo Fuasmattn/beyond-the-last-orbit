@@ -1,14 +1,15 @@
 import { Container } from 'pixi.js';
-import { MENU_W } from '../data/balance';
-import { formatHighscoreLine } from '../view/highscoreTable';
+import { viewport } from '../app/viewport';
+import { formatHighscoreLine, highscoreTableX } from '../view/highscoreTable';
 import { MenuList } from '../view/menuList';
 import { centerText, PixelText } from '../view/pixelText';
 import type { FrameInput, Scene, SceneContext } from './scene';
-import { sceneBackground } from './ui';
+import { centerX, sceneBackground } from './ui';
 
 const PAGE_TIME = 5;
 const NOTICE_TIME = 3;
-const TABLE_X = 82;
+/** Main menu, centered in the frame together with its cursor (8px left of the labels). */
+const MENU = { y: 212, lineH: 14, width: 64 } as const;
 /** The rogue run is the main game; the pure beat run is a secondary mode. */
 const ITEMS = ['START RUN', 'HANGAR', 'SHOP', 'BEAT RUN', 'SETTINGS'] as const;
 const TABLES = [
@@ -34,7 +35,7 @@ export class TitleScene implements Scene {
   constructor(private readonly ctx: SceneContext) {
     const g = ctx.textures.glyphs;
     // Chromatic-split neon logo: cyan and pink ghosts drift around a white core.
-    // Two lines: the full title is too wide for MENU_W at the logo scale.
+    // Two lines: the full title is too wide for the menu frame at the logo scale.
     this.logo = ([0x4af2ff, 0xff3d9a, 0xffffff] as const).map((color) => {
       const top = new PixelText(g, 'BEYOND THE', color);
       top.scale.set(2);
@@ -53,7 +54,7 @@ export class TitleScene implements Scene {
     centerText(this.notice, 296);
     this.tableHeader = new PixelText(g, '', 0xff5ad1);
     this.buildTables();
-    this.menu = new MenuList(g, { x: 92, y: 212, lineH: 14, width: 64 });
+    this.menu = new MenuList(g, { ...MENU, x: centerX(MENU.width) + 4 });
     this.menu.setRows(ITEMS.map((label) => ({ label })));
 
     this.root.addChild(
@@ -107,7 +108,7 @@ export class TitleScene implements Scene {
     }
     this.tagline.visible = page < 0;
     this.credits.setText(`CREDITS ${this.ctx.save.credits}`);
-    this.credits.position.set(MENU_W - 4 - this.credits.pixelWidth, 4);
+    this.credits.position.set(viewport.menuW - 4 - this.credits.pixelWidth, 4);
     this.menu.refresh(this.t);
     this.notice.visible = this.ctx.notice !== null && this.t < NOTICE_TIME;
     if (this.t >= NOTICE_TIME) this.ctx.notice = null;
@@ -129,7 +130,7 @@ export class TitleScene implements Scene {
       this.tableTitles.push(global || !lb.enabled ? title : `LOCAL ${title}`);
       const rows = (global ?? this.ctx.save[key]).map((e, i) => {
         const t = new PixelText(this.ctx.textures.glyphs, formatHighscoreLine(i + 1, e), i === 0 ? 0xffe14a : 0xcccccc);
-        t.position.set(TABLE_X, 118 + i * 9);
+        t.position.set(highscoreTableX(), 118 + i * 9);
         return t;
       });
       if (rows.length > 0) this.tableLayer.addChild(...rows);

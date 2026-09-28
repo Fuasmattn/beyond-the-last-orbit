@@ -1,17 +1,19 @@
 import { Container, Graphics } from 'pixi.js';
-import { MENU_W } from '../data/balance';
+import { viewport } from '../app/viewport';
 import { UPGRADES, type UpgradeDef } from '../data/upgrades';
 import type { Tap } from '../input/inputFrame';
 import { buyUpgrade, nextCost, upgradeLevel, type UpgradeResult } from '../meta/upgrades';
 import { MenuList } from '../view/menuList';
 import { centerText, PixelText } from '../view/pixelText';
 import type { FrameInput, Scene, SceneContext } from './scene';
-import { inRect, sceneBackground, type Rect } from './ui';
+import { inRect, menuListLayout, narrowMenu, sceneBackground, type Rect } from './ui';
 
 const BACK: Rect = { x: 4, y: 300, w: 40, h: 14 };
 const LIST = { x: 28, y: 60, lineH: 16, width: 184 } as const;
 const PIP = { w: 5, h: 3, gap: 2 } as const;
 const MESSAGE_TIME = 1.5;
+/** Subtitle; two lines on the narrow frame. */
+const SUB = ['PERMANENT UPGRADES', 'NOT FOR BEAT RUNS'] as const;
 
 const MESSAGES: Record<UpgradeResult, [string, number]> = {
   bought: ['UPGRADED!', 0x7dff6b],
@@ -35,10 +37,13 @@ export class HangarScene implements Scene {
     const title = new PixelText(g, 'HANGAR', 0xffe14a);
     title.scale.set(2);
     title.position.set(6, 4);
-    const sub = new PixelText(g, 'PERMANENT UPGRADES - NOT FOR BEAT RUNS', 0x4af2ff);
-    centerText(sub, 30);
+    const sub = (narrowMenu() ? SUB : [SUB.join(' - ')]).map((line, i, lines) => {
+      const t = new PixelText(g, line, 0x4af2ff);
+      centerText(t, lines.length > 1 ? 26 + i * 8 : 30);
+      return t;
+    });
     this.credits = new PixelText(g, '', 0x7dff6b);
-    this.list = new MenuList(g, LIST);
+    this.list = new MenuList(g, menuListLayout(LIST));
     this.desc = new PixelText(g, '', 0xcccccc);
     this.message = new PixelText(g, '');
     const hint = new PixelText(g, ctx.isTouch ? 'TAP ITEM TWICE TO BUY' : 'FIRE BUY  ESC BACK', 0x777777);
@@ -46,7 +51,7 @@ export class HangarScene implements Scene {
     const back = new PixelText(g, 'BACK', 0xbbbbbb);
     back.position.set(BACK.x + 4, BACK.y + 4);
     const backBox = new Graphics().rect(BACK.x, BACK.y, BACK.w, BACK.h).stroke({ color: 0x555a77, width: 1 });
-    this.root.addChild(sceneBackground(), title, sub, this.credits, this.list, this.pips, this.desc, this.message, hint, backBox, back);
+    this.root.addChild(sceneBackground(), title, ...sub, this.credits, this.list, this.pips, this.desc, this.message, hint, backBox, back);
   }
 
   update(input: FrameInput, dt: number): void {
@@ -75,16 +80,17 @@ export class HangarScene implements Scene {
     this.pips.clear();
     UPGRADES.forEach((u, i) => {
       const lv = upgradeLevel(save, u.id);
-      const y = LIST.y + i * LIST.lineH + 8;
+      const { x, y: top, lineH } = this.list.layout;
+      const y = top + i * lineH + 8;
       u.costs.forEach((_, k) => {
-        this.pips.rect(LIST.x + k * (PIP.w + PIP.gap), y, PIP.w, PIP.h).fill(k < lv ? 0x7dff6b : 0x333a55);
+        this.pips.rect(x + k * (PIP.w + PIP.gap), y, PIP.w, PIP.h).fill(k < lv ? 0x7dff6b : 0x333a55);
       });
     });
     const sel = this.selected();
     this.desc.setText(sel ? sel.desc : '');
     centerText(this.desc, LIST.y + UPGRADES.length * LIST.lineH + 10);
     this.credits.setText(`CREDITS ${save.credits}`);
-    this.credits.position.set(MENU_W - 4 - this.credits.pixelWidth, 6);
+    this.credits.position.set(viewport.menuW - 4 - this.credits.pixelWidth, 6);
     this.message.visible = this.messageTime > 0;
     centerText(this.message, 262);
   }

@@ -1,5 +1,5 @@
 import { Container, Sprite, type Texture } from 'pixi.js';
-import { MENU_W } from '../data/balance';
+import { viewport } from '../app/viewport';
 import { GLYPH_ADVANCE, textWidth } from '../data/font';
 
 export class PixelText extends Container {
@@ -43,6 +43,6 @@ export class PixelText extends Container {
 }
 
 /** Horizontally centers `t` at row `y` within `width` (defaults to the menu frame). */
-export function centerText(t: PixelText, y: number, width: number = MENU_W): void {
+export function centerText(t: PixelText, y: number, width: number = viewport.menuW): void {
   t.position.set(Math.round((width - t.pixelWidth) / 2), y);
 }

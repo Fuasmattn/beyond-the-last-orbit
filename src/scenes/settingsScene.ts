@@ -3,7 +3,7 @@ import { adjustSetting, type SettingKey } from '../meta/settings';
 import { MenuList } from '../view/menuList';
 import { centerText, PixelText } from '../view/pixelText';
 import type { FrameInput, Scene, SceneContext } from './scene';
-import { sceneBackground } from './ui';
+import { menuListLayout, narrowMenu, sceneBackground } from './ui';
 
 type Row = SettingKey | 'calibrate' | 'musicTest' | 'back';
 
@@ -15,6 +15,9 @@ const TRACKS = [0, 1, 2].flatMap((world) =>
     label: `${['EARTH', 'MOON', 'MARS'][world]}${arrangement === 'main' ? '' : arrangement === 'boss' ? ' BOSS' : ' FINAL'}`,
   })),
 );
+
+/** CC-BY 4.0 attribution for the recorded drums (full credits in audio/CREDITS.md); two lines on the narrow frame. */
+const DRUM_CREDIT = ['DRUMS: DRUMGIZMO MULDJORDKIT', 'CC BY 4.0'] as const;
 
 const ROWS: readonly { key: Row; label: string }[] = [
   { key: 'musicVolume', label: 'MUSIC VOLUME' },
@@ -51,11 +54,13 @@ export class SettingsScene implements Scene {
       0x777777,
     );
     centerText(hint, 290);
-    // CC-BY 4.0 attribution for the recorded drums (full credits in audio/CREDITS.md).
-    const credit = new PixelText(g, 'DRUMS: DRUMGIZMO MULDJORDKIT - CC BY 4.0', 0x555a77);
-    centerText(credit, 304);
-    this.list = new MenuList(g, { x: 36, y: 90, lineH: 16, width: 168 });
-    this.root.addChild(sceneBackground(), title, this.list, hint, credit);
+    const credit = (narrowMenu() ? DRUM_CREDIT : [DRUM_CREDIT.join(' - ')]).map((line, i, lines) => {
+      const t = new PixelText(g, line, 0x555a77);
+      centerText(t, lines.length > 1 ? 301 + i * 8 : 304);
+      return t;
+    });
+    this.list = new MenuList(g, menuListLayout({ x: 36, y: 90, lineH: 16, width: 168 }));
+    this.root.addChild(sceneBackground(), title, this.list, hint, ...credit);
   }
 
   update(input: FrameInput, dt: number): void {

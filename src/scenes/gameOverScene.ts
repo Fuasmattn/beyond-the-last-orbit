@@ -1,5 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
-import { MENU_W } from '../data/balance';
+import { viewport } from '../app/viewport';
 import { INITIALS_LENGTH, InitialsPicker } from '../app/initialsPicker';
 import type { Tap } from '../input/inputFrame';
 import { findEntry } from '../leaderboard/leaderboard';
@@ -8,17 +8,16 @@ import { creditMultiplier } from '../meta/upgrades';
 import { insertHighscore, qualifiesForHighscore } from '../persist/save';
 import type { HighscoreEntry } from '../persist/schema';
 import { blink } from '../view/anim';
-import { formatHighscoreLine } from '../view/highscoreTable';
+import { formatHighscoreLine, highscoreTableX } from '../view/highscoreTable';
 import { centerText, PixelText } from '../view/pixelText';
 import type { FrameInput, RunSummary, Scene, SceneContext } from './scene';
-import { sceneBackground } from './ui';
+import { centerX, inRect, sceneBackground, type Rect } from './ui';
 
 const LETTER_SCALE = 3;
 const LETTER_Y = 130;
 const LETTER_H = 15;
 const LETTER_SPACING = 24;
-const OK_BOX = { x: 104, y: 172, w: 32, h: 12 } as const;
-const TABLE_X = 82;
+const OK_BOX = { y: 172, w: 32, h: 12 } as const;
 const CONTINUE_DELAY = 0.5;
 /** Ignore input briefly so fire-mashing at death doesn't skip letters. */
 const INPUT_DELAY = 0.4;
@@ -26,7 +25,7 @@ const COUNT_UP_TIME = 1.5;
 const COIN_TICK = 0.07;
 
 function letterLeft(i: number): number {
-  return Math.round(MENU_W / 2 + (i - 1) * LETTER_SPACING - 4.5);
+  return Math.round(viewport.menuW / 2 + (i - 1) * LETTER_SPACING - 4.5);
 }
 
 export class GameOverScene implements Scene {
@@ -37,6 +36,7 @@ export class GameOverScene implements Scene {
   private readonly cursor = new Graphics();
   private readonly ok: PixelText;
   private readonly okBox = new Graphics();
+  private readonly okRect: Rect = { ...OK_BOX, x: centerX(OK_BOX.w) };
   private readonly help: PixelText;
   private readonly heading: PixelText;
   private readonly prompt: PixelText;
@@ -84,8 +84,9 @@ export class GameOverScene implements Scene {
       this.letters.push(t);
     }
     this.ok = new PixelText(g, 'OK', 0x7dff6b);
-    this.ok.position.set(OK_BOX.x + 13, OK_BOX.y + 4);
-    this.okBox.rect(OK_BOX.x, OK_BOX.y, OK_BOX.w, OK_BOX.h).stroke({ color: 0x7dff6b, width: 1 });
+    const ok = this.okRect;
+    this.ok.position.set(ok.x + 13, ok.y + 4);
+    this.okBox.rect(ok.x, ok.y, ok.w, ok.h).stroke({ color: 0x7dff6b, width: 1 });
     this.help = new PixelText(g, ctx.isTouch ? 'TAP TOP OR BOTTOM OF A LETTER' : 'UP/DOWN CHANGE  FIRE NEXT', 0x888888);
     centerText(this.help, 196);
     this.status = new PixelText(g, '', 0xff5a5a);
@@ -177,7 +178,7 @@ export class GameOverScene implements Scene {
   }
 
   private handleTap(p: InitialsPicker, tap: Tap): void {
-    if (tap.x >= OK_BOX.x && tap.x <= OK_BOX.x + OK_BOX.w && tap.y >= OK_BOX.y && tap.y <= OK_BOX.y + OK_BOX.h) {
+    if (inRect(tap, this.okRect)) {
       p.finish();
       return;
     }
@@ -248,7 +249,7 @@ export class GameOverScene implements Scene {
     list.forEach((e, i) => {
       const color = i === mine ? 0xffe14a : 0xcccccc;
       const t = new PixelText(this.glyphs, formatHighscoreLine(i + 1, e), color);
-      t.position.set(TABLE_X, 122 + i * 9);
+      t.position.set(highscoreTableX(), 122 + i * 9);
       this.tableLayer.addChild(t);
     });
   }

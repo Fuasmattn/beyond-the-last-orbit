@@ -1,5 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
-import { CALIBRATION, MENU_W } from '../data/balance';
+import { viewport } from '../app/viewport';
+import { CALIBRATION } from '../data/balance';
 import { computeLatencyOffset } from '../meta/calibration';
 import { beatPulse } from '../view/beatPulse';
 import { centerText, PixelText } from '../view/pixelText';
@@ -29,7 +30,7 @@ export class CalibrationScene implements Scene {
     const esc = new PixelText(g, ctx.isTouch ? '' : 'ESC TO CANCEL', 0x777777);
     centerText(esc, 290);
     this.status = new PixelText(g, ctx.audio ? '' : 'NO AUDIO', 0xff3b5c);
-    this.ring.position.set(MENU_W / 2, 150);
+    this.ring.position.set(viewport.menuW / 2, 150);
     this.root.addChild(sceneBackground(), title, how, this.ring, this.dots, this.status, esc);
     ctx.audio?.startSong(ctx.metronome);
   }
@@ -70,7 +71,7 @@ export class CalibrationScene implements Scene {
       .stroke({ color: 0x4af2ff, width: 2, alpha: 0.4 + pulse * 0.6 });
     this.dots.clear();
     for (let i = 0; i < CALIBRATION.taps; i++) {
-      const x = MENU_W / 2 - (CALIBRATION.taps - 1) * 6 + i * 12;
+      const x = viewport.menuW / 2 - (CALIBRATION.taps - 1) * 6 + i * 12;
       this.dots.circle(x, 200, 3).fill(i < this.deltas.length ? 0xffe14a : 0x333a55);
     }
     centerText(this.status, 230);

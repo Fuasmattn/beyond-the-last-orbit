@@ -1,4 +1,4 @@
-import { DIFFICULTY, ELITE, ENEMY, STAGE } from '../data/balance';
+import { DIFFICULTY, ELITE, ENEMY, STAGE, THREAT } from '../data/balance';
 import type { Difficulty, EnemyKind } from './types';
 
 export function difficultyScalar(world: number, stage: number, loop: number): number {
@@ -10,8 +10,9 @@ function curve(range: readonly [number, number], d: number): number {
   return min + (max - min) * (1 - Math.exp(-d / DIFFICULTY.k));
 }
 
-export function difficultyFor(world: number, stage: number, loop: number): Difficulty {
-  const d = difficultyScalar(world, stage, loop);
+/** `power`: the run's build power (M22); the ladder climbs with the build, not only with the map. */
+export function difficultyFor(world: number, stage: number, loop: number, power = 0): Difficulty {
+  const d = difficultyScalar(world, stage, loop) + power * THREAT.perPower;
   return {
     d,
     swayAmp: curve(DIFFICULTY.swayAmp, d),
@@ -21,15 +22,15 @@ export function difficultyFor(world: number, stage: number, loop: number): Diffi
     diveInterval: curve(DIFFICULTY.diveInterval, d),
     cols: 8 + Math.min(2, Math.floor(d / 5)),
     rows: d < DIFFICULTY.fullRowsFrom ? DIFFICULTY.earlyRows : ENEMY.rows,
-    hpBonus: loop >= 1 ? 1 : 0,
-    bossHpScale: 1 + loop * 0.5,
+    hpBonus: (loop >= 1 ? 1 : 0) + Math.floor(power / THREAT.hpPer),
+    bossHpScale: 1 + loop * 0.5 + power * THREAT.bossHpPerPower,
     elite: false,
   };
 }
 
 /** Rogue elite stage: the formation of a stage `ELITE.difficultyBoost` later, tougher and shooting more. */
-export function eliteDifficulty(world: number, stage: number, loop: number): Difficulty {
-  const base = difficultyFor(world, stage + ELITE.difficultyBoost, loop);
+export function eliteDifficulty(world: number, stage: number, loop: number, power = 0): Difficulty {
+  const base = difficultyFor(world, stage + ELITE.difficultyBoost, loop, power);
   return { ...base, fireRate: base.fireRate * ELITE.fireRateMul, hpBonus: base.hpBonus + 1, elite: true };
 }
 

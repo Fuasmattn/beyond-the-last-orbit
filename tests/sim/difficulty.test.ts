@@ -51,3 +51,14 @@ describe('difficulty', () => {
     expect(enemyHp('grunt', difficultyFor(0, 1, 1))).toBe(2);
   });
 });
+
+describe('threat (M22)', () => {
+  it('build power raises the scalar, enemy HP and boss HP', () => {
+    const base = difficultyFor(0, 2, 0);
+    const built = difficultyFor(0, 2, 0, 16);
+    expect(built.d).toBeGreaterThan(base.d);
+    expect(built.fireRate).toBeGreaterThan(base.fireRate);
+    expect(built.hpBonus).toBe(base.hpBonus + 2);
+    expect(built.bossHpScale).toBeGreaterThan(base.bossHpScale);
+  });
+});

@@ -1,7 +1,7 @@
 import { BEAT_STAGE, CONVOY, PLAYER, SCRAP, SHOP, STAGE, WARP } from '../data/balance';
 import { WORLDS } from '../data/worlds';
 import { spawnBoss } from './boss';
-import { boonDef, rollOffer, takeBoon } from './boons';
+import { boonDef, buildPower, rollOffer, takeBoon } from './boons';
 import { difficultyFor, eliteDifficulty } from './difficulty';
 import { spawnFight } from './fight';
 import { clamp } from './math';
@@ -23,7 +23,7 @@ export function startStage(state: SimState, events: SimEvent[]): void {
   state.fieldW = state.nextFieldW;
   state.player.x = clamp(state.player.x, 0, state.fieldW - state.player.w);
   const elite = !boss && state.rogue.node === 'elite';
-  state.diff = (elite ? eliteDifficulty : difficultyFor)(state.world, state.stage, state.loop);
+  state.diff = (elite ? eliteDifficulty : difficultyFor)(state.world, state.stage, state.loop, buildPower(state.rogue.boons));
   // Beat stages start the x8 climb from zero; leaving one clamps back to the x4 cap.
   const master = state.beatLock || (!boss && state.rogue.beat);
   if (master && state.beatMode !== 'master') state.rhythm.streak = 0;

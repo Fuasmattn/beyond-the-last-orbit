@@ -195,8 +195,10 @@ export interface Bullet extends Box {
   pierce?: number;
   /** Player bolts: ids of enemies already pierced (so a bolt hits each enemy once). */
   pierced?: number[];
-  /** Player side bolts (twin/spread): not capped and not counted for accuracy. */
+  /** Player side bolts (twin/spread/mirror): not counted for accuracy. */
   extra?: boolean;
+  /** Player shot this bolt belongs to; a volley with any bolt in flight holds one slot of the bolt cap (M22). */
+  volley?: number;
   /** Player power shot (PERFECT in a beat stage, or a full GRAZE CHARGE). */
   power?: boolean;
   /** Player side bolts: wall bounces left (RICOCHET). */

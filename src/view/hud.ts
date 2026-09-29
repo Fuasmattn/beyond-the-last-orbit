@@ -1,7 +1,7 @@
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import { STAGE } from '../data/balance';
 import { worldAt } from '../data/worlds';
-import { boonDef, RARITY_COLOR } from '../sim/boons';
+import { boonDef, RARITY_COLOR, threatLevel } from '../sim/boons';
 import type { BoonId, SimEvent, SimState } from '../sim/types';
 import { viewport } from '../app/viewport';
 import type { JudgeLabel } from './beatJudge';
@@ -42,6 +42,7 @@ function fitCenter(t: PixelText, scale: number, y: number, width: number): void 
 export class Hud extends Container {
   private readonly score: PixelText;
   private readonly stage: PixelText;
+  private readonly threat: PixelText;
   private readonly lives: PixelText;
   private readonly scrap: PixelText;
   private readonly track: BeatTrack;
@@ -72,6 +73,7 @@ export class Hud extends Container {
     const k = textScale;
     this.score = new PixelText(glyphs);
     this.stage = new PixelText(glyphs);
+    this.threat = new PixelText(glyphs, '', 0xff5a5a);
     this.lives = new PixelText(glyphs, '', 0x4af2ff);
     this.scrap = new PixelText(glyphs, '', 0xffb347);
     this.track = new BeatTrack(glyphs);
@@ -87,7 +89,7 @@ export class Hud extends Container {
       t.y = Math.round(140 + 24 * (k - 1) + i * ROW * k);
       this.results.push(t);
     }
-    for (const t of [this.score, this.stage, this.lives, this.scrap, this.noAudio]) t.scale.set(k);
+    for (const t of [this.score, this.stage, this.threat, this.lives, this.scrap, this.noAudio]) t.scale.set(k);
     this.pauseIcon.visible = pauseButton;
     this.pauseIcon
       .rect(0, 0, PAUSE_ICON.bar, PAUSE_ICON.h)
@@ -98,6 +100,7 @@ export class Hud extends Container {
     const left = pauseButton ? Math.round(MARGIN + PAUSE_ICON.w * k + 5) : MARGIN;
     this.score.position.set(left, MARGIN);
     this.stage.y = MARGIN;
+    this.threat.y = Math.round(MARGIN + ROW * k);
     this.lives.position.set(left, Math.round(MARGIN + ROW * k));
     this.scrap.position.set(left, Math.round(MARGIN + ROW * 2 * k));
     this.noAudio.y = Math.round(MARGIN + ROW * 3 * k);
@@ -110,6 +113,7 @@ export class Hud extends Container {
       this.pauseIcon,
       this.score,
       this.stage,
+      this.threat,
       this.lives,
       this.scrap,
       this.noAudio,
@@ -158,6 +162,9 @@ export class Hud extends Container {
     const compact = this.textScale > 1;
     this.stage.setText(state.loop > 0 ? `L${state.loop + 1} ${label}` : compact ? label : `STAGE ${label}`);
     this.stage.x = Math.round(viewport.w - MARGIN - this.stage.pixelWidth);
+    const threat = threatLevel(state.rogue.boons);
+    this.threat.setText(threat > 0 ? `THREAT ${threat}` : '');
+    this.threat.x = Math.round(viewport.w - MARGIN - this.threat.pixelWidth);
     const rhythm = state.beatMode !== 'off';
     const master = state.beatMode === 'master';
     this.track.update(viewport.w, audioOk ? beat : null, state.rhythm.mult, state.rhythm.streak, dt, rhythm, master);

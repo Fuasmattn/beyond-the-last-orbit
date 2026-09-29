@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { BOON, PLAYER, RHYTHM, SCRAP, SIM_DT } from '../../src/data/balance';
-import { BOONS, boonDef, offerable, rollOffer, takeBoon } from '../../src/sim/boons';
+import { BOONS, boonDef, buildPower, offerable, rollOffer, takeBoon, threatLevel } from '../../src/sim/boons';
 import { moveBullets } from '../../src/sim/bullets';
 import { resolveCollisions } from '../../src/sim/collision';
 import { hitPlayer, hurtbox, updatePlayer } from '../../src/sim/player';
 import { multCap, registerGraze } from '../../src/sim/scoring';
 import { defaultRunOptions } from '../../src/sim/ship';
-import { finishStage, rerollDraft } from '../../src/sim/stageFlow';
+import { finishStage, rerollDraft, startStage } from '../../src/sim/stageFlow';
 import { createInitialState } from '../../src/sim/state';
 import { NO_INPUT, type BoonId, type Bullet, type SimEvent, type SimState } from '../../src/sim/types';
 import { landFormation } from './helpers';
@@ -330,5 +330,42 @@ describe('M19 boons', () => {
     expect(s.ship.damage).toBe(1 + BOON.blindDamage);
     expect(registerGraze(s)).toBe(0);
     expect(s.charge).toBe(1);
+  });
+});
+
+describe('threat and the volley cap (M22)', () => {
+  it('sums rarity weights into build power and a HUD level', () => {
+    expect(buildPower({})).toBe(0);
+    expect(buildPower({ twin: 1, magnet: 2, jackpot: 1, berserk: 1 })).toBe(1 + 4 + 3 + 1);
+    expect(threatLevel({ twin: 1, magnet: 2, jackpot: 1, berserk: 1 })).toBe(3);
+  });
+
+  it('a stage started with boons is harder than the same stage without them', () => {
+    const plain = run();
+    const built = run();
+    take(built, 'twin', 'spread', 'heavy', 'magnet', 'overdrive');
+    built.stage = plain.stage;
+    startStage(built, []);
+    startStage(plain, []);
+    expect(built.diff.d).toBeGreaterThan(plain.diff.d);
+    expect(built.diff.fireRate).toBeGreaterThan(plain.diff.fireRate);
+  });
+
+  it('side bolts hold the volley slot until they leave, so spread fire is capped', () => {
+    const s = run();
+    take(s, 'spread');
+    for (let i = 0; i < 6; i++) fire(s);
+    const volleys = new Set(s.bullets.filter((b) => b.owner === 'player').map((b) => b.volley));
+    expect(volleys.size).toBe(s.ship.maxBullets);
+    // The primary bolts vanish (hit something) but the side bolts remain: still capped.
+    s.bullets = s.bullets.filter((b) => b.extra);
+    fire(s);
+    expect(new Set(s.bullets.map((b) => b.volley)).size).toBe(s.ship.maxBullets);
+    // Once a whole volley is gone, a new shot fits.
+    const first = s.bullets[0]!.volley;
+    s.bullets = s.bullets.filter((b) => b.volley !== first);
+    fire(s);
+    expect(new Set(s.bullets.map((b) => b.volley)).size).toBe(s.ship.maxBullets);
+    expect(s.bullets.some((b) => b.volley !== first && !b.extra)).toBe(true);
   });
 });

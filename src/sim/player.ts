@@ -31,9 +31,12 @@ function tryFire(state: SimState, input: InputFrame, events: SimEvent[]): void {
   const p = state.player;
   const ship = state.ship;
   if (p.cooldown > 0) return;
-  let active = 0;
-  for (const b of state.bullets) if (b.owner === 'player' && !b.extra) active++;
-  if (active >= ship.maxBullets) return;
+  // Volley cap: a shot holds a slot until every bolt it fired has hit or left the field, so side bolts sprayed
+  // at an angle are not free (M22). Shrapnel and burst bolts carry no volley and never block a shot.
+  const volleys = new Set<number>();
+  for (const b of state.bullets) if (b.owner === 'player' && b.volley !== undefined) volleys.add(b.volley);
+  if (volleys.size >= ship.maxBullets) return;
+  const volley = allocId(state);
 
   const cx = p.x + p.w / 2;
   const y = p.y - PLAYER.bulletH;
@@ -61,6 +64,7 @@ function tryFire(state: SimState, input: InputFrame, events: SimEvent[]): void {
       mult: state.rhythm.mult,
       damage: ship.damage + overdrive + sniper + (power ? BEAT_STAGE.powerDamage : 0),
       pierce: ship.pierce + (power ? BEAT_STAGE.powerPierce : 0),
+      volley,
       ...(extra ? { extra } : {}),
       ...(extra && vx !== 0 && ship.bounce > 0 ? { bounce: ship.bounce } : {}),
       ...(power ? { power } : {}),

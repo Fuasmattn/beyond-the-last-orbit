@@ -1,4 +1,4 @@
-import { BOON, PLAYER, ROUTE } from '../data/balance';
+import { BOON, PLAYER, ROUTE, THREAT } from '../data/balance';
 import { nextRandom } from './rng';
 import type { BoonId, BoonRarity, DraftTier, RogueState, SimState } from './types';
 
@@ -255,6 +255,18 @@ export const RARITY_COLOR: Readonly<Record<BoonRarity, number>> = {
   epic: 0xffe14a,
   curse: 0xc36bff,
 };
+
+/** Build power (M22): rarity weights summed over every boon stack. Drives the threat ladder. */
+export function buildPower(boons: Partial<Record<BoonId, number>>): number {
+  let power = 0;
+  for (const [id, n] of Object.entries(boons) as [BoonId, number][]) power += THREAT.rarityPower[boonDef(id).rarity] * n;
+  return power;
+}
+
+/** THREAT level shown on the HUD. */
+export function threatLevel(boons: Partial<Record<BoonId, number>>): number {
+  return Math.floor(buildPower(boons) / THREAT.perLevel);
+}
 
 export function boonDef(id: BoonId): BoonDef {
   return BOONS.find((b) => b.id === id)!;

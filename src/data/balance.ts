@@ -89,6 +89,19 @@ export const TURRET_POINTS = 250;
 
 export const MINI = { w: 7, h: 6, vx: 35, vy: 45 } as const;
 
+/** M22 threat: enemies scale with the build's power (sum of boon rarity weights). */
+export const THREAT = {
+  /** Difficulty scalar per point of power. */
+  perPower: 0.6,
+  /** Power per extra enemy HP. */
+  hpPer: 8,
+  /** Boss HP scale per point of power. */
+  bossHpPerPower: 0.03,
+  /** Power per THREAT level shown on the HUD. */
+  perLevel: 3,
+  rarityPower: { common: 1, rare: 2, epic: 3, curse: 1 },
+} as const;
+
 /** M21 fight archetypes. Route weights for battle / elite nodes off the beat row. */
 export const FIGHT = {
   weights: { swarm: 35, convoy: 30, miniboss: 20, formation: 15 },

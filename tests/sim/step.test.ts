@@ -145,3 +145,13 @@ describe('step', () => {
     expect(a.stats.shots).toBeGreaterThan(0);
   });
 });
+
+describe('menu phases', () => {
+  it('ignores movement input while a route, draft, shop or event waits for a pick', () => {
+    const s = playing();
+    s.phase = 'draft';
+    const x = s.player.x;
+    for (let i = 0; i < 30; i++) step(s, { ...NO_INPUT, moveX: 1, dragX: 5 });
+    expect(s.player.x).toBe(x);
+  });
+});

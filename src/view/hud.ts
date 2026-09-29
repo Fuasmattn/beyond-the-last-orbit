@@ -169,7 +169,7 @@ export class Hud extends Container {
     this.updateStrip(state);
     this.updateBossBar(state);
     this.updateBanner(state, paused);
-    this.updateResults(state);
+    this.updateResults(state, paused);
     this.popupTime = Math.max(0, this.popupTime - dt);
     this.popup.visible = this.popupTime > 0;
     fitCenter(this.popup, this.textScale, 200, viewport.w);
@@ -256,8 +256,9 @@ export class Hud extends Container {
     fitCenter(this.sub, k, y + 20 * k, viewport.w);
   }
 
-  private updateResults(state: SimState): void {
-    const r = state.phase === 'stageClear' ? state.result : null;
+  private updateResults(state: SimState, paused: boolean): void {
+    // The stage-clear card sits where the pause menu opens; PAUSED replaces it.
+    const r = state.phase === 'stageClear' && !paused ? state.result : null;
     const lines = r
       ? [
           `ACCURACY  ${pct(r.accuracy)}`,

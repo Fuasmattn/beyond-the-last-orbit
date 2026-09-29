@@ -10,6 +10,7 @@ import { hitPlayer, updatePlayer } from './player';
 import { updateCombo } from './scoring';
 import { updateSpecials } from './specials';
 import { advanceStage, checkExtraLife, finishStage, startStage } from './stageFlow';
+import { NO_INPUT } from './types';
 import type { InputFrame, SimEvent, SimState } from './types';
 
 export function step(state: SimState, input: InputFrame, dt: number = SIM_DT): SimEvent[] {
@@ -47,8 +48,9 @@ export function step(state: SimState, input: InputFrame, dt: number = SIM_DT): S
     case 'draft':
     case 'shop':
     case 'event':
-      // Waiting for the player's pick (chooseNode / chooseBoon / shop / event); the ship can still drift around.
-      updatePlayer(state, noFire, dt, events);
+      // Waiting for the player's pick (chooseNode / chooseBoon / shop / event). The arrow keys drive the menu,
+      // so the ship gets no movement input and just glides to a stop.
+      updatePlayer(state, { ...NO_INPUT, beat: input.beat }, dt, events);
       state.phaseTimer += dt;
       return events;
 

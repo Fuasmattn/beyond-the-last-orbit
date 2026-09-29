@@ -1,7 +1,7 @@
-import { Container } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { viewport } from '../app/viewport';
 import { Sourness } from '../audio/sourness';
-import { ROUTE } from '../data/balance';
+import { FIELD_H, ROUTE } from '../data/balance';
 import { equippedLaser, equippedSkin } from '../data/cosmetics';
 import { dailyBoard, dailyRunOptions, dailySeed, dayKey } from '../meta/daily';
 import { runOptionsFor } from '../meta/upgrades';
@@ -49,6 +49,8 @@ export class RunScene implements Scene {
   private readonly draft: DraftOverlay;
   private readonly event: EventOverlay;
   private readonly pauseMenu: MenuList;
+  /** Dims the field and frames the pause menu so it reads over any stage text. */
+  private readonly pauseShade = new Graphics();
   private elapsed = 0;
   private pauseBlink = 0;
   private paused = false;
@@ -83,7 +85,9 @@ export class RunScene implements Scene {
     this.pauseMenu = new MenuList(ctx.textures.glyphs, PAUSE_MENU);
     this.pauseMenu.setRows(PAUSE_ITEMS.map((label) => ({ label })));
     this.pauseMenu.visible = false;
-    this.root.addChild(this.renderer.root, this.hud, this.route, this.draft, this.event, this.pauseMenu);
+    this.pauseShade.visible = false;
+    // The shade dims the field but not the HUD (score, PAUSED banner) or the menu.
+    this.root.addChild(this.renderer.root, this.pauseShade, this.hud, this.route, this.draft, this.event, this.pauseMenu);
     ctx.audio?.sfx.start();
     ctx.audio?.startSong(ctx.songForWorld(this.state.world, this.state.loop));
     if (this.state.phase === 'draft') this.draft.open('draft');
@@ -195,9 +199,19 @@ export class RunScene implements Scene {
     this.renderer.root.position.set(Math.round(off.x) - this.camX, Math.round(off.y));
     this.ctx.setAberration(shakeOn ? this.renderer.trauma : 0);
     this.hud.update(this.state, this.paused, beat, this.ctx.audio !== null, elapsed);
-    this.pauseMenu.visible = this.paused;
+    this.pauseMenu.visible = this.pauseShade.visible = this.paused;
     if (this.paused) {
-      this.pauseMenu.position.set(Math.round(viewport.w / 2 - PAUSE_MENU.width / 2), PAUSE_MENU_Y);
+      const x = Math.round(viewport.w / 2 - PAUSE_MENU.width / 2);
+      this.pauseMenu.position.set(x, PAUSE_MENU_Y);
+      const box = { x: x - 16, y: PAUSE_MENU_Y - 8, w: PAUSE_MENU.width + 28, h: PAUSE_ITEMS.length * PAUSE_MENU.lineH + 10 };
+      this.pauseShade
+        .clear()
+        .rect(0, 0, viewport.w, FIELD_H)
+        .fill({ color: 0x000000, alpha: 0.7 })
+        .rect(box.x, box.y, box.w, box.h)
+        .fill({ color: 0x05030f, alpha: 0.95 })
+        .rect(box.x, box.y, box.w, box.h)
+        .stroke({ color: 0xffe14a, width: 1 });
       this.pauseBlink += elapsed;
       this.pauseMenu.refresh(this.pauseBlink);
     }

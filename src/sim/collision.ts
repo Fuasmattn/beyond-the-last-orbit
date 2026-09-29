@@ -5,7 +5,7 @@ import { overlaps } from './geometry';
 import { hitPlayer, hurtbox } from './player';
 import { recordHit, registerGraze, registerKill } from './scoring';
 import { spawnMini } from './specials';
-import type { Box, Bullet, SimEvent, SimState } from './types';
+import type { Box, Bullet, Enemy, SimEvent, SimState } from './types';
 
 export { overlaps } from './geometry';
 
@@ -33,10 +33,11 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
       const cy = e.y + e.h / 2;
       if (e.hp <= 0) {
         const points = registerKill(state, POINTS[e.kind], b.mult);
-        state.rogue.scrap += state.diff.elite ? SCRAP.eliteKill : SCRAP.kill;
+        state.rogue.scrap += scrapForKill(state);
         state.run.kills++;
         events.push({ type: 'enemyKilled', id: e.id, kind: e.kind, x: cx, y: cy, points });
         if (state.ship.shrapnel && !b.ttl) spawnShrapnel(state, cx, cy, b, events);
+        if (state.ship.arc) arcZap(state, e, b.mult, events);
         if (e.kind === 'splitter') {
           spawnMini(state, cx, cy, -1);
           spawnMini(state, cx, cy, 1);
@@ -77,6 +78,47 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
   if (spent.size > 0) state.bullets = state.bullets.filter((b) => !spent.has(b.id));
 }
 
+/** Scrap for a kill: the stage's base plus SALVAGE, scaled by LOANSHARK. */
+export function scrapForKill(state: SimState): number {
+  const base = state.diff.elite ? SCRAP.eliteKill : SCRAP.kill;
+  return Math.round((base + state.ship.scrapBonus) * state.ship.scrapMul);
+}
+
+/** ARC: a kill zaps the nearest other live enemy within range; a zap kill scores but does not chain. */
+function arcZap(state: SimState, from: Enemy, mult: number, events: SimEvent[]): void {
+  const fx = from.x + from.w / 2;
+  const fy = from.y + from.h / 2;
+  let best: Enemy | null = null;
+  let bestD: number = BOON.arcRange;
+  for (const e of state.enemies) {
+    if (e === from || e.hp <= 0 || e.phased) continue;
+    const d = Math.hypot(e.x + e.w / 2 - fx, e.y + e.h / 2 - fy);
+    if (d < bestD) {
+      bestD = d;
+      best = e;
+    }
+  }
+  if (!best) return;
+  const cx = best.x + best.w / 2;
+  const cy = best.y + best.h / 2;
+  best.hp -= BOON.arcDamage;
+  best.flash = ENEMY.flashTime;
+  events.push({ type: 'arc', x1: fx, y1: fy, x2: cx, y2: cy });
+  if (best.hp <= 0) {
+    const points = registerKill(state, POINTS[best.kind], mult);
+    state.rogue.scrap += scrapForKill(state);
+    state.run.kills++;
+    events.push({ type: 'enemyKilled', id: best.id, kind: best.kind, x: cx, y: cy, points });
+    if (best.kind === 'splitter') {
+      spawnMini(state, cx, cy, -1);
+      spawnMini(state, cx, cy, 1);
+      events.push({ type: 'split', id: best.id, x: cx, y: cy });
+    }
+  } else {
+    events.push({ type: 'enemyHit', id: best.id, x: cx, y: cy });
+  }
+}
+
 /**
  * Enemy bullets that enter the graze margin around the ship and then leave it without hitting
  * score once each. (A hit clears all enemy bullets, so a bullet that hits never scores.)
@@ -93,8 +135,10 @@ function checkGrazes(state: SimState, spent: ReadonlySet<number>, events: SimEve
     }
     if (!b.nearMiss) continue;
     b.grazed = true;
+    const shield = state.player.shield;
     const points = registerGraze(state);
     events.push({ type: 'graze', x: b.x + b.w / 2, y: b.y + b.h / 2, points });
+    if (state.player.shield > shield) events.push({ type: 'mended', shield: state.player.shield });
   }
 }
 

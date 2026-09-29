@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { BOON, PLAYER, RHYTHM, SIM_DT } from '../../src/data/balance';
+import { BOON, PLAYER, RHYTHM, SCRAP, SIM_DT } from '../../src/data/balance';
 import { BOONS, boonDef, offerable, rollOffer, takeBoon } from '../../src/sim/boons';
 import { moveBullets } from '../../src/sim/bullets';
 import { resolveCollisions } from '../../src/sim/collision';
 import { hitPlayer, hurtbox, updatePlayer } from '../../src/sim/player';
-import { registerGraze } from '../../src/sim/scoring';
+import { multCap, registerGraze } from '../../src/sim/scoring';
+import { defaultRunOptions } from '../../src/sim/ship';
+import { finishStage, rerollDraft } from '../../src/sim/stageFlow';
 import { createInitialState } from '../../src/sim/state';
 import { NO_INPUT, type BoonId, type Bullet, type SimEvent, type SimState } from '../../src/sim/types';
 import { landFormation } from './helpers';
@@ -191,5 +193,142 @@ describe('curses and second wind', () => {
     s.player.invuln = 0;
     hitPlayer(s, events);
     expect(s.phase).toBe('gameOver');
+  });
+});
+
+describe('draft tiers (M19)', () => {
+  const rarities = (s: SimState, tier: Parameters<typeof rollOffer>[2]) => rollOffer(s, s.rogue, tier).map((id) => boonDef(id).rarity);
+
+  it('starter drafts are three rares, basic drafts three commons, rare drafts rare or better', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const s = createInitialState(seed);
+      expect(rarities(s, 'starter')).toEqual(['rare', 'rare', 'rare']);
+      expect(rarities(s, 'basic')).toEqual(['common', 'common', 'common']);
+      for (const r of rarities(s, 'rare')) expect(['rare', 'epic']).toContain(r);
+    }
+  });
+
+  it('every plain battle clear owes a basic draft; an elite clear a full one', () => {
+    const s = run();
+    finishStage(s, []);
+    expect(s.rogue.drafts).toEqual(['basic']);
+    const e = run();
+    e.diff = { ...e.diff, elite: true };
+    finishStage(e, []);
+    expect(e.rogue.drafts).toEqual(['full']);
+  });
+
+  it('a starter run opens on rares and a reroll keeps the tier', () => {
+    const s = createInitialState(5, undefined, { ...defaultRunOptions(), starterDraft: true, rerolls: 1 });
+    expect(s.rogue.draftTier).toBe('starter');
+    expect(rerollDraft(s)).toBe(true);
+    for (const id of s.rogue.offer) expect(boonDef(id).rarity).toBe('rare');
+  });
+});
+
+describe('M19 boons', () => {
+  const kill = (s: SimState, events: SimEvent[] = []) => {
+    const e = s.enemies.find((x) => x.hp > 0 && x.row === 0)!;
+    e.hp = 1;
+    s.bullets = [bullet({ x: e.x + 2, y: e.y + 1 })];
+    resolveCollisions(s, events);
+    return e;
+  };
+
+  it('SALVAGE adds scrap per kill and LOANSHARK halves income after a payout', () => {
+    const s = run();
+    take(s, 'salvage');
+    kill(s);
+    expect(s.rogue.scrap).toBe(SCRAP.kill + 1);
+    take(s, 'loanshark');
+    expect(s.rogue.scrap).toBe(SCRAP.kill + 1 + BOON.loanScrap);
+    kill(s);
+    expect(s.rogue.scrap).toBe(SCRAP.kill + 1 + BOON.loanScrap + Math.round((SCRAP.kill + 1) * BOON.loanMul));
+  });
+
+  it('LONG BARREL and WIDE BOLTS change the bolt', () => {
+    const s = run();
+    take(s, 'longbarrel', 'widebolts');
+    fire(s);
+    expect(s.bullets[0]!.vy).toBeCloseTo(-PLAYER.bulletSpeed * BOON.longBarrel);
+    expect(s.bullets[0]!.w).toBe(PLAYER.bulletW + BOON.wideBolts);
+  });
+
+  it('HARDPOINT adds a shield and stops being offered at the ceiling', () => {
+    const s = run();
+    expect(offerable(s, s.rogue)).toContain('hardpoint');
+    for (let i = 0; i < BOON.hardpointMax; i++) take(s, 'hardpoint');
+    expect(s.player.shield).toBe(BOON.hardpointMax);
+    expect(offerable(s, s.rogue)).not.toContain('hardpoint');
+  });
+
+  it('SNIPER adds damage only while still', () => {
+    const s = run();
+    take(s, 'sniper');
+    fire(s);
+    expect(s.bullets[0]!.damage).toBe(2);
+    s.bullets = [];
+    s.player.vx = 50;
+    fire(s);
+    expect(s.bullets[0]!.damage).toBe(1);
+  });
+
+  it('ARC zaps the nearest neighbour on a kill', () => {
+    const s = run();
+    take(s, 'arc');
+    for (const x of s.enemies) x.hp = x.maxHp = 5;
+    const events: SimEvent[] = [];
+    const e = kill(s, events);
+    const zapped = events.find((ev) => ev.type === 'arc');
+    expect(zapped).toBeDefined();
+    const hit = s.enemies.find((x) => x.hp < x.maxHp && x.id !== e.id);
+    expect(hit).toBeDefined();
+    expect(events.some((ev) => ev.type === 'enemyHit' && ev.id === hit!.id)).toBe(true);
+  });
+
+  it('SHIELD BURST fires a ring of bolts when a shield absorbs a hit', () => {
+    const s = run();
+    take(s, 'shieldburst', 'hardpoint');
+    const events: SimEvent[] = [];
+    hitPlayer(s, events);
+    expect(s.player.shield).toBe(0);
+    expect(s.bullets.filter((b) => b.owner === 'player' && b.extra)).toHaveLength(BOON.burstCount);
+    expect(events.some((e) => e.type === 'shieldBurst')).toBe(true);
+  });
+
+  it('GRAZE MEND restores a shield every 25 grazes', () => {
+    const s = run();
+    take(s, 'mend');
+    for (let i = 0; i < BOON.mendGrazes - 1; i++) registerGraze(s);
+    expect(s.player.shield).toBe(0);
+    registerGraze(s);
+    expect(s.player.shield).toBe(1);
+    expect(s.mend).toBe(0);
+  });
+
+  it('JACKPOT lifts the multiplier cap', () => {
+    const s = run();
+    expect(multCap(s)).toBe(RHYTHM.maxMult);
+    take(s, 'jackpot');
+    expect(multCap(s)).toBe(RHYTHM.maxMult + BOON.jackpotLevels);
+  });
+
+  it('MIRROR fires an extra bolt from the mirrored position', () => {
+    const s = run();
+    take(s, 'mirror');
+    s.player.x = 20;
+    fire(s);
+    const cx = s.player.x + s.player.w / 2;
+    const ghost = s.bullets.find((b) => b.extra);
+    expect(ghost).toBeDefined();
+    expect(ghost!.x + ghost!.w / 2).toBeCloseTo(s.fieldW - cx);
+  });
+
+  it('BLIND SPOT adds damage and zeroes graze points but still feeds GRAZE CHARGE', () => {
+    const s = run();
+    take(s, 'blindspot', 'charge');
+    expect(s.ship.damage).toBe(1 + BOON.blindDamage);
+    expect(registerGraze(s)).toBe(0);
+    expect(s.charge).toBe(1);
   });
 });

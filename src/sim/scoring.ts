@@ -7,7 +7,7 @@ export function rhythmMultForStreak(streak: number, maxMult: number = RHYTHM.max
 
 /** Highest multiplier right now: x8 in beat stages, x4 otherwise. */
 export function multCap(state: SimState): number {
-  return state.beatMode === 'master' ? BEAT_STAGE.maxMult : RHYTHM.maxMult;
+  return (state.beatMode === 'master' ? BEAT_STAGE.maxMult : RHYTHM.maxMult) + state.ship.multBonus;
 }
 
 function maxStreak(state: SimState): number {
@@ -96,6 +96,10 @@ export function registerGraze(state: SimState): number {
   state.stageStats.grazes++;
   state.run.grazes++;
   if (state.ship.chargeGrazes > 0) state.charge = Math.min(state.ship.chargeGrazes, state.charge + 1);
+  if (state.ship.mendGrazes > 0 && ++state.mend >= state.ship.mendGrazes) {
+    state.mend = 0;
+    state.player.shield++;
+  }
   return points;
 }
 

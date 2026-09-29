@@ -45,7 +45,8 @@ function tryFire(state: SimState, input: InputFrame, events: SimEvent[]): void {
   const power = (state.beatMode === 'master' && onBeat && input.firePerfect) || charged;
   if (charged) state.charge = 0;
   const overdrive = ship.overdrive && state.rhythm.mult >= BOON.overdriveMult ? 1 : 0;
-  const w = power ? BEAT_STAGE.powerW : PLAYER.bulletW;
+  const sniper = ship.sniper && Math.hypot(p.vx, p.vy) < BOON.sniperStill ? 1 : 0;
+  const w = power ? Math.max(BEAT_STAGE.powerW, ship.boltW) : ship.boltW;
   const bolt = (x: number, vx: number, extra: boolean) =>
     state.bullets.push({
       id: allocId(state),
@@ -54,11 +55,11 @@ function tryFire(state: SimState, input: InputFrame, events: SimEvent[]): void {
       w,
       h: PLAYER.bulletH,
       vx,
-      vy: -PLAYER.bulletSpeed,
+      vy: -ship.boltSpeed,
       owner: 'player',
       onBeat,
       mult: state.rhythm.mult,
-      damage: ship.damage + overdrive + (power ? BEAT_STAGE.powerDamage : 0),
+      damage: ship.damage + overdrive + sniper + (power ? BEAT_STAGE.powerDamage : 0),
       pierce: ship.pierce + (power ? BEAT_STAGE.powerPierce : 0),
       ...(extra ? { extra } : {}),
       ...(extra && vx !== 0 && ship.bounce > 0 ? { bounce: ship.bounce } : {}),
@@ -71,15 +72,43 @@ function tryFire(state: SimState, input: InputFrame, events: SimEvent[]): void {
     bolt(cx, 0, false);
   }
   if (ship.spread) {
-    bolt(cx, -PLAYER.bulletSpeed * SPREAD_VX, true);
-    bolt(cx, PLAYER.bulletSpeed * SPREAD_VX, true);
+    bolt(cx, -ship.boltSpeed * SPREAD_VX, true);
+    bolt(cx, ship.boltSpeed * SPREAD_VX, true);
   }
+  if (ship.mirror) bolt(state.fieldW - cx, 0, true);
   p.cooldown = ship.cooldown;
   recordShot(state);
   events.push({ type: 'shot', x: cx, y, onBeat, power });
 }
 
 /** What enemy bullets and lasers must touch to hit: a small core at the center of the hull (HOT ZONE grows it). */
+/** SHIELD BURST: a ring of side bolts from the ship's center, carrying the current bolt damage. */
+function shieldBurst(state: SimState, events: SimEvent[]): void {
+  const p = state.player;
+  const ship = state.ship;
+  const cx = p.x + p.w / 2;
+  const cy = p.y + p.h / 2;
+  for (let i = 0; i < BOON.burstCount; i++) {
+    const a = (i / BOON.burstCount) * Math.PI * 2;
+    state.bullets.push({
+      id: allocId(state),
+      x: cx - ship.boltW / 2,
+      y: cy - PLAYER.bulletH / 2,
+      w: ship.boltW,
+      h: PLAYER.bulletH,
+      vx: Math.sin(a) * BOON.burstSpeed,
+      vy: -Math.cos(a) * BOON.burstSpeed,
+      owner: 'player',
+      onBeat: false,
+      mult: state.rhythm.mult,
+      damage: ship.damage,
+      pierce: ship.pierce,
+      extra: true,
+    });
+  }
+  events.push({ type: 'shieldBurst', x: cx, y: cy });
+}
+
 export function hurtbox(state: SimState): Box {
   const p = state.player;
   const w = PLAYER.hurtW * state.ship.hurtScale;
@@ -97,6 +126,7 @@ export function hitPlayer(state: SimState, events: SimEvent[]): void {
     state.hitStop = HITSTOP.playerHit;
     state.bullets = state.bullets.filter((b) => b.owner === 'player');
     events.push({ type: 'shieldHit', x: p.x + p.w / 2, y: p.y + p.h / 2, shieldLeft: p.shield });
+    if (state.ship.shieldBurst) shieldBurst(state, events);
     return;
   }
   p.lives--;

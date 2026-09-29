@@ -22,6 +22,16 @@ export function baseShip(): ShipStats {
     overdrive: false,
     revives: 0,
     fragileStreak: false,
+    boltSpeed: PLAYER.bulletSpeed,
+    boltW: PLAYER.bulletW,
+    scrapBonus: 0,
+    scrapMul: 1,
+    sniper: false,
+    arc: false,
+    shieldBurst: false,
+    mendGrazes: 0,
+    multBonus: 0,
+    mirror: false,
   };
 }
 

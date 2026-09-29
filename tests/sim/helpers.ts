@@ -1,6 +1,20 @@
 import { updateFormation } from '../../src/sim/formation';
+import { advanceStage, chooseBoon, finishStage } from '../../src/sim/stageFlow';
 import { createInitialState } from '../../src/sim/state';
-import type { SimState } from '../../src/sim/types';
+import type { SimEvent, SimState } from '../../src/sim/types';
+
+/** Skips the common-only draft every plain battle stage owes (M19), so tests land where they used to. */
+export function skipBasicDraft(s: SimState, events: SimEvent[] = []): void {
+  while (s.phase === 'draft' && s.rogue.draftTier === 'basic') chooseBoon(s, null, events);
+}
+
+/** Clears the current stage, runs through the stage-clear screen and past the basic draft. */
+export function clearStage(s: SimState, events: SimEvent[] = []): SimEvent[] {
+  finishStage(s, events);
+  advanceStage(s, events);
+  skipBasicDraft(s, events);
+  return events;
+}
 
 /** Lands every flying-in enemy in its formation slot. */
 export function landFormation(s: SimState): SimState {

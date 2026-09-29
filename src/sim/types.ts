@@ -36,9 +36,27 @@ export type BoonId =
   | 'secondwind'
   | 'glasscannon'
   | 'berserk'
-  | 'hotzone';
+  | 'hotzone'
+  | 'salvage'
+  | 'longbarrel'
+  | 'widebolts'
+  | 'hardpoint'
+  | 'sniper'
+  | 'arc'
+  | 'shieldburst'
+  | 'mend'
+  | 'jackpot'
+  | 'mirror'
+  | 'loanshark'
+  | 'blindspot';
 
 export type BoonRarity = 'common' | 'rare' | 'epic' | 'curse';
+
+/**
+ * What a draft may roll: `starter` rares only (the run-opening pick), `basic` commons only (plain battle
+ * stages), `full` the rarity weights with a curse slot (elites, bosses, beat ranks, caches), `rare` rare or epic.
+ */
+export type DraftTier = 'starter' | 'basic' | 'full' | 'rare';
 
 export interface RouteNode {
   lane: number;
@@ -68,10 +86,10 @@ export interface RogueState {
   boons: Partial<Record<BoonId, number>>;
   /** Upgrades on offer while drafting. */
   offer: BoonId[];
-  /** Drafts owed after the current node (elite or boss beaten, beat rank, events). */
-  draftsOwed: number;
-  /** Minimum rarity of the next draft's offers (BLACK MARKET). */
-  draftRarity: BoonRarity | null;
+  /** Drafts owed after the current node, in order (stage clears, caches, events). */
+  drafts: DraftTier[];
+  /** Tier of the open draft, so REROLL rolls the same kind of offer. */
+  draftTier: DraftTier;
   /** The current fight was forced on the player and owes no draft. */
   ambush: boolean;
   /** The next fight is a beat stage (GHOST SIGNAL). */
@@ -201,6 +219,24 @@ export interface ShipStats {
   revives: number;
   /** A hit resets the multiplier instead of dropping a level (BERSERK). */
   fragileStreak: boolean;
+  /** Primary bolt speed (px/s) and width. */
+  boltSpeed: number;
+  boltW: number;
+  /** Scrap per kill: round((base + scrapBonus) * scrapMul). */
+  scrapBonus: number;
+  scrapMul: number;
+  /** +1 damage while the ship is (almost) still (SNIPER). */
+  sniper: boolean;
+  /** Kills zap the nearest enemy in range (ARC). */
+  arc: boolean;
+  /** A shield absorbing a hit fires a ring of bolts (SHIELD BURST). */
+  shieldBurst: boolean;
+  /** GRAZE MEND: grazes per restored shield (0 = off). */
+  mendGrazes: number;
+  /** Extra multiplier levels on top of the stage cap (JACKPOT). */
+  multBonus: number;
+  /** Primary shots also fire from the mirrored x (MIRROR). */
+  mirror: boolean;
 }
 
 export interface Player extends Box {
@@ -349,6 +385,8 @@ export interface SimState {
   rhythm: { streak: number; mult: number };
   /** GRAZE CHARGE: grazes banked toward the next power shot. */
   charge: number;
+  /** GRAZE MEND: grazes since the last restored shield. */
+  mend: number;
   combo: { chain: number; timer: number };
   stats: { shots: number; hits: number; onBeatShots: number };
   stageStats: StageStats;
@@ -380,6 +418,9 @@ export type SimEvent =
   | { type: 'eventOpen'; id: EventId }
   | { type: 'eventResolved'; text: string }
   | { type: 'shrapnel'; x: number; y: number }
+  | { type: 'arc'; x1: number; y1: number; x2: number; y2: number }
+  | { type: 'shieldBurst'; x: number; y: number }
+  | { type: 'mended'; shield: number }
   | { type: 'graze'; x: number; y: number; points: number }
   | { type: 'bulletCancel'; count: number; points: number; spots: { x: number; y: number }[] }
   | { type: 'shieldHit'; x: number; y: number; shieldLeft: number }

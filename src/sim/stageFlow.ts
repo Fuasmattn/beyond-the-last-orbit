@@ -8,7 +8,7 @@ import { clamp } from './math';
 import { generateMap, nodeAt, reachableLanes } from './route';
 import { cancelBullets, clampStreak } from './scoring';
 import { canChoose, resolveEvent, rollEvent } from './signal';
-import type { BeatMode, BeatRank, BoonId, SimEvent, SimState, StageResult, StageStats } from './types';
+import type { BeatMode, BeatRank, BoonId, DraftTier, SimEvent, SimState, StageResult, StageStats } from './types';
 
 export function emptyStageStats(): StageStats {
   return { shots: 0, hits: 0, onBeatShots: 0, hitsTaken: 0, grazes: 0, time: 0 };
@@ -91,7 +91,8 @@ export function finishStage(state: SimState, events: SimEvent[]): void {
   state.run.stagesCleared++;
   const beatDraft = result.beatRank === 'S' || result.beatRank === 'A';
   const r = state.rogue;
-  if (!r.ambush && (state.diff.elite || isBossStage(state.stage) || beatDraft)) r.draftsOwed++;
+  // Every stage clear owes a draft: commons after a plain battle, the full table after an elite, boss or beat rank.
+  if (!r.ambush) r.drafts.push(state.diff.elite || isBossStage(state.stage) || beatDraft ? 'full' : 'basic');
   r.ambush = false;
   if (isBossStage(state.stage)) r.scrap += SCRAP.boss;
   state.bullets = [];
@@ -113,7 +114,8 @@ export function startWarp(state: SimState, events: SimEvent[]): void {
 
 /** After the stage-clear screen: draft / route / boss / next world. */
 export function advanceStage(state: SimState, events: SimEvent[]): void {
-  if (state.rogue.draftsOwed > 0) openDraft(state, events);
+  const tier = state.rogue.drafts.shift();
+  if (tier) openDraft(state, events, tier);
   else continueRoute(state, events);
 }
 
@@ -162,11 +164,10 @@ function continueRoute(state: SimState, events: SimEvent[]): void {
   }
 }
 
-function openDraft(state: SimState, events: SimEvent[]): void {
+function openDraft(state: SimState, events: SimEvent[], tier: DraftTier): void {
   const r = state.rogue;
-  r.draftsOwed = Math.max(0, r.draftsOwed - 1);
-  r.offer = rollOffer(state, r, r.draftRarity);
-  r.draftRarity = null;
+  r.draftTier = tier;
+  r.offer = rollOffer(state, r, tier);
   if (r.offer.length === 0) {
     advanceStage(state, events);
     return;
@@ -194,7 +195,7 @@ export function chooseNode(state: SimState, lane: number, events: SimEvent[]): b
       startFight(state, events, node.kind);
       break;
     case 'cache':
-      openDraft(state, events);
+      openDraft(state, events, 'full');
       break;
     case 'shop':
       openShop(state, events);
@@ -296,7 +297,8 @@ export function chooseEvent(state: SimState, index: number, events: SimEvent[]):
 /** Run opener: a draft before stage 1 (the formation is spawned and waits). */
 export function openStarterDraft(state: SimState): void {
   const r = state.rogue;
-  r.offer = rollOffer(state, r);
+  r.draftTier = 'starter';
+  r.offer = rollOffer(state, r, 'starter');
   if (r.offer.length === 0) return;
   r.starter = true;
   state.phase = 'draft';
@@ -328,7 +330,7 @@ export function rerollDraft(state: SimState): boolean {
   const r = state.rogue;
   if (state.phase !== 'draft' || r.rerolls <= 0) return false;
   r.rerolls--;
-  r.offer = rollOffer(state, r);
+  r.offer = rollOffer(state, r, r.draftTier);
   return true;
 }
 

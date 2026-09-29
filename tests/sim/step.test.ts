@@ -12,7 +12,7 @@ import { WORLDS } from '../../src/data/worlds';
 import { reachableLanes } from '../../src/sim/route';
 import { chooseBoon, chooseNode, startStage } from '../../src/sim/stageFlow';
 import { createInitialState } from '../../src/sim/state';
-import { landedState } from './helpers';
+import { landedState, skipBasicDraft } from './helpers';
 import { step } from '../../src/sim/step';
 import { NO_INPUT, type InputFrame, type SimEvent } from '../../src/sim/types';
 
@@ -48,6 +48,8 @@ describe('step', () => {
     expect(s.phase).toBe('stageClear');
     expect(clear?.type === 'stageClear' ? clear.result.bonus : -1).toBe(s.score);
     for (let t = 0; t < STAGE.clearTime + 0.1; t += SIM_DT) step(s, NO_INPUT);
+    expect(s.phase).toBe('draft');
+    skipBasicDraft(s);
     expect(s.phase).toBe('route');
     s.rogue.map.rows[0]!.forEach((n) => (n.kind = 'battle'));
     chooseNode(s, reachableLanes(s.rogue)[0]!, []);

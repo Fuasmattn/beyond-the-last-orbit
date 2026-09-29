@@ -5,7 +5,6 @@ import { boonDef } from '../../src/sim/boons';
 import { resolveCollisions } from '../../src/sim/collision';
 import { generateMap, reachableLanes } from '../../src/sim/route';
 import {
-  advanceStage,
   buyShopBoon,
   buyShopRepair,
   chooseEvent,
@@ -17,14 +16,13 @@ import {
 } from '../../src/sim/stageFlow';
 import { createInitialState } from '../../src/sim/state';
 import type { Bullet, EventId, NodeKind, SimEvent, SimState } from '../../src/sim/types';
-import { landFormation } from './helpers';
+import { clearStage, landFormation } from './helpers';
 
 /** Clears stage 1 and lands on the route with the first row rewritten to `kind`. */
 function atNode(kind: NodeKind, seed = 3): { s: SimState; events: SimEvent[] } {
   const s = createInitialState(seed);
   const events: SimEvent[] = [];
-  finishStage(s, events);
-  advanceStage(s, events);
+  clearStage(s, events);
   s.rogue.map.rows[0]!.forEach((n) => (n.kind = kind));
   chooseNode(s, reachableLanes(s.rogue)[0]!, events);
   return { s, events };
@@ -134,7 +132,7 @@ describe('signal node', () => {
     expect(a.s.phase).toBe('stageIntro');
     expect(a.s.diff.elite).toBe(true);
     finishStage(a.s, a.events);
-    expect(a.s.rogue.draftsOwed).toBe(2);
+    expect(a.s.rogue.drafts).toEqual(['full', 'full']);
     const b = withEvent('distress');
     chooseEvent(b.s, 1, b.events);
     expect(b.s.rogue.scrap).toBe(SIGNAL.distressScrap);
@@ -155,7 +153,7 @@ describe('signal node', () => {
         ambushed++;
         expect(s.diff.elite).toBe(true);
         finishStage(s, events);
-        expect(s.rogue.draftsOwed).toBe(0);
+        expect(s.rogue.drafts).toEqual([]);
         expect(s.rogue.ambush).toBe(false);
       }
     }

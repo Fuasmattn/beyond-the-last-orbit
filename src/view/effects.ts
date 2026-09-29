@@ -49,6 +49,8 @@ export class Effects extends Container {
     }
   }
 
+  private lastGraze = { x: 0, y: 0 };
+
   notify(events: readonly SimEvent[]): void {
     for (const e of events) {
       switch (e.type) {
@@ -99,6 +101,7 @@ export class Effects extends Container {
           this.shake.add(TRAUMA.playerHit);
           break;
         case 'graze':
+          this.lastGraze = { x: e.x, y: e.y };
           this.sparks(e.x, e.y, 3, [0x4af2ff, 0xffffff]);
           this.popups.spawn(`+${e.points}`, 0x4af2ff, e.x, e.y);
           break;
@@ -112,6 +115,22 @@ export class Effects extends Container {
           this.explode(e.x, e.y, 16, [0x7dff6b, 0xffffff], 70);
           this.shake.add(TRAUMA.part);
           break;
+        case 'shieldBurst':
+          this.explode(e.x, e.y, 24, [0x7dff6b, 0x4af2ff, 0xffffff], 120);
+          this.popups.spawn('BURST', 0x7dff6b, e.x, e.y - 10);
+          break;
+        case 'mended':
+          this.popups.spawn('+SHIELD', 0x7dff6b, this.lastGraze.x, this.lastGraze.y);
+          break;
+        case 'arc': {
+          // A dotted spark line from the kill to the zapped enemy.
+          const n = 6;
+          for (let i = 1; i <= n; i++) {
+            const t = i / n;
+            this.sparks(e.x1 + (e.x2 - e.x1) * t, e.y1 + (e.y2 - e.y1) * t, 1, [0x4af2ff, 0xffffff]);
+          }
+          break;
+        }
         case 'bombBurst':
           this.sparks(e.x, e.y, 10, [0xff7a3d]);
           this.shake.add(TRAUMA.bomb);

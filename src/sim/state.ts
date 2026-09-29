@@ -50,6 +50,7 @@ export function createInitialState(
     beat: { last: null, count: 0 },
     rhythm: { streak: 0, mult: 1 },
     charge: 0,
+    mend: 0,
     combo: { chain: 0, timer: 0 },
     stats: { shots: 0, hits: 0, onBeatShots: 0 },
     stageStats: emptyStageStats(),

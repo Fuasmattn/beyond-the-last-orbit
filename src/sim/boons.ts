@@ -1,6 +1,6 @@
 import { BOON, PLAYER, ROUTE } from '../data/balance';
 import { nextRandom } from './rng';
-import type { BoonId, BoonRarity, RogueState, SimState } from './types';
+import type { BoonId, BoonRarity, DraftTier, RogueState, SimState } from './types';
 
 export interface BoonDef {
   id: BoonId;
@@ -147,10 +147,107 @@ export const BOONS: readonly BoonDef[] = [
       s.ship.hurtScale *= BOON.hotZoneScale;
     },
   },
+  // M19 commons.
+  { id: 'salvage', name: 'SALVAGE', desc: '+1 SCRAP PER KILL', rarity: 'common', max: 2, apply: (s) => void s.ship.scrapBonus++ },
+  {
+    id: 'longbarrel',
+    name: 'LONG BARREL',
+    desc: 'BOLT SPEED +30%',
+    rarity: 'common',
+    max: 2,
+    apply: (s) => void (s.ship.boltSpeed *= BOON.longBarrel),
+  },
+  { id: 'widebolts', name: 'WIDE BOLTS', desc: 'WIDER BOLTS', rarity: 'common', max: 2, apply: (s) => void (s.ship.boltW += BOON.wideBolts) },
+  {
+    id: 'hardpoint',
+    name: 'HARDPOINT',
+    desc: '+1 SHIELD NOW',
+    rarity: 'common',
+    max: Infinity,
+    synergy: ['shieldburst'],
+    apply: (s) => void s.player.shield++,
+  },
+  // M19 rares.
+  {
+    id: 'sniper',
+    name: 'SNIPER',
+    desc: '+1 DAMAGE WHEN STILL',
+    rarity: 'rare',
+    max: 1,
+    synergy: ['heavy'],
+    apply: (s) => void (s.ship.sniper = true),
+  },
+  {
+    id: 'arc',
+    name: 'ARC',
+    desc: 'KILLS ZAP A NEIGHBOUR',
+    rarity: 'rare',
+    max: 1,
+    synergy: ['shrapnel', 'pierce'],
+    apply: (s) => void (s.ship.arc = true),
+  },
+  {
+    id: 'shieldburst',
+    name: 'SHIELD BURST',
+    desc: 'SHIELD HIT: BOLT RING',
+    rarity: 'rare',
+    max: 1,
+    synergy: ['deflector', 'hardpoint'],
+    apply: (s) => void (s.ship.shieldBurst = true),
+  },
+  {
+    id: 'mend',
+    name: 'GRAZE MEND',
+    desc: `${BOON.mendGrazes} GRAZES: +1 SHIELD`,
+    rarity: 'rare',
+    max: 1,
+    synergy: ['magnet'],
+    apply: (s) => void (s.ship.mendGrazes = BOON.mendGrazes),
+  },
+  // M19 epics.
+  {
+    id: 'jackpot',
+    name: 'JACKPOT',
+    desc: `MULTIPLIER CAP +${BOON.jackpotLevels}`,
+    rarity: 'epic',
+    max: 1,
+    apply: (s) => void (s.ship.multBonus += BOON.jackpotLevels),
+  },
+  { id: 'mirror', name: 'MIRROR', desc: 'A GHOST SHIP FIRES TOO', rarity: 'epic', max: 1, apply: (s) => void (s.ship.mirror = true) },
+  // M19 curses.
+  {
+    id: 'loanshark',
+    name: 'LOANSHARK',
+    desc: `+${BOON.loanScrap} SCRAP, INCOME -50%`,
+    rarity: 'curse',
+    max: 1,
+    apply: (s) => {
+      s.rogue.scrap += BOON.loanScrap;
+      s.ship.scrapMul *= BOON.loanMul;
+    },
+  },
+  {
+    id: 'blindspot',
+    name: 'BLIND SPOT',
+    desc: `+${BOON.blindDamage} DMG, GRAZES SCORE 0`,
+    rarity: 'curse',
+    max: 1,
+    apply: (s) => {
+      s.ship.damage += BOON.blindDamage;
+      s.ship.grazeMul = 0;
+    },
+  },
 ];
 
-/** Rarity order for "at least this rare" offers; curses sit outside it. */
 const RARITY_RANK: Readonly<Record<BoonRarity, number>> = { common: 0, rare: 1, epic: 2, curse: -1 };
+
+/** What each draft tier may roll: a rarity rank range and whether a slot may hold a curse. */
+const TIERS: Readonly<Record<DraftTier, { min: number; max: number; curses: boolean }>> = {
+  starter: { min: 1, max: 1, curses: false },
+  basic: { min: 0, max: 0, curses: false },
+  full: { min: 0, max: 2, curses: true },
+  rare: { min: 1, max: 2, curses: false },
+};
 
 export const RARITY_COLOR: Readonly<Record<BoonRarity, number>> = {
   common: 0xffffff,
@@ -169,6 +266,7 @@ export function offerable(state: SimState, r: RogueState): BoonId[] {
     if ((r.boons[b.id] ?? 0) >= b.max) return false;
     if (b.requires && !(r.boons[b.requires] ?? 0)) return false;
     if (b.id === 'nanorepair') return state.player.lives < PLAYER.maxLives;
+    if (b.id === 'hardpoint') return state.player.shield < BOON.hardpointMax;
     return true;
   }).map((b) => b.id);
 }
@@ -183,28 +281,32 @@ function rollRarity(rng: { seed: number }, world: number): Exclude<BoonRarity, '
 }
 
 /**
- * Rolls `ROUTE.draftSize` distinct offers from the rogue RNG stream: each slot rolls a rarity, then a boon of that
- * rarity (any rarity when that pool is empty). At most one slot is a curse. `minRarity` drops commons (and
- * curses) from the pool and bumps every slot's roll to at least that rarity.
+ * Rolls `ROUTE.draftSize` distinct offers from the rogue RNG stream for a draft tier: each slot rolls a rarity,
+ * clamped into the tier's range, then a boon of that rarity (any rarity in range when that pool is empty).
+ * `full` drafts hold at most one curse, in one slot 20 % of the time.
  */
-export function rollOffer(state: SimState, r: RogueState, minRarity: BoonRarity | null = null): BoonId[] {
-  const minRank = minRarity ? RARITY_RANK[minRarity] : 0;
-  const pool = offerable(state, r).filter((id) => minRank === 0 || RARITY_RANK[boonDef(id).rarity] >= minRank);
+export function rollOffer(state: SimState, r: RogueState, tier: DraftTier = 'full'): BoonId[] {
+  const t = TIERS[tier];
+  const inRange = (rank: number) => rank >= t.min && rank <= t.max;
+  const pool = offerable(state, r).filter((id) => {
+    const rank = RARITY_RANK[boonDef(id).rarity];
+    return rank < 0 ? t.curses : inRange(rank);
+  });
   const offer: BoonId[] = [];
-  const take = (rarity: BoonRarity | null): void => {
-    let candidates = rarity ? pool.filter((id) => boonDef(id).rarity === rarity) : pool;
+  const take = (rarity: BoonRarity): void => {
+    let candidates = pool.filter((id) => boonDef(id).rarity === rarity);
     if (candidates.length === 0) candidates = pool.filter((id) => boonDef(id).rarity !== 'curse');
-    if (candidates.length === 0) candidates = pool;
     if (candidates.length === 0) return;
     const id = candidates[Math.floor(nextRandom(r.rng) * candidates.length)]!;
     pool.splice(pool.indexOf(id), 1);
     offer.push(id);
   };
-  const curseSlot =
-    minRank === 0 && nextRandom(r.rng) < BOON.curseChance ? Math.floor(nextRandom(r.rng) * ROUTE.draftSize) : -1;
+  const curseSlot = t.curses && nextRandom(r.rng) < BOON.curseChance ? Math.floor(nextRandom(r.rng) * ROUTE.draftSize) : -1;
+  const ranks: BoonRarity[] = ['common', 'rare', 'epic'];
   for (let i = 0; i < ROUTE.draftSize; i++) {
-    const rarity = rollRarity(r.rng, state.world);
-    take(i === curseSlot ? 'curse' : RARITY_RANK[rarity] < minRank ? minRarity : rarity);
+    const rolled = RARITY_RANK[rollRarity(r.rng, state.world)];
+    const rank = Math.min(t.max, Math.max(t.min, rolled));
+    take(i === curseSlot ? 'curse' : ranks[rank]!);
   }
   // Curses never fill in for a missing rarity unless the curse slot asked for one.
   return offer;

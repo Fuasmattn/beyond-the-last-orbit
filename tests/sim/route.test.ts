@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { ELITE, PLAYER, STAGE } from '../../src/data/balance';
+import { BOON, ELITE, PLAYER, STAGE } from '../../src/data/balance';
 import { BOONS } from '../../src/sim/boons';
 import { BEAT_ROW, createRogueState, generateMap, MAP_ROWS, reachableLanes } from '../../src/sim/route';
 import { defaultRunOptions } from '../../src/sim/ship';
-import { advanceStage, chooseBoon, chooseNode, finishStage, rerollDraft, startStage } from '../../src/sim/stageFlow';
+import { chooseBoon, chooseNode, rerollDraft, startStage } from '../../src/sim/stageFlow';
 import { createInitialState } from '../../src/sim/state';
+import { clearStage } from './helpers';
 import { step } from '../../src/sim/step';
 import { NO_INPUT, type NodeKind, type SimEvent, type SimState } from '../../src/sim/types';
 
@@ -12,12 +13,6 @@ function rogue(seed = 7, rerolls = 0): SimState {
   return createInitialState(seed, undefined, { ...defaultRunOptions(), rerolls });
 }
 
-/** Clears the current stage and runs through the stage-clear screen. */
-function clearStage(s: SimState, events: SimEvent[] = []): SimEvent[] {
-  finishStage(s, events);
-  advanceStage(s, events);
-  return events;
-}
 
 function laneOf(s: SimState, kind: NodeKind): number | undefined {
   const r = s.rogue!;
@@ -202,6 +197,7 @@ describe('boons', () => {
     const r = s.rogue!;
     for (const b of BOONS) if (b.max !== Infinity) r.boons[b.id] = b.max;
     s.player.lives = 1;
+    s.player.shield = BOON.hardpointMax;
     clearStage(s);
     r.map.rows[0]!.forEach((n) => (n.kind = 'cache'));
     chooseNode(s, reachableLanes(r)[0]!, []);

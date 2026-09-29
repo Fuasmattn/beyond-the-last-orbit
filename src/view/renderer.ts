@@ -103,6 +103,8 @@ export class GameRenderer {
   private readonly effects: Effects;
   private readonly ship = new Container();
   private readonly hull: Graphics;
+  /** MIRROR: translucent copy of the hull at the mirrored x. */
+  private readonly ghost: Graphics;
   private readonly flame = new Graphics(FLAME_ART);
   private readonly shield = new Graphics();
   /** Rogue runs: marks the small hurtbox at the hull's center. */
@@ -131,6 +133,9 @@ export class GameRenderer {
     private readonly cosmetics: Cosmetics,
   ) {
     this.hull = new Graphics(SHIP_ART[cosmetics.skin.hull]);
+    this.ghost = new Graphics(SHIP_ART[cosmetics.skin.hull]);
+    this.ghost.alpha = 0.35;
+    this.ghost.visible = false;
     this.flame.tint = FLAME_COLOR;
     this.flame.position.set(0, 1);
     this.ship.addChild(this.flame, this.hull, this.shield, this.hitDot);
@@ -139,7 +144,7 @@ export class GameRenderer {
     this.laserBeam.alpha = 0.85;
     this.laserZone.alpha = 0.18;
     this.bossLayer.addChild(this.laserZone, this.laserWarn, this.laserBeam, this.laserCore);
-    this.entities.addChild(this.ship);
+    this.entities.addChild(this.ghost, this.ship);
     this.root.addChild(
       this.backdrop,
       this.starfield,
@@ -209,6 +214,10 @@ export class GameRenderer {
     const blinkOff = p.invuln > 0 && Math.floor(state.time * 20) % 2 === 1;
     this.ship.visible = state.phase !== 'gameOver' && !blinkOff;
     this.hull.tint = color;
+    this.ghost.visible = state.ship.mirror && this.ship.visible;
+    this.ghost.tint = color;
+    this.ghost.position.set(state.fieldW - (p.x + p.w / 2), p.y + p.h);
+    this.ghost.scale.set(-1 + Math.sin(state.time * 5) * 0.05, 1);
     this.hitDot.visible = true;
     this.hitDot.position.set(0, -p.h / 2);
     // Shield charges: a pulsing ring per charge.
@@ -295,9 +304,10 @@ export class GameRenderer {
         // Laser art is drawn for the standard bolt width; center it on wider bolts.
         const x = b.x + (b.w - PLAYER.bulletW) / 2;
         v.update(x, b.y, state.time, pulse, b.onBeat, b.vy !== 0 ? -b.vx / b.vy : 0);
-        // Power shots (beat-stage PERFECT) are drawn double width around the bolt's center.
-        const cx = b.power ? b.x + b.w / 2 : 0;
-        v.root.scale.x = b.power ? 2 : 1;
+        // Wider bolts (power shots, WIDE BOLTS) stretch the art around the bolt's center.
+        const sx = b.w / PLAYER.bulletW;
+        const cx = sx !== 1 ? b.x + b.w / 2 : 0;
+        v.root.scale.x = sx;
         v.root.pivot.x = v.root.position.x = cx;
       },
     );

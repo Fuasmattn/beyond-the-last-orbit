@@ -334,6 +334,26 @@ export const BOON = {
   hotZoneGrazeMul: 3,
   /** SECOND WIND: invulnerability after the revive (s). */
   reviveInvuln: 2.5,
+  /** M19: LONG BARREL speed factor, WIDE BOLTS extra width, HARDPOINT shield ceiling. */
+  longBarrel: 1.3,
+  wideBolts: 2,
+  hardpointMax: 2,
+  /** SNIPER: ship speed (px/s) under which it counts as still. */
+  sniperStill: 10,
+  /** ARC: zap range (px) and damage. */
+  arcRange: 60,
+  arcDamage: 1,
+  /** SHIELD BURST: bolts in the ring and their speed. */
+  burstCount: 8,
+  burstSpeed: 200,
+  /** GRAZE MEND: grazes per shield. */
+  mendGrazes: 25,
+  /** JACKPOT: extra multiplier levels above the stage cap. */
+  jackpotLevels: 2,
+  /** LOANSHARK: scrap now and the income factor after. BLIND SPOT damage. */
+  loanScrap: 80,
+  loanMul: 0.5,
+  blindDamage: 2,
 } as const;
 
 export const COMBO = {

@@ -37,7 +37,7 @@ export function resolveEvent(state: SimState, id: EventId, index: number, events
   switch (id) {
     case 'distress':
       if (index === 0) {
-        r.draftsOwed++;
+        r.drafts.push('full');
         say('ESCORT DUTY!');
         return 'fight';
       }
@@ -57,8 +57,7 @@ export function resolveEvent(state: SimState, id: EventId, index: number, events
     case 'market':
       if (index === 0) {
         p.lives--;
-        r.draftRarity = 'rare';
-        r.draftsOwed++;
+        r.drafts.push('rare');
         say('-1 SHIP');
       } else {
         r.scrap -= SIGNAL.shieldPrice;

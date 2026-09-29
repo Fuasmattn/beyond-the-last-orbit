@@ -3,7 +3,7 @@ import { FIELD_H, SHOP } from '../data/balance';
 import type { MenuAction, Tap } from '../input/inputFrame';
 import { boonDef, RARITY_COLOR, type BoonDef } from '../sim/boons';
 import { shopPrice } from '../sim/stageFlow';
-import type { RogueState } from '../sim/types';
+import type { DraftTier, RogueState } from '../sim/types';
 import { blink } from './anim';
 import { centerText, PixelText } from './pixelText';
 
@@ -13,6 +13,13 @@ export type DraftPick = { type: 'boon'; index: number } | { type: 'reroll' } | {
 export type DraftMode = 'draft' | 'shop';
 
 const TOP = 70;
+/** Draft heading per tier: the run-opening pick, the small common draft after a plain stage, the rest. */
+const DRAFT_TITLE: Readonly<Record<DraftTier, string>> = {
+  starter: 'PICK A LOADOUT',
+  basic: 'FIELD UPGRADE',
+  full: 'CHOOSE AN UPGRADE',
+  rare: 'RARE PARTS',
+};
 const CARD_H = 38;
 const ROW_H = 16;
 const MAX_W = 150;
@@ -61,7 +68,6 @@ export class DraftOverlay extends Container {
     this.mode = mode;
     this.sel = 0;
     this.tapped = null;
-    this.title.setText(mode === 'shop' ? 'SHOP' : 'CHOOSE AN UPGRADE');
   }
 
   /** A tap selects a row (highlighting it); a second tap on the same row picks it. */
@@ -92,6 +98,7 @@ export class DraftOverlay extends Container {
     const g = this.panel.clear().rect(0, 0, fieldW, FIELD_H).fill({ color: 0x000000, alpha: 0.6 });
     const shop = this.mode === 'shop';
     const offer = shop ? (r.shop?.offer ?? []) : r.offer;
+    this.title.setText(shop ? 'SHOP' : DRAFT_TITLE[r.draftTier]);
     const afford = (price: number) => r.scrap >= price;
     let ti = 0;
     const text = (s: string, color: number, y: number) => {

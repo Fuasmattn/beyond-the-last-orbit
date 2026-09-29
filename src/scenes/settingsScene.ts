@@ -17,7 +17,7 @@ const TRACKS = [0, 1, 2].flatMap((world) =>
 );
 
 /** CC-BY 4.0 attribution for the recorded drums (full credits in audio/CREDITS.md); two lines on the narrow frame. */
-const DRUM_CREDIT = ['DRUMS: DRUMGIZMO MULDJORDKIT', 'CC BY 4.0'] as const;
+const DRUM_CREDIT = ['DRUMS: DRUMGIZMO', 'MULDJORDKIT, CC BY 4.0'] as const;
 
 const ROWS: readonly { key: Row; label: string }[] = [
   { key: 'musicVolume', label: 'MUSIC VOLUME' },
@@ -51,13 +51,13 @@ export class SettingsScene implements Scene {
     centerText(title, 40);
     const hint = new PixelText(
       g,
-      ctx.isTouch ? 'TAP LEFT/RIGHT SIDE TO ADJUST' : 'LEFT/RIGHT ADJUST  FIRE SELECT',
+      ctx.isTouch ? 'TAP LEFT/RIGHT TO ADJUST' : 'LEFT/RIGHT ADJUST  FIRE SELECT',
       0x777777,
     );
     centerText(hint, 290);
     const credit = (narrowMenu() ? DRUM_CREDIT : [DRUM_CREDIT.join(' - ')]).map((line, i, lines) => {
       const t = new PixelText(g, line, 0x555a77);
-      centerText(t, lines.length > 1 ? 301 + i * 8 : 304);
+      centerText(t, lines.length > 1 ? 300 + i * 9 : 304);
       return t;
     });
     this.list = new MenuList(g, menuListLayout({ x: 36, y: 90, lineH: 16, width: 168 }));

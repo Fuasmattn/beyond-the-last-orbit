@@ -9,6 +9,8 @@ import { BOONS } from '../../src/sim/boons';
 import { hueToRgb } from '../../src/view/color';
 import { formatHighscoreLine, highscoreTableX } from '../../src/view/highscoreTable';
 import { menuIndexAt } from '../../src/view/menuList';
+import { charsThatFit, wrapText } from '../../src/view/pixelText';
+import { EVENTS } from '../../src/data/events';
 
 afterEach(() => {
   viewport.menuW = MENU_W;
@@ -21,7 +23,7 @@ describe('menu frame', () => {
     expect(narrowMenu()).toBe(false);
     expect(centerX(32)).toBe(104);
     expect(menuListLayout(desktop)).toEqual(desktop);
-    expect(highscoreTableX()).toBe(82);
+    expect(highscoreTableX()).toBe(57);
   });
 
   it('fits lists and tables into the narrow touch frame', () => {
@@ -48,11 +50,33 @@ describe('menu frame', () => {
   });
 
   it('fits draft cards on the narrowest touch view', () => {
-    const panel = Math.min(150, TOUCH_VIEW.minW - 8);
+    const panel = Math.min(200, TOUCH_VIEW.minW - 8);
+    // Line 1 shares the card with a 16 px icon (3 px inset, 3 px gap); lines 2–3 may wrap once.
+    const nameW = panel - (3 + 16 + 3) - 2;
+    const maxChars = charsThatFit(panel - 4);
     for (const b of BOONS) {
-      expect(textWidth(`${b.name} LV${Math.min(b.max, 9)}`), b.name).toBeLessThanOrEqual(panel);
-      expect(textWidth(b.desc), b.desc).toBeLessThanOrEqual(panel);
+      expect(textWidth(`${b.name} LV${Math.min(b.max, 9)}`), b.name).toBeLessThanOrEqual(nameW);
+      const lines = wrapText(b.desc, maxChars);
+      expect(lines.length, b.desc).toBeLessThanOrEqual(2);
+      for (const l of lines) expect(textWidth(l), b.desc).toBeLessThanOrEqual(panel - 4);
     }
+  });
+
+  it('fits event text on the narrowest touch view', () => {
+    const panel = Math.min(150, TOUCH_VIEW.minW - 8);
+    const maxChars = charsThatFit(panel - 4);
+    for (const e of EVENTS) {
+      for (const s of [...e.lines, ...e.choices]) {
+        const lines = wrapText(s, maxChars);
+        expect(lines.length, s).toBeLessThanOrEqual(2);
+        for (const l of lines) expect(textWidth(l), s).toBeLessThanOrEqual(panel - 4);
+      }
+    }
+  });
+
+  it('wraps at spaces and leaves short text alone', () => {
+    expect(wrapText('SIDE BOLTS BOUNCE ONCE', 20)).toEqual(['SIDE BOLTS BOUNCE', 'ONCE']);
+    expect(wrapText('SHORT', 20)).toEqual(['SHORT']);
   });
 });
 

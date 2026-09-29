@@ -13,7 +13,7 @@ const LIST = { x: 28, y: 60, lineH: 16, width: 184 } as const;
 const PIP = { w: 5, h: 3, gap: 2 } as const;
 const MESSAGE_TIME = 1.5;
 /** Subtitle; two lines on the narrow frame. */
-const SUB = ['PERMANENT UPGRADES', 'NOT FOR BEAT RUNS'] as const;
+const SUB = ['PERMANENT UPGRADES', 'FOR EVERY RUN'] as const;
 
 const MESSAGES: Record<UpgradeResult, [string, number]> = {
   bought: ['UPGRADED!', 0x7dff6b],
@@ -39,7 +39,7 @@ export class HangarScene implements Scene {
     title.position.set(6, 4);
     const sub = (narrowMenu() ? SUB : [SUB.join(' - ')]).map((line, i, lines) => {
       const t = new PixelText(g, line, 0x4af2ff);
-      centerText(t, lines.length > 1 ? 26 + i * 8 : 30);
+      centerText(t, lines.length > 1 ? 24 + i * 9 : 30);
       return t;
     });
     this.credits = new PixelText(g, '', 0x7dff6b);
@@ -81,7 +81,7 @@ export class HangarScene implements Scene {
     UPGRADES.forEach((u, i) => {
       const lv = upgradeLevel(save, u.id);
       const { x, y: top, lineH } = this.list.layout;
-      const y = top + i * lineH + 8;
+      const y = top + i * lineH + 9;
       u.costs.forEach((_, k) => {
         this.pips.rect(x + k * (PIP.w + PIP.gap), y, PIP.w, PIP.h).fill(k < lv ? 0x7dff6b : 0x333a55);
       });

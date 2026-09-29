@@ -51,7 +51,7 @@ export class SoundToggle extends Container {
     this.status.setText(muted ? 'SOUND OFF' : 'SOUND ON');
     this.status.tint = color;
     const text = unlocked ? this.status : this.hint;
-    const textY = Math.round(y + (ICON.h * s) / 2 - 2.5);
+    const textY = Math.round(y + (ICON.h * s) / 2 - 3.5);
     const textX = Math.round(x + ICON.w * s + 4);
     this.status.position.set(textX, textY);
     this.hint.position.set(textX, textY);

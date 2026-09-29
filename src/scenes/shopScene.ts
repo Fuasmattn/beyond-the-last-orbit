@@ -78,7 +78,7 @@ export class ShopScene implements Scene {
     };
     for (const k of TABS) {
       const r = this.tabRect[k];
-      this.tabs[k].position.set(r.x + Math.round((r.w - this.tabs[k].pixelWidth) / 2), r.y + 3);
+      this.tabs[k].position.set(r.x + Math.round((r.w - this.tabs[k].pixelWidth) / 2), r.y + 2);
     }
     const frame = new Graphics()
       .rect(preview.x, preview.y, preview.w, preview.h)
@@ -91,7 +91,7 @@ export class ShopScene implements Scene {
     this.message = new PixelText(g, '');
     const hint = new PixelText(
       g,
-      ctx.isTouch ? 'TAP ITEM TWICE TO BUY/EQUIP' : 'FIRE BUY/EQUIP  LEFT/RIGHT TAB',
+      ctx.isTouch ? 'TAP TWICE TO BUY/EQUIP' : 'FIRE BUY/EQUIP  LEFT/RIGHT TAB',
       0x777777,
     );
     centerText(hint, 290);

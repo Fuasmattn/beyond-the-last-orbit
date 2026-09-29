@@ -93,7 +93,7 @@ export class BeatTrack extends Container {
 
     this.mult.setText(`X${mult.toFixed(1)}`);
     this.mult.tint = multColor(mult);
-    this.mult.position.set(Math.round(cx + GATE_HALF + 6), MID - 2);
+    this.mult.position.set(Math.round(cx + GATE_HALF + 6), MID - 3);
     const steps = RHYTHM.shotsPerStep;
     const filled = mult >= RHYTHM.maxMult ? steps : streak % steps;
     const px = this.mult.x + this.mult.pixelWidth + 3;
@@ -109,7 +109,7 @@ export class BeatTrack extends Container {
     this.grade.tint = this.flashColor;
     this.grade.alpha = Math.min(1, this.labelTime / (LABEL_TIME * 0.4));
     // Sits left of the gate, mirroring the multiplier on the right.
-    this.grade.position.set(Math.round(cx - GATE_HALF - 8 - this.grade.pixelWidth), Math.round(MID - 2.5 * s));
+    this.grade.position.set(Math.round(cx - GATE_HALF - 8 - this.grade.pixelWidth), Math.round(MID - 3.5 * s));
   }
 
   private layout(fieldW: number): void {

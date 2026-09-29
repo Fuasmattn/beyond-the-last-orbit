@@ -76,9 +76,9 @@ export class RunScene implements Scene {
       this.state = createInitialState(newSeed(), viewport.fieldW, runOptionsFor(ctx.save));
     }
     this.renderer = new GameRenderer(ctx.textures, { skin: equippedSkin(ctx.save), laser: equippedLaser(ctx.save) });
-    this.hud = new Hud(ctx.textures.glyphs, ctx.isTouch ? TOUCH_HUD_SCALE : 1, ctx.isTouch);
+    this.hud = new Hud(ctx.textures.glyphs, ctx.textures.icons, ctx.isTouch ? TOUCH_HUD_SCALE : 1, ctx.isTouch);
     this.route = new RouteOverlay(ctx.textures.glyphs, ctx.isTouch);
-    this.draft = new DraftOverlay(ctx.textures.glyphs, ctx.isTouch);
+    this.draft = new DraftOverlay(ctx.textures.glyphs, ctx.textures.icons, ctx.isTouch);
     this.event = new EventOverlay(ctx.textures.glyphs, ctx.isTouch);
     this.pauseMenu = new MenuList(ctx.textures.glyphs, PAUSE_MENU);
     this.pauseMenu.setRows(PAUSE_ITEMS.map((label) => ({ label })));

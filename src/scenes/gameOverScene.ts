@@ -15,7 +15,7 @@ import { centerX, inRect, sceneBackground, type Rect } from './ui';
 
 const LETTER_SCALE = 3;
 const LETTER_Y = 130;
-const LETTER_H = 15;
+const LETTER_H = 21;
 const LETTER_SPACING = 24;
 const OK_BOX = { y: 172, w: 32, h: 12 } as const;
 const CONTINUE_DELAY = 0.5;
@@ -81,7 +81,7 @@ export class GameOverScene implements Scene {
       qualifiesForHighscore(this.table, summary.score) ||
       (global !== null && qualifiesForHighscore(global, summary.score));
     this.picker = qualifies ? new InitialsPicker() : null;
-    this.heading = new PixelText(g, 'NEW HIGH SCORE! ENTER NAME', 0x7dff6b);
+    this.heading = new PixelText(g, 'HIGH SCORE! ENTER NAME', 0x7dff6b);
     centerText(this.heading, 108);
     for (let i = 0; i < INITIALS_LENGTH; i++) {
       const t = new PixelText(g, 'A');
@@ -91,9 +91,9 @@ export class GameOverScene implements Scene {
     }
     this.ok = new PixelText(g, 'OK', 0x7dff6b);
     const ok = this.okRect;
-    this.ok.position.set(ok.x + 13, ok.y + 4);
+    this.ok.position.set(ok.x + 11, ok.y + 3);
     this.okBox.rect(ok.x, ok.y, ok.w, ok.h).stroke({ color: 0x7dff6b, width: 1 });
-    this.help = new PixelText(g, ctx.isTouch ? 'TAP TOP OR BOTTOM OF A LETTER' : 'UP/DOWN CHANGE  FIRE NEXT', 0x888888);
+    this.help = new PixelText(g, ctx.isTouch ? 'TAP ABOVE/BELOW A LETTER' : 'UP/DOWN CHANGE  FIRE NEXT', 0x888888);
     centerText(this.help, 196);
     this.status = new PixelText(g, '', 0xff5a5a);
     this.prompt = new PixelText(g, ctx.isTouch ? 'TAP TO CONTINUE' : 'PRESS FIRE TO CONTINUE');
@@ -261,7 +261,7 @@ export class GameOverScene implements Scene {
     list.forEach((e, i) => {
       const color = i === mine ? 0xffe14a : 0xcccccc;
       const t = new PixelText(this.glyphs, formatHighscoreLine(i + 1, e), color);
-      t.position.set(highscoreTableX(), 122 + i * 9);
+      t.position.set(highscoreTableX(), 122 + i * 10);
       this.tableLayer.addChild(t);
     });
   }

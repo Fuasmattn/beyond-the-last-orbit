@@ -7,7 +7,7 @@ import type { HighscoreEntry } from '../persist/schema';
 import { MenuList } from '../view/menuList';
 import { centerText, PixelText } from '../view/pixelText';
 import type { FrameInput, Scene, SceneContext } from './scene';
-import { centerX, sceneBackground } from './ui';
+import { centerX, narrowMenu, sceneBackground } from './ui';
 
 const PAGE_TIME = 5;
 const NOTICE_TIME = 3;
@@ -42,15 +42,16 @@ export class TitleScene implements Scene {
     this.logo = ([0x4af2ff, 0xff3d9a, 0xffffff] as const).map((color) => {
       const top = new PixelText(g, 'BEYOND THE', color);
       top.scale.set(2);
-      centerText(top, 34);
+      centerText(top, 28);
       const bottom = new PixelText(g, 'LAST ORBIT', color);
-      bottom.scale.set(3);
-      centerText(bottom, 48);
+      // 3× is 177 px wide: too wide for the narrow touch frame.
+      bottom.scale.set(narrowMenu() ? 2 : 3);
+      centerText(bottom, 46);
       const logo = new Container();
       logo.addChild(top, bottom);
       return logo;
     });
-    this.tagline = new PixelText(g, 'DEFEND THE ORBIT. KEEP THE BEAT.', 0x4af2ff);
+    this.tagline = new PixelText(g, narrowMenu() ? 'DEFEND THE ORBIT.' : 'DEFEND THE ORBIT. KEEP THE BEAT.', 0x4af2ff);
     centerText(this.tagline, 86);
     this.credits = new PixelText(g, '', 0x7dff6b);
     this.notice = new PixelText(g, ctx.notice ?? '', 0xff5a5a);
@@ -112,7 +113,8 @@ export class TitleScene implements Scene {
     }
     this.tagline.visible = page < 0;
     this.credits.setText(`CREDITS ${this.ctx.save.credits}`);
-    this.credits.position.set(viewport.menuW - 4 - this.credits.pixelWidth, 4);
+    // The narrow frame has no room beside the sound toggle's text: credits drop under it.
+    this.credits.position.set(viewport.menuW - 4 - this.credits.pixelWidth, narrowMenu() ? 14 : 4);
     this.menu.refresh(this.t);
     this.notice.visible = this.ctx.notice !== null && this.t < NOTICE_TIME;
     if (this.t >= NOTICE_TIME) this.ctx.notice = null;

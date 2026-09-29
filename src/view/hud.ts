@@ -1,8 +1,8 @@
-import { Container, Graphics, type Texture } from 'pixi.js';
+import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import { STAGE } from '../data/balance';
 import { worldAt } from '../data/worlds';
-import { boonDef } from '../sim/boons';
-import type { SimEvent, SimState } from '../sim/types';
+import { boonDef, RARITY_COLOR } from '../sim/boons';
+import type { BoonId, SimEvent, SimState } from '../sim/types';
 import { viewport } from '../app/viewport';
 import type { JudgeLabel } from './beatJudge';
 import { BeatTrack } from './beatTrack';
@@ -16,7 +16,12 @@ function pct(v: number): string {
 const RESULT_LINES = 5;
 const RESULT_LINE_DELAY = 0.25;
 const POPUP_TIME = 1.5;
-const BOSS_BAR = { y: 13, h: 3, margin: 40, maxW: 240 } as const;
+/** Boss health: a thin line along the top edge, clear of the text rows on any width. */
+const BOSS_BAR = { h: 2 } as const;
+/** HUD text rows are this far apart (× text scale) for the 7 px font. */
+const ROW = 10;
+/** Build strip: owned boon pictograms under SCRAP, 1× icons with 2 px stack pips below. */
+const STRIP = { advance: 11, h: 12 } as const;
 const RESULTS_W = 96;
 const MARGIN = 4;
 /** Touch pause button, top-left: hit area in logical px (generous for thumbs) and the drawn icon. */
@@ -47,6 +52,10 @@ export class Hud extends Container {
   private readonly results: PixelText[] = [];
   private readonly bossBar = new Graphics();
   private readonly pauseIcon = new Graphics();
+  private readonly strip = new Container();
+  private readonly stripPips = new Graphics();
+  private readonly stripIcons: Sprite[] = [];
+  private readonly stripLeft: number;
   private popupTime = 0;
 
   /**
@@ -55,6 +64,7 @@ export class Hud extends Container {
    */
   constructor(
     glyphs: Map<string, Texture>,
+    private readonly iconTex: Map<BoonId, Texture>,
     private readonly textScale = 1,
     pauseButton = false,
   ) {
@@ -74,7 +84,7 @@ export class Hud extends Container {
       const t = new PixelText(glyphs, '', i === RESULT_LINES - 1 ? 0xffe14a : 0xcccccc);
       t.scale.set(k);
       // Starts below the stage-clear sub line, which moves down with the text scale.
-      t.y = Math.round(138 + 24 * (k - 1) + i * 9 * k);
+      t.y = Math.round(140 + 24 * (k - 1) + i * ROW * k);
       this.results.push(t);
     }
     for (const t of [this.score, this.stage, this.lives, this.scrap, this.noAudio]) t.scale.set(k);
@@ -88,9 +98,13 @@ export class Hud extends Container {
     const left = pauseButton ? Math.round(MARGIN + PAUSE_ICON.w * k + 5) : MARGIN;
     this.score.position.set(left, MARGIN);
     this.stage.y = MARGIN;
-    this.lives.position.set(left, Math.round(MARGIN + 8 * k));
-    this.scrap.position.set(left, Math.round(MARGIN + 16 * k));
-    this.noAudio.y = Math.round(MARGIN + 24 * k);
+    this.lives.position.set(left, Math.round(MARGIN + ROW * k));
+    this.scrap.position.set(left, Math.round(MARGIN + ROW * 2 * k));
+    this.noAudio.y = Math.round(MARGIN + ROW * 3 * k);
+    this.stripLeft = left;
+    this.strip.position.set(left, Math.round(MARGIN + ROW * 3 * k + 2));
+    this.strip.scale.set(k);
+    this.strip.addChild(this.stripPips);
     this.addChild(
       this.track,
       this.pauseIcon,
@@ -99,6 +113,7 @@ export class Hud extends Container {
       this.lives,
       this.scrap,
       this.noAudio,
+      this.strip,
       this.bossBar,
       this.banner,
       this.sub,
@@ -139,7 +154,9 @@ export class Hud extends Container {
   update(state: SimState, paused: boolean, beat: number | null, audioOk: boolean, dt: number): void {
     this.score.setText(`SCORE ${state.score}`);
     const label = `${state.world + 1}-${state.stage}`;
-    this.stage.setText(state.loop > 0 ? `L${state.loop + 1} ${label}` : `STAGE ${label}`);
+    // Enlarged touch text: "SCORE 12345" and "STAGE 1-1" no longer share the top row of a phone view.
+    const compact = this.textScale > 1;
+    this.stage.setText(state.loop > 0 ? `L${state.loop + 1} ${label}` : compact ? label : `STAGE ${label}`);
     this.stage.x = Math.round(viewport.w - MARGIN - this.stage.pixelWidth);
     const rhythm = state.beatMode !== 'off';
     const master = state.beatMode === 'master';
@@ -149,6 +166,7 @@ export class Hud extends Container {
     this.scrap.setText(`SCRAP ${state.rogue.scrap}`);
     this.noAudio.visible = !audioOk && rhythm;
     centerText(this.noAudio, 4, viewport.w);
+    this.updateStrip(state);
     this.updateBossBar(state);
     this.updateBanner(state, paused);
     this.updateResults(state);
@@ -162,16 +180,42 @@ export class Hud extends Container {
     this.bossBar.visible = b !== null && !b.entering && b.dying === 0;
     if (!b || !this.bossBar.visible) return;
     const ratio = Math.max(0, b.hp / b.maxHp);
-    const w = Math.min(BOSS_BAR.maxW, viewport.w - BOSS_BAR.margin * 2);
-    const x = (viewport.w - w) / 2;
-    // Below the score and ships rows.
-    const y = Math.round(BOSS_BAR.y + 16 * (this.textScale - 1));
+    const w = viewport.w;
     this.bossBar
       .clear()
-      .rect(x, y, w, BOSS_BAR.h)
+      .rect(0, 0, w, BOSS_BAR.h)
       .fill(0x331018)
-      .rect(x, y, w * ratio, BOSS_BAR.h)
+      .rect(0, 0, w * ratio, BOSS_BAR.h)
       .fill(b.phased ? 0x8a7fb5 : 0xff3b5c);
+  }
+
+  /**
+   * Owned boons as pictograms in pick order, wrapping before the middle of the screen; pips mark stacks.
+   * Hidden under the route, draft, shop and event overlays, whose titles sit where the strip would be.
+   */
+  private updateStrip(state: SimState): void {
+    const overlay = state.phase === 'route' || state.phase === 'draft' || state.phase === 'shop' || state.phase === 'event';
+    this.strip.visible = !overlay;
+    if (overlay) return;
+    const owned = Object.entries(state.rogue.boons) as [BoonId, number][];
+    const perRow = Math.max(1, Math.floor((viewport.w / 2 - this.stripLeft) / (STRIP.advance * this.textScale)));
+    this.stripPips.clear();
+    owned.forEach(([id, lv], i) => {
+      let s = this.stripIcons[i];
+      if (!s) {
+        s = new Sprite();
+        this.stripIcons.push(s);
+        this.strip.addChild(s);
+      }
+      s.visible = lv > 0;
+      s.texture = this.iconTex.get(id) ?? s.texture;
+      s.tint = RARITY_COLOR[boonDef(id).rarity];
+      const x = (i % perRow) * STRIP.advance;
+      const y = Math.floor(i / perRow) * STRIP.h;
+      s.position.set(x, y);
+      for (let k = 1; k < lv; k++) this.stripPips.rect(x + (k - 1) * 3, y + 9, 2, 2).fill(s.tint);
+    });
+    for (let i = owned.length; i < this.stripIcons.length; i++) this.stripIcons[i]!.visible = false;
   }
 
   private updateBanner(state: SimState, paused: boolean): void {
@@ -194,14 +238,14 @@ export class Hud extends Container {
         sub = world.bossName;
       } else {
         banner = state.beatMode === 'master' ? 'BEAT STAGE' : `STAGE ${state.world + 1}-${state.stage}`;
-        if (state.beatMode === 'master') sub = state.diff.elite ? 'ELITE - ON BEAT X8' : 'ON BEAT X8 - PERFECT: POWER SHOT';
+        if (state.beatMode === 'master') sub = state.diff.elite ? 'ELITE - ON BEAT X8' : 'PERFECT = POWER SHOT';
         else if (state.stage === 1) sub = world.name;
         else if (state.diff.elite) sub = 'ELITE - STAY SHARP';
       }
     } else if (state.phase === 'stageClear') {
       banner = state.stage === STAGE.perWorld ? 'WORLD CLEAR' : 'STAGE CLEAR';
       const rank = state.result?.beatRank;
-      if (rank) sub = rank === 'S' ? 'BEAT RANK S - BONUS X2' : `BEAT RANK ${rank}`;
+      if (rank) sub = rank === 'S' ? 'RANK S: BONUS X2' : `BEAT RANK ${rank}`;
       y = 110;
     }
     this.banner.setText(banner);

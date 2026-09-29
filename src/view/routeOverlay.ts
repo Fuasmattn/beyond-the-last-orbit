@@ -8,11 +8,11 @@ import { centerText, PixelText } from './pixelText';
 
 const NODE_INFO: Record<NodeKind, { letter: string; name: string; desc: string; color: number }> = {
   battle: { letter: 'B', name: 'BATTLE', desc: 'SCORE AND CREDITS', color: 0x4af2ff },
-  elite: { letter: 'E', name: 'ELITE', desc: 'HARD FIGHT - THEN UPGRADE', color: 0xff3b5c },
-  cache: { letter: 'C', name: 'CACHE', desc: 'FREE UPGRADE - NO SCORE', color: 0xffe14a },
+  elite: { letter: 'E', name: 'ELITE', desc: 'HARD FIGHT, BIG DRAFT', color: 0xff3b5c },
+  cache: { letter: 'C', name: 'CACHE', desc: 'FREE DRAFT, NO SCORE', color: 0xffe14a },
   repair: { letter: 'R', name: 'REPAIR', desc: '+1 SHIP - NO SCORE', color: 0x7dff6b },
-  shop: { letter: 'S', name: 'SHOP', desc: 'SPEND SCRAP ON UPGRADES', color: 0xb8ff4a },
-  signal: { letter: '?', name: 'SIGNAL', desc: 'UNKNOWN - CHOOSE WISELY', color: 0xffb347 },
+  shop: { letter: 'S', name: 'SHOP', desc: 'BUY BOONS FOR SCRAP', color: 0xb8ff4a },
+  signal: { letter: '?', name: 'SIGNAL', desc: 'UNKNOWN. CHOOSE WELL', color: 0xffb347 },
 };
 
 const START_Y = 238;
@@ -49,7 +49,7 @@ export class RouteOverlay extends Container {
     this.title = new PixelText(glyphs, 'CHOOSE YOUR ROUTE', 0xffe14a);
     this.nodeName = new PixelText(glyphs, '');
     this.desc = new PixelText(glyphs, '', 0xcccccc);
-    this.hint = new PixelText(glyphs, isTouch ? 'TAP A NODE TWICE TO GO' : 'LEFT/RIGHT  FIRE TO GO', 0x777777);
+    this.hint = new PixelText(glyphs, isTouch ? 'TAP NODE TWICE TO GO' : 'LEFT/RIGHT  FIRE TO GO', 0x777777);
     this.boss = new PixelText(glyphs, 'BOSS', 0xff3b5c);
     this.beatLabel = new PixelText(glyphs, 'BEAT', BEAT_COLOR);
     this.addChild(this.shade, this.links, this.boxes, this.title, this.nodeName, this.desc, this.hint, this.boss, this.beatLabel);
@@ -121,7 +121,7 @@ export class RouteOverlay extends Container {
     if (beatRow >= 0) {
       const y = ROW_Y[beatRow]!;
       b.rect(0, y - BOX, fieldW, BOX * 2).fill({ color: BEAT_COLOR, alpha: 0.08 + 0.06 * Math.sin(time * 6) });
-      this.beatLabel.position.set(4, y - 2);
+      this.beatLabel.position.set(4, y - 3);
     }
     b.circle(cx, START_Y, 3).fill(PATH);
     let li = 0;
@@ -143,19 +143,20 @@ export class RouteOverlay extends Container {
         t.setText(info.letter);
         t.tint = color;
         t.alpha = reachable || past || i > row ? 1 : 0.5;
-        t.position.set(Math.round(x - 1), Math.round(y - 2));
+        t.position.set(Math.round(x - 2), Math.round(y - 3));
       }
     });
     for (let i = li; i < this.letters.length; i++) this.letters[i]!.visible = false;
     b.rect(cx - 12, BOSS_Y - 7, 24, 14).fill({ color: 0x05030f, alpha: 0.9 }).rect(cx - 12, BOSS_Y - 7, 24, 14).stroke({ color: 0xff3b5c, width: 1 });
-    this.boss.position.set(Math.round(cx - this.boss.pixelWidth / 2), BOSS_Y - 2);
+    this.boss.position.set(Math.round(cx - this.boss.pixelWidth / 2), BOSS_Y - 3);
 
-    centerText(this.title, 30, fieldW);
+    // Below the HUD rows, which reach y ≈ 49 with enlarged touch text.
+    centerText(this.title, 50, fieldW);
     const node = selected === undefined ? undefined : r.map.rows[row]?.find((n) => n.lane === selected);
     const info = node ? NODE_INFO[node.kind] : null;
     this.nodeName.setText(info ? (node?.beat ? `BEAT ${info.name}` : info.name) : '');
     this.nodeName.tint = node?.beat ? BEAT_COLOR : (info?.color ?? 0xffffff);
-    this.desc.setText(node?.beat ? 'ON BEAT X8 - RANK A+ UPGRADES' : (info?.desc ?? ''));
+    this.desc.setText(node?.beat ? 'X8 ON BEAT, A+ DRAFT' : (info?.desc ?? ''));
     centerText(this.nodeName, 256, fieldW);
     centerText(this.desc, 266, fieldW);
     centerText(this.hint, FIELD_H - 40, fieldW);

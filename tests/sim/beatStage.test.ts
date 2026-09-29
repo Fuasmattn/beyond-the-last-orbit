@@ -110,7 +110,7 @@ describe('beat stages', () => {
 });
 
 describe('beat rank', () => {
-  const stats = (shots: number, onBeat: number) => ({ shots, hits: shots, onBeatShots: onBeat, hitsTaken: 1, grazes: 0, time: 99 });
+  const stats = (shots: number, onBeat: number) => ({ shots, hits: shots, onBeatShots: onBeat, hitsTaken: 1, grazes: 0, time: 99, escaped: 0 });
 
   it('ranks by on-beat share with a minimum shot count', () => {
     expect(beatRankFor(stats(20, 18))).toBe('S');

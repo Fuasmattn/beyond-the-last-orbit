@@ -233,9 +233,17 @@ export class Hud extends Container {
       sub = world.name;
       y = 130;
     } else if (state.phase === 'stageIntro') {
-      if (state.boss) {
+      const fight = state.rogue.fight;
+      if (state.boss && state.boss.kind === 'sentinel') {
+        banner = 'MINIBOSS';
+        sub = state.diff.elite ? 'ELITE SENTINEL' : 'SENTINEL';
+      } else if (state.boss) {
         banner = Math.floor(state.time * 6) % 2 === 0 ? 'WARNING' : '';
         sub = world.bossName;
+      } else if (fight !== 'formation') {
+        banner = fight === 'swarm' ? 'SWARM' : 'CONVOY';
+        sub = fight === 'swarm' ? 'CHAIN WHOLE GROUPS' : 'STOP THE FREIGHTERS';
+        if (state.diff.elite) sub = `ELITE - ${sub}`;
       } else {
         banner = state.beatMode === 'master' ? 'BEAT STAGE' : `STAGE ${state.world + 1}-${state.stage}`;
         if (state.beatMode === 'master') sub = state.diff.elite ? 'ELITE - ON BEAT X8' : 'PERFECT = POWER SHOT';
@@ -262,7 +270,11 @@ export class Hud extends Container {
     const lines = r
       ? [
           `ACCURACY  ${pct(r.accuracy)}`,
-          state.beatMode === 'off' ? `GRAZES    ${state.stageStats.grazes}` : `ON BEAT   ${pct(r.beatPct)}`,
+          state.rogue.fight === 'convoy'
+            ? `LOST      ${r.escaped}`
+            : state.beatMode === 'off'
+              ? `GRAZES    ${state.stageStats.grazes}`
+              : `ON BEAT   ${pct(r.beatPct)}`,
           r.noHit ? 'NO HIT    +2000' : 'HIT TAKEN',
           r.perfect ? 'PERFECT!' : '',
           `BONUS     +${r.bonus}`,

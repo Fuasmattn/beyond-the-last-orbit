@@ -148,10 +148,10 @@ describe('bullet cancel', () => {
     expect(s.bullets).toEqual([]);
     expect(s.run.bestBeatRank).toBeNull();
     s.beatMode = 'master';
-    s.stageStats = { shots: 20, hits: 20, onBeatShots: 16, hitsTaken: 0, grazes: 0, time: 10 };
+    s.stageStats = { shots: 20, hits: 20, onBeatShots: 16, hitsTaken: 0, grazes: 0, time: 10 , escaped: 0 };
     finishStage(s, events);
     expect(s.run.bestBeatRank).toBe('A');
-    s.stageStats = { shots: 20, hits: 20, onBeatShots: 10, hitsTaken: 0, grazes: 0, time: 10 };
+    s.stageStats = { shots: 20, hits: 20, onBeatShots: 10, hitsTaken: 0, grazes: 0, time: 10 , escaped: 0 };
     finishStage(s, events);
     expect(s.run.bestBeatRank).toBe('A');
   });

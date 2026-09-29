@@ -8,7 +8,7 @@ import type { Enemy, Entry, SimState } from './types';
 
 /** Sitting in its formation slot (not flying in, diving or free-moving). */
 export function inFormation(e: Enemy): boolean {
-  return e.dive === null && e.free === null && e.entry === null;
+  return e.dive === null && e.free === null && e.entry === null && !e.path;
 }
 
 /** Bars between advances for the surviving fraction of the formation. */
@@ -108,6 +108,7 @@ export function updateFormation(state: SimState, dt: number, beats: number): voi
   let members = 0;
   for (const e of state.enemies) if (!e.free) members++;
   if (members === 0) return;
+  if (breakaway(state, members)) return;
 
   if (beats % 2 === 1) f.swayDir = f.swayDir === 1 ? -1 : 1;
   f.beats += beats;
@@ -142,6 +143,29 @@ export function updateFormation(state: SimState, dt: number, beats: number): voi
     e.x = slot.x;
     e.y = slot.y;
   }
+}
+
+/**
+ * Breakaway: once only a few of the grid survive, they leave it and charge the player as free movers,
+ * so a stage does not end with a hunt for the last stragglers. Returns true when it fired.
+ */
+function breakaway(state: SimState, members: number): boolean {
+  const f = state.formation;
+  if (state.diff.d < FORMATION.breakawayFrom || f.total === 0) return false;
+  const threshold = Math.max(2, Math.floor(f.total * FORMATION.breakawayShare));
+  if (members > threshold) return false;
+  const p = state.player;
+  let fired = false;
+  for (const e of state.enemies) {
+    if (!inFormation(e) || e.entry) continue;
+    const dx = p.x + p.w / 2 - (e.x + e.w / 2);
+    const dy = Math.max(30, p.y + p.h / 2 - (e.y + e.h / 2));
+    const len = Math.hypot(dx, dy);
+    e.free = { vx: (dx / len) * FORMATION.breakawaySpeed, vy: (dy / len) * FORMATION.breakawaySpeed };
+    e.charging = false;
+    fired = true;
+  }
+  return fired;
 }
 
 /** Lowest edge of enemies sitting in the formation. */

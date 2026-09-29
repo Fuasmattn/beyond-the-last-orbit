@@ -3,7 +3,8 @@ import { beatsCrossed } from './beat';
 import { updateBoss } from './boss';
 import { moveBullets } from './bullets';
 import { resolveCollisions } from './collision';
-import { updateDives } from './dive';
+import { updateDives, updateRowDives } from './dive';
+import { fightExhausted, updateFight } from './fight';
 import { updateEliteVolleys, updateEnemyFire } from './enemyFire';
 import { formationBottom, spawnFormation, updateFormation } from './formation';
 import { hitPlayer, updatePlayer } from './player';
@@ -83,13 +84,17 @@ function playing(state: SimState, input: InputFrame, dt: number, beats: number, 
   updatePlayer(state, input, dt, events);
   updateCombo(state, dt);
   state.stageStats.time += dt;
+  const formation = state.rogue.fight === 'formation';
   if (state.boss) {
     updateBoss(state, dt, beats, events);
-  } else {
+  } else if (formation) {
     updateFormation(state, dt, beats);
+    updateRowDives(state, beats, events);
     updateDives(state, dt, events);
     updateEnemyFire(state, dt, events);
     if (state.diff.elite) updateEliteVolleys(state, beats, events);
+  } else {
+    updateFight(state, dt, events);
   }
   updateSpecials(state, dt, events);
   moveBullets(state, dt);
@@ -97,11 +102,11 @@ function playing(state: SimState, input: InputFrame, dt: number, beats: number, 
   checkExtraLife(state, events);
   if (state.phase !== 'playing' || state.boss) return;
 
-  if (state.enemies.length === 0) {
+  if (state.enemies.length === 0 && fightExhausted(state)) {
     finishStage(state, events);
     return;
   }
-  if (formationBottom(state) >= PLAYER_ZONE_TOP) {
+  if (formation && formationBottom(state) >= PLAYER_ZONE_TOP) {
     events.push({ type: 'formationInvaded' });
     hitPlayer(state, events);
     if (state.phase === 'playing') {

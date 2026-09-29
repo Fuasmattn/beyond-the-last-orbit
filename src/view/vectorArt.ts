@@ -76,6 +76,12 @@ function enemy(kind: EnemyKind): GraphicsContext {
       neon(c, regular(5, 8, Math.PI / 2));
       c.circle(0, 1, 2.8).fill({ color: 0xffffff, alpha: 0.5 }).stroke({ color: 0xffffff, width: LINE });
       return c;
+    case 'freighter':
+      // Long hull (22×10) with cargo pods and a bridge.
+      neon(c, [-11, -2, -8, -5, 8, -5, 11, -2, 11, 3, 8, 5, -8, 5, -11, 3]);
+      for (const x of [-6, -1, 4]) line(c, [x, -5, x, 5]);
+      c.rect(-3, -7, 6, 2).fill({ color: 0xffffff, alpha: 0.6 });
+      return dot(c, 0, 0, 1.2);
   }
 }
 
@@ -97,6 +103,7 @@ export const ENEMY_ART: Record<EnemyKind, GraphicsContext> = {
   mini: enemy('mini'),
   phaser: enemy('phaser'),
   bomber: enemy('bomber'),
+  freighter: enemy('freighter'),
 };
 
 export const SHIELD_CRACKED_ART = crackedShield();
@@ -111,6 +118,7 @@ export const ENEMY_COLOR: Record<EnemyKind, number> = {
   mini: 0x9affd6,
   phaser: 0xd98bff,
   bomber: 0xff5a3d,
+  freighter: 0xffc857,
 };
 
 /** Bosses are drawn in their sim box coordinates (top-left origin). */
@@ -154,10 +162,22 @@ function dreadnought(): GraphicsContext {
   return c;
 }
 
+/** SENTINEL miniboss (40×16): a gun platform with a central eye and two pylons for the turrets. */
+function sentinel(): GraphicsContext {
+  const c = new GraphicsContext();
+  neon(c, [0, 6, 6, 2, 34, 2, 40, 6, 40, 12, 34, 16, 6, 16, 0, 12]);
+  line(c, [6, 9, 12, 9]);
+  line(c, [28, 9, 34, 9]);
+  c.circle(20, 9, 6).fill({ color: 0xffffff, alpha: FILL_ALPHA }).stroke({ color: 0xffffff, width: LINE });
+  for (const x of [3, 37]) line(c, [x, 12, x, 15]);
+  return line(c, [20, 2, 20, -2]);
+}
+
 export const BOSS_ART: Record<BossKind, GraphicsContext> = {
   warden: warden(),
   hive: hive(),
   dreadnought: dreadnought(),
+  sentinel: sentinel(),
 };
 
 /** Glowing weak point drawn over each boss core (sim `coreX`/`coreW`, box coords). */
@@ -165,12 +185,14 @@ export const BOSS_CORE: Record<BossKind, { x: number; y: number; r: number; colo
   warden: { x: 28, y: 9.5, r: 3, color: 0xff3b5c },
   hive: { x: 30, y: 12, r: 4, color: 0x7dff6b },
   dreadnought: { x: 48, y: 12, r: 4, color: 0xffe14a },
+  sentinel: { x: 20, y: 9, r: 3, color: 0xff7a3d },
 };
 
 export const BOSS_COLOR: Record<BossKind, number> = {
   warden: 0x7fa8ff,
   hive: 0xb9a8ff,
   dreadnought: 0xff8a5a,
+  sentinel: 0xc9a0ff,
 };
 
 /** Turret 10×8 and armor plate 10×6, top-left origin. */

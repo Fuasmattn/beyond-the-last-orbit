@@ -1,9 +1,9 @@
-import { DIVE } from '../data/balance';
+import { DIVE, FORMATION } from '../data/balance';
 import { aimVelocity, spawnEnemyBullet } from './bullets';
 import { inFormation, slotPosition } from './formation';
 import { clamp, smoothstep } from './math';
 import { nextRandom } from './rng';
-import type { Dive, SimEvent, SimState } from './types';
+import type { Dive, Enemy, SimEvent, SimState } from './types';
 
 /** Swoop down to the target, swinging sideways, then blend back into the formation slot. */
 export function divePosition(dive: Dive, slotX: number, slotY: number): { x: number; y: number } {
@@ -15,31 +15,47 @@ export function divePosition(dive: Dive, slotX: number, slotY: number): { x: num
   return { x: px + (slotX - px) * w, y: py + (slotY - py) * w };
 }
 
+function startDive(state: SimState, e: Enemy, delay: number, events: SimEvent[]): void {
+  const p = state.player;
+  e.dive = {
+    t: -delay,
+    duration: DIVE.duration,
+    startX: e.x,
+    startY: e.y,
+    targetX: clamp(p.x + p.w / 2 - e.w / 2, 0, state.fieldW - e.w),
+    dir: nextRandom(state.rng) < 0.5 ? -1 : 1,
+    fired: false,
+  };
+  events.push({ type: 'dive', id: e.id });
+}
+
+/** Row dive (M21): from `rowDiveFrom`, every `rowDiveBars` bars every formation diver dives together. */
+export function updateRowDives(state: SimState, beats: number, events: SimEvent[]): void {
+  if (state.diff.d < FORMATION.rowDiveFrom || beats === 0) return;
+  const every = FORMATION.rowDiveBars * 4;
+  const end = state.beat.count;
+  for (let beat = end - beats + 1; beat <= end; beat++) {
+    if (beat <= 0 || beat % every !== 0) continue;
+    const divers = state.enemies.filter((e) => e.kind === 'diver' && inFormation(e));
+    divers.forEach((e, i) => startDive(state, e, i * FORMATION.rowDiveStagger, events));
+    if (divers.length > 0) state.diveTimer = state.diff.diveInterval;
+  }
+}
+
 export function updateDives(state: SimState, dt: number, events: SimEvent[]): void {
   state.diveTimer -= dt;
   if (state.diveTimer <= 0) {
     state.diveTimer = state.diff.diveInterval * (0.75 + 0.5 * nextRandom(state.rng));
     const candidates = state.enemies.filter((e) => e.kind === 'diver' && inFormation(e));
     const e = candidates[Math.floor(nextRandom(state.rng) * candidates.length)];
-    if (e) {
-      const p = state.player;
-      e.dive = {
-        t: 0,
-        duration: DIVE.duration,
-        startX: e.x,
-        startY: e.y,
-        targetX: clamp(p.x + p.w / 2 - e.w / 2, 0, state.fieldW - e.w),
-        dir: nextRandom(state.rng) < 0.5 ? -1 : 1,
-        fired: false,
-      };
-      events.push({ type: 'dive', id: e.id });
-    }
+    if (e) startDive(state, e, 0, events);
   }
 
   for (const e of state.enemies) {
     const d = e.dive;
     if (!d) continue;
     d.t += dt;
+    if (d.t < 0) continue;
     const slot = slotPosition(state, e);
     if (d.t >= d.duration) {
       e.dive = null;

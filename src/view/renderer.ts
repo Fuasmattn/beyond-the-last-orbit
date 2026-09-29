@@ -254,7 +254,7 @@ export class GameRenderer {
         g.scale.set(s);
         const spin = e.kind === 'phaser' ? 1.2 : e.kind === 'mini' ? 5 : 0;
         // Divers and fly-ins bank into their motion.
-        g.rotation = spin ? state.time * spin : e.dive || e.entry ? Math.sin(state.time * 8 + e.id) * 0.25 : 0;
+        g.rotation = spin ? state.time * spin : e.dive || e.entry || e.path ? Math.sin(state.time * 8 + e.id) * 0.25 : 0;
         g.alpha = e.phased ? 0.25 : 1;
       },
     );

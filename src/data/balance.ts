@@ -64,9 +64,18 @@ export const FORMATION = {
   advanceBars: [4, 2, 1],
   /** Beats a shape morph takes. */
   morphBeats: 1,
+  /** Row dive (d ≥ rowDiveFrom): every `rowDiveBars` bars all formation divers dive, `rowDiveStagger` s apart. */
+  rowDiveFrom: 4,
+  rowDiveBars: 4,
+  rowDiveStagger: 0.12,
+  /** Breakaway (d ≥ breakawayFrom): the last `breakawayShare` (min 2) of the grid charges the player. */
+  breakawayFrom: 2,
+  breakawayShare: 0.15,
+  breakawaySpeed: 70,
 } as const;
 
 export const POINTS = {
+  freighter: 150,
   grunt: 10,
   gunner: 20,
   diver: 30,
@@ -79,6 +88,74 @@ export const POINTS = {
 export const TURRET_POINTS = 250;
 
 export const MINI = { w: 7, h: 6, vx: 35, vy: 45 } as const;
+
+/** M21 fight archetypes. Route weights for battle / elite nodes off the beat row. */
+export const FIGHT = {
+  weights: { swarm: 35, convoy: 30, miniboss: 20, formation: 15 },
+} as const;
+
+/** SWARM: groups fly Bézier paths through the field. */
+export const SWARM = {
+  groupMin: 4,
+  groupMax: 6,
+  groupEvery: 2.4,
+  eliteGroupEvery: 1.8,
+  /** Launch gap between members of a group (s). */
+  stagger: 0.15,
+  /** Seconds for one pass along a path. */
+  passTime: 3.2,
+  /** Path progress at which a member fires its aimed shot. */
+  fireAt: 0.4,
+  /** Full-chain bonus per member. */
+  chainPoints: 40,
+  /** Budget as a share of the formation's enemy count. */
+  budgetShare: 0.8,
+} as const;
+
+/** CONVOY: freighters cross the field with escorts. */
+export const CONVOY = {
+  w: 22,
+  h: 10,
+  hp: 6,
+  speed: 34,
+  every: 3.2,
+  eliteEvery: 2.4,
+  baseCount: 5,
+  lanesY: [56, 88, 120],
+  /** Seconds after entry at which each escort peels off. */
+  escortAt: [1, 3],
+  escortSpeed: 75,
+  bombEvery: 2.6,
+  /** Stage bonus lost per freighter that escapes. */
+  escapePenalty: 600,
+  scrap: 5,
+} as const;
+
+/** SENTINEL miniboss: a gun platform with two turrets, one phase. */
+export const SENTINEL = {
+  w: 40,
+  h: 16,
+  y: 40,
+  hp: 45,
+  hpPerWorld: 0.5,
+  eliteHpMul: 1.4,
+  coreX: 14,
+  coreW: 12,
+  turretW: 10,
+  turretH: 8,
+  turretHp: 8,
+  turretOffsets: [
+    [0, 14],
+    [30, 14],
+  ],
+  enterTime: 1.6,
+  swayAmp: 45,
+  swaySpeed: 0.7,
+  spreadAngle: 0.28,
+  ringCount: 8,
+  points: 1500,
+  scrap: 12,
+} as const;
 
 export const BOMB = { w: 4, h: 4, speed: 60, fuse: 1.1, ringCount: 8, ringSpeed: 70 } as const;
 

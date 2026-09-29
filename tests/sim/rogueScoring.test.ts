@@ -119,7 +119,7 @@ describe('hurtbox', () => {
 
 describe('rogue stage result', () => {
   it('weights accuracy only and judges perfect by accuracy', () => {
-    const stats = { shots: 10, hits: 8, onBeatShots: 0, hitsTaken: 0, grazes: 0, time: STAGE.parTime };
+    const stats = { shots: 10, hits: 8, onBeatShots: 0, hitsTaken: 0, grazes: 0, time: STAGE.parTime, escaped: 0 };
     const r = computeStageResult(stats, false);
     expect(r.bonus).toBe(0.8 * STAGE.rogueAccuracyBonus + 2000);
     expect(r.perfect).toBe(true);

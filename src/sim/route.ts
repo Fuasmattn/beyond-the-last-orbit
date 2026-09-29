@@ -1,6 +1,6 @@
-import { ROUTE, STAGE } from '../data/balance';
+import { FIGHT, ROUTE, STAGE } from '../data/balance';
 import { nextRandom } from './rng';
-import type { NodeKind, RogueState, RouteMap, RouteNode } from './types';
+import type { FightKind, NodeKind, RogueState, RouteMap, RouteNode } from './types';
 
 /** Map rows per world: every stage between the fixed opener and the boss. */
 export const MAP_ROWS = STAGE.perWorld - 2;
@@ -92,6 +92,22 @@ function assignKinds(rng: Rng, row: RouteNode[], rowIdx: number, world: number):
   });
 }
 
+/**
+ * Fight archetypes for battle / elite nodes off the beat row (the beat row keeps formations for the rhythm sway).
+ * The miniboss is held back from world 1's first row.
+ */
+function assignFights(rng: Rng, rows: RouteNode[][], world: number): void {
+  rows.forEach((row, i) => {
+    if (i === BEAT_ROW) return;
+    for (const n of row) {
+      if (n.kind !== 'battle' && n.kind !== 'elite') continue;
+      const weights: Record<FightKind, number> = { ...FIGHT.weights };
+      if (world === 0 && i === 0) weights.miniboss = 0;
+      n.fight = weighted(rng, weights);
+    }
+  });
+}
+
 /** Every world has a shop: when the roll had none, one non-battle node off the beat row becomes one. */
 function ensureShop(rng: Rng, rows: RouteNode[][]): void {
   if (rows.some((row) => row.some((n) => n.kind === 'shop'))) return;
@@ -122,6 +138,7 @@ export function generateMap(rng: Rng, world: number): RouteMap {
     assignKinds(rng, row, i, world);
   });
   ensureShop(rng, rows);
+  assignFights(rng, rows, world);
   return { rows };
 }
 
@@ -133,6 +150,7 @@ export function createRogueState(seed: number, rerolls: number, world: number): 
     path: [],
     node: 'battle',
     beat: false,
+    fight: 'formation',
     boons: {},
     offer: [],
     drafts: [],

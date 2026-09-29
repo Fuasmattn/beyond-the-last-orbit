@@ -2,7 +2,7 @@ import { Container, Graphics, type Texture } from 'pixi.js';
 import { FIELD_H } from '../data/balance';
 import type { MenuAction, Tap } from '../input/inputFrame';
 import { reachableLanes } from '../sim/route';
-import type { NodeKind, RogueState } from '../sim/types';
+import type { FightKind, NodeKind, RogueState } from '../sim/types';
 import { blink } from './anim';
 import { centerText, PixelText } from './pixelText';
 
@@ -13,6 +13,14 @@ const NODE_INFO: Record<NodeKind, { letter: string; name: string; desc: string; 
   repair: { letter: 'R', name: 'REPAIR', desc: '+1 SHIP - NO SCORE', color: 0x7dff6b },
   shop: { letter: 'S', name: 'SHOP', desc: 'BUY BOONS FOR SCRAP', color: 0xb8ff4a },
   signal: { letter: '?', name: 'SIGNAL', desc: 'UNKNOWN. CHOOSE WELL', color: 0xffb347 },
+};
+
+/** Fight archetypes (M21): shown in the node name and description. */
+const FIGHT_INFO: Record<FightKind, { name: string; desc: string }> = {
+  formation: { name: '', desc: '' },
+  swarm: { name: 'SWARM', desc: 'CHAIN WHOLE GROUPS' },
+  convoy: { name: 'CONVOY', desc: 'STOP THE FREIGHTERS' },
+  miniboss: { name: 'MINIBOSS', desc: 'SENTINEL. BIG DRAFT' },
 };
 
 const START_Y = 238;
@@ -154,9 +162,11 @@ export class RouteOverlay extends Container {
     centerText(this.title, 50, fieldW);
     const node = selected === undefined ? undefined : r.map.rows[row]?.find((n) => n.lane === selected);
     const info = node ? NODE_INFO[node.kind] : null;
-    this.nodeName.setText(info ? (node?.beat ? `BEAT ${info.name}` : info.name) : '');
+    const fight = node?.fight && node.fight !== 'formation' ? FIGHT_INFO[node.fight] : null;
+    const name = fight ? (node?.kind === 'elite' ? `${fight.name} ELITE` : fight.name) : (info?.name ?? '');
+    this.nodeName.setText(info ? (node?.beat ? `BEAT ${info.name}` : name) : '');
     this.nodeName.tint = node?.beat ? BEAT_COLOR : (info?.color ?? 0xffffff);
-    this.desc.setText(node?.beat ? 'X8 ON BEAT, A+ DRAFT' : (info?.desc ?? ''));
+    this.desc.setText(node?.beat ? 'X8 ON BEAT, A+ DRAFT' : (fight?.desc ?? info?.desc ?? ''));
     centerText(this.nodeName, 256, fieldW);
     centerText(this.desc, 266, fieldW);
     centerText(this.hint, FIELD_H - 40, fieldW);

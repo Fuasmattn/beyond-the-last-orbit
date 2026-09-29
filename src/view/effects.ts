@@ -115,6 +115,13 @@ export class Effects extends Container {
           this.explode(e.x, e.y, 16, [0x7dff6b, 0xffffff], 70);
           this.shake.add(TRAUMA.part);
           break;
+        case 'groupCleared':
+          this.sparks(e.x, e.y, 12, [0xffe14a, 0xffffff]);
+          this.popups.spawn(`FULL CHAIN +${e.points}`, 0xffe14a, e.x, e.y - 8);
+          break;
+        case 'escaped':
+          this.popups.spawn('ESCAPED', 0xff5a5a, e.x, e.y);
+          break;
         case 'shieldBurst':
           this.explode(e.x, e.y, 24, [0x7dff6b, 0x4af2ff, 0xffffff], 120);
           this.popups.spawn('BURST', 0x7dff6b, e.x, e.y - 10);

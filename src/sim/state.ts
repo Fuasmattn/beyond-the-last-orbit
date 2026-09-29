@@ -1,5 +1,6 @@
 import { BEAT_TRACK, FIELD_H, FIELD_W_DEFAULT, PLAYER } from '../data/balance';
 import { difficultyFor } from './difficulty';
+import { emptyFight } from './fight';
 import { createRogueState } from './route';
 import { defaultRunOptions, type RunOptions } from './ship';
 import { emptyStageStats, openStarterDraft, startStage } from './stageFlow';
@@ -42,6 +43,7 @@ export function createInitialState(
     enemies: [],
     bullets: [],
     formation: { y: 0, sway: 0, swayDir: 1, shapes: ['block'], shapeIdx: 0, morph: 1, beats: 0, total: 0, rows: 0, cols: 0 },
+    fight: emptyFight(),
     boss: null,
     diff: difficultyFor(0, 1, 0),
     enemyFireTimer: 1.5,

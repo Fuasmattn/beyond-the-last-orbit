@@ -1,9 +1,9 @@
-import { BEAT_STAGE, PLAYER, SCRAP, SHOP, STAGE, WARP } from '../data/balance';
+import { BEAT_STAGE, CONVOY, PLAYER, SCRAP, SHOP, STAGE, WARP } from '../data/balance';
 import { WORLDS } from '../data/worlds';
 import { spawnBoss } from './boss';
 import { boonDef, rollOffer, takeBoon } from './boons';
 import { difficultyFor, eliteDifficulty } from './difficulty';
-import { spawnFormation } from './formation';
+import { spawnFight } from './fight';
 import { clamp } from './math';
 import { generateMap, nodeAt, reachableLanes } from './route';
 import { cancelBullets, clampStreak } from './scoring';
@@ -11,7 +11,7 @@ import { canChoose, resolveEvent, rollEvent } from './signal';
 import type { BeatMode, BeatRank, BoonId, DraftTier, SimEvent, SimState, StageResult, StageStats } from './types';
 
 export function emptyStageStats(): StageStats {
-  return { shots: 0, hits: 0, onBeatShots: 0, hitsTaken: 0, grazes: 0, time: 0 };
+  return { shots: 0, hits: 0, onBeatShots: 0, hitsTaken: 0, grazes: 0, time: 0, escaped: 0 };
 }
 
 export function isBossStage(stage: number): boolean {
@@ -37,7 +37,7 @@ export function startStage(state: SimState, events: SimEvent[]): void {
   const refill = state.stage === 1 ? Math.max(state.ship.shieldMax, state.ship.worldShield) : state.ship.shieldMax;
   state.player.shield = Math.max(state.player.shield, refill);
   if (boss) spawnBoss(state);
-  else spawnFormation(state);
+  else spawnFight(state);
   state.enemyFireTimer = 1.5;
   state.diveTimer = state.diff.diveInterval;
   state.phase = 'stageIntro';
@@ -64,15 +64,18 @@ export function computeStageResult(stats: StageStats, boss: boolean, beatMode: B
   const skill = rogue ? accuracy * STAGE.rogueAccuracyBonus : accuracy * 1000 + beatPct * 1000;
   const beatRank = beatMode === 'master' ? beatRankFor(stats) : null;
   const rankMul = beatRank === 'S' ? BEAT_STAGE.sBonusMul : 1;
-  const bonus = Math.round((skill + (noHit ? 2000 : 0) + timeBonus) * rankMul);
+  // Convoy stages: every freighter that got away costs part of the bonus.
+  const escapePenalty = stats.escaped * CONVOY.escapePenalty;
+  const bonus = Math.max(0, Math.round((skill + (noHit ? 2000 : 0) + timeBonus) * rankMul - escapePenalty));
   return {
     accuracy,
     beatPct,
     noHit,
     time: stats.time,
     bonus,
-    perfect: noHit && (rogue ? accuracy >= STAGE.roguePerfectAccuracy : beatPct >= STAGE.perfectBeatPct),
+    perfect: noHit && stats.escaped === 0 && (rogue ? accuracy >= STAGE.roguePerfectAccuracy : beatPct >= STAGE.perfectBeatPct),
     beatRank,
+    escaped: stats.escaped,
   };
 }
 
@@ -91,8 +94,9 @@ export function finishStage(state: SimState, events: SimEvent[]): void {
   state.run.stagesCleared++;
   const beatDraft = result.beatRank === 'S' || result.beatRank === 'A';
   const r = state.rogue;
-  // Every stage clear owes a draft: commons after a plain battle, the full table after an elite, boss or beat rank.
-  if (!r.ambush) r.drafts.push(state.diff.elite || isBossStage(state.stage) || beatDraft ? 'full' : 'basic');
+  // Every stage clear owes a draft: commons after a plain battle, the full table after an elite, boss, miniboss or beat rank.
+  const big = state.diff.elite || isBossStage(state.stage) || beatDraft || r.fight === 'miniboss';
+  if (!r.ambush) r.drafts.push(big ? 'full' : 'basic');
   r.ambush = false;
   if (isBossStage(state.stage)) r.scrap += SCRAP.boss;
   state.bullets = [];
@@ -143,6 +147,7 @@ function nextWorld(state: SimState, events: SimEvent[]): void {
   r.path = [];
   r.node = 'battle';
   r.beat = false;
+  r.fight = 'formation';
   startWarp(state, events);
 }
 
@@ -154,6 +159,7 @@ function continueRoute(state: SimState, events: SimEvent[]): void {
     state.stage++;
     state.rogue.node = 'battle';
     state.rogue.beat = false;
+    state.rogue.fight = 'formation';
     startStage(state, events);
   } else {
     state.phase = 'route';
@@ -187,6 +193,7 @@ export function chooseNode(state: SimState, lane: number, events: SimEvent[]): b
   r.path.push(lane);
   r.node = node.kind;
   r.beat = node.beat === true;
+  r.fight = node.fight ?? 'formation';
   state.stage++;
   events.push({ type: 'nodeChosen', kind: node.kind });
   switch (node.kind) {

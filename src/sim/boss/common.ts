@@ -73,10 +73,11 @@ export function applyPhase(state: SimState, b: Boss, events: SimEvent[]): boolea
   return true;
 }
 
-export function killBoss(state: SimState, events: SimEvent[]): void {
+/** Kills the boss; `miniboss` kills score their own `points` and do not count toward the run's boss tally. */
+export function killBoss(state: SimState, events: SimEvent[], opts: { points?: number; miniboss?: boolean } = {}): void {
   const b = state.boss;
   if (!b) return;
-  const points = BOSS_POINTS * (state.world + 1) * (state.loop + 1);
+  const points = opts.points ?? BOSS_POINTS * (state.world + 1) * (state.loop + 1);
   state.score += points;
   b.hp = 0;
   b.dying = BOSS_DYING_TIME;
@@ -84,7 +85,7 @@ export function killBoss(state: SimState, events: SimEvent[]): void {
   b.phased = false;
   state.phase = 'bossDying';
   state.phaseTimer = BOSS_DYING_TIME;
-  state.run.bossesKilled++;
+  if (!opts.miniboss) state.run.bossesKilled++;
   cancelBullets(state, events);
   state.enemies = [];
   events.push({ type: 'bossKilled', x: b.x + b.w / 2, y: b.y + b.h / 2, points });

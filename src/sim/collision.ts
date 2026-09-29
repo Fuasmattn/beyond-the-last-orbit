@@ -1,10 +1,11 @@
-import { BOON, ENEMY, PLAYER, POINTS, SCRAP } from '../data/balance';
+import { BOON, CONVOY, ENEMY, PLAYER, POINTS, SCRAP } from '../data/balance';
 import { allocId } from './ids';
 import { hitBoss } from './boss';
 import { overlaps } from './geometry';
 import { hitPlayer, hurtbox } from './player';
 import { recordHit, registerGraze, registerKill } from './scoring';
 import { spawnMini } from './specials';
+import { swarmKill } from './swarm';
 import type { Box, Bullet, Enemy, SimEvent, SimState } from './types';
 
 export { overlaps } from './geometry';
@@ -36,6 +37,8 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
         state.rogue.scrap += scrapForKill(state);
         state.run.kills++;
         events.push({ type: 'enemyKilled', id: e.id, kind: e.kind, x: cx, y: cy, points });
+        if (e.kind === 'freighter') state.rogue.scrap += CONVOY.scrap;
+        swarmKill(state, e, cx, cy, events);
         if (state.ship.shrapnel && !b.ttl) spawnShrapnel(state, cx, cy, b, events);
         if (state.ship.arc) arcZap(state, e, b.mult, events);
         if (e.kind === 'splitter') {
@@ -65,7 +68,7 @@ export function resolveCollisions(state: SimState, events: SimEvent[]): void {
 
   if (state.player.invuln <= 0) {
     for (const e of state.enemies) {
-      if ((e.dive || e.free) && e.hp > 0 && overlaps(e, state.player)) {
+      if ((e.dive || e.free || e.path) && e.hp > 0 && overlaps(e, state.player)) {
         e.hp = 0;
         events.push({ type: 'enemyKilled', id: e.id, kind: e.kind, x: e.x + e.w / 2, y: e.y + e.h / 2, points: 0 });
         hitPlayer(state, events);
@@ -109,6 +112,7 @@ function arcZap(state: SimState, from: Enemy, mult: number, events: SimEvent[]):
     state.rogue.scrap += scrapForKill(state);
     state.run.kills++;
     events.push({ type: 'enemyKilled', id: best.id, kind: best.kind, x: cx, y: cy, points });
+    swarmKill(state, best, cx, cy, events);
     if (best.kind === 'splitter') {
       spawnMini(state, cx, cy, -1);
       spawnMini(state, cx, cy, 1);

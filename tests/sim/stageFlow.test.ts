@@ -17,7 +17,7 @@ import { NO_INPUT, type SimEvent } from '../../src/sim/types';
 
 describe('computeStageResult', () => {
   it('scores accuracy, beat, no-hit and time', () => {
-    const r = computeStageResult({ shots: 10, hits: 8, onBeatShots: 5, hitsTaken: 0, grazes: 0, time: 20 }, false, 'master');
+    const r = computeStageResult({ shots: 10, hits: 8, onBeatShots: 5, hitsTaken: 0, grazes: 0, time: 20 , escaped: 0 }, false, 'master');
     expect(r.accuracy).toBeCloseTo(0.8);
     expect(r.beatPct).toBeCloseTo(0.5);
     expect(r.noHit).toBe(true);
@@ -26,18 +26,18 @@ describe('computeStageResult', () => {
   });
 
   it('handles zero shots and slow clears', () => {
-    const r = computeStageResult({ shots: 0, hits: 0, onBeatShots: 0, hitsTaken: 2, grazes: 0, time: 999 }, false);
+    const r = computeStageResult({ shots: 0, hits: 0, onBeatShots: 0, hitsTaken: 2, grazes: 0, time: 999 , escaped: 0 }, false);
     expect(r.bonus).toBe(0);
     expect(r.noHit).toBe(false);
   });
 
   it('flags perfect stages', () => {
-    const r = computeStageResult({ shots: 10, hits: 10, onBeatShots: 7, hitsTaken: 0, grazes: 0, time: 10 }, false);
+    const r = computeStageResult({ shots: 10, hits: 10, onBeatShots: 7, hitsTaken: 0, grazes: 0, time: 10 , escaped: 0 }, false);
     expect(r.perfect).toBe(true);
   });
 
   it('uses the boss par time on boss stages', () => {
-    const r = computeStageResult({ shots: 0, hits: 0, onBeatShots: 0, hitsTaken: 1, grazes: 0, time: 40 }, true);
+    const r = computeStageResult({ shots: 0, hits: 0, onBeatShots: 0, hitsTaken: 1, grazes: 0, time: 40 , escaped: 0 }, true);
     expect(r.bonus).toBe((STAGE.bossParTime - 40) * STAGE.timeBonusPerSec);
   });
 });
@@ -45,7 +45,7 @@ describe('computeStageResult', () => {
 describe('stage progression', () => {
   it('finishStage adds the bonus and counts perfect stages', () => {
     const s = createInitialState(1);
-    s.stageStats = { shots: 10, hits: 10, onBeatShots: 10, hitsTaken: 0, grazes: 0, time: 10 };
+    s.stageStats = { shots: 10, hits: 10, onBeatShots: 10, hitsTaken: 0, grazes: 0, time: 10 , escaped: 0 };
     finishStage(s, []);
     expect(s.phase).toBe('stageClear');
     expect(s.score).toBe(s.result!.bonus);

@@ -10,6 +10,8 @@ export type BeatRank = 'S' | 'A' | 'B' | 'C';
 
 /** Route map node types. */
 export type NodeKind = 'battle' | 'elite' | 'cache' | 'repair' | 'shop' | 'signal';
+/** How a battle or elite node fights (M21): the classic grid, Galaga-style swarm paths, a freighter convoy, a miniboss. */
+export type FightKind = 'formation' | 'swarm' | 'convoy' | 'miniboss';
 
 export type EventId = 'distress' | 'derelict' | 'market' | 'ghost';
 
@@ -61,6 +63,8 @@ export type DraftTier = 'starter' | 'basic' | 'full' | 'rare';
 export interface RouteNode {
   lane: number;
   kind: NodeKind;
+  /** Battle / elite nodes off the beat row: the fight archetype (missing = formation). */
+  fight?: FightKind;
   /** On the world's beat row: played as a beat stage. */
   beat?: boolean;
   /** Lanes of the connected nodes in the next row. */
@@ -82,6 +86,8 @@ export interface RogueState {
   node: NodeKind;
   /** The current or last-entered node is on the beat row. */
   beat: boolean;
+  /** Fight archetype of the current stage (stage 1 and the boss reset it to `formation`). */
+  fight: FightKind;
   /** Drafted upgrade stacks. */
   boons: Partial<Record<BoonId, number>>;
   /** Upgrades on offer while drafting. */
@@ -104,8 +110,8 @@ export interface RogueState {
   seenEvents: EventId[];
 }
 
-export type EnemyKind = 'grunt' | 'gunner' | 'diver' | 'shield' | 'splitter' | 'phaser' | 'bomber' | 'mini';
-export type BossKind = 'warden' | 'hive' | 'dreadnought';
+export type EnemyKind = 'grunt' | 'gunner' | 'diver' | 'shield' | 'splitter' | 'phaser' | 'bomber' | 'mini' | 'freighter';
+export type BossKind = 'warden' | 'hive' | 'dreadnought' | 'sentinel';
 
 export interface Box {
   x: number;
@@ -122,6 +128,16 @@ export interface Dive {
   targetX: number;
   dir: 1 | -1;
   fired: boolean;
+}
+
+/** Swarm flight: cubic Bézier through the field, `t` seconds along a `duration`-second pass. */
+export interface Path {
+  t: number;
+  duration: number;
+  /** Control points p0..p3 as [x, y] (top-left of the enemy box). */
+  pts: readonly [readonly [number, number], readonly [number, number], readonly [number, number], readonly [number, number]];
+  /** Fired its pass shot(s). */
+  shots: number;
 }
 
 /** Fly-in from off-screen: quadratic curve from (x0, y0) via (cx, cy) to the live slot. */
@@ -153,6 +169,14 @@ export interface Enemy extends Box {
   phased: boolean;
   /** Elite stages: winding up the next bar's volley (telegraph). */
   charging?: boolean;
+  /** Swarm stages: flying a path (no formation slot). */
+  path?: Path | null;
+  /** Swarm stages: group id for the full-chain bonus. */
+  group?: number;
+  /** Convoy freighters: seconds until the next bomb. */
+  bombTimer?: number;
+  /** Convoy freighters: escorts still to peel off (seconds until each). */
+  escorts?: number[];
 }
 
 export interface Bullet extends Box {
@@ -326,6 +350,20 @@ export interface StageStats {
   hitsTaken: number;
   grazes: number;
   time: number;
+  /** Convoy stages: freighters that crossed the field alive. */
+  escaped: number;
+}
+
+/** Per-stage spawner state for the non-formation fight kinds. */
+export interface FightState {
+  /** Enemies (swarm) or freighters (convoy) still to spawn. */
+  budget: number;
+  /** Seconds until the next group / freighter. */
+  timer: number;
+  /** Groups launched so far (swarm) or freighters launched (convoy); also the next group id. */
+  launched: number;
+  /** Swarm: members alive or killed per group, for the chain bonus. */
+  groups: Record<number, { size: number; killed: number }>;
 }
 
 export interface StageResult {
@@ -337,6 +375,8 @@ export interface StageResult {
   perfect: boolean;
   /** Beat stages only. */
   beatRank: BeatRank | null;
+  /** Convoy stages: freighters that got away. */
+  escaped: number;
 }
 
 /** `route` / `draft` / `shop` / `event`: waiting for the player to pick a map node / upgrade / purchase / choice. */
@@ -375,6 +415,7 @@ export interface SimState {
   enemies: Enemy[];
   bullets: Bullet[];
   formation: Formation;
+  fight: FightState;
   boss: Boss | null;
   diff: Difficulty;
   enemyFireTimer: number;
@@ -425,6 +466,9 @@ export type SimEvent =
   | { type: 'bulletCancel'; count: number; points: number; spots: { x: number; y: number }[] }
   | { type: 'shieldHit'; x: number; y: number; shieldLeft: number }
   | { type: 'formationInvaded' }
+  | { type: 'groupCleared'; x: number; y: number; points: number }
+  | { type: 'escaped'; x: number; y: number }
+  | { type: 'breakaway' }
   | { type: 'split'; id: number; x: number; y: number }
   | { type: 'bombBurst'; x: number; y: number }
   | { type: 'stageIntro'; world: number; stage: number; loop: number; boss: boolean }

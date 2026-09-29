@@ -51,6 +51,8 @@ export function updateSpecials(state: SimState, dt: number, events: SimEvent[]):
     if (!f) continue;
     e.x += f.vx * dt;
     e.y += f.vy * dt;
+    // Convoy freighters cross the field and leave; only the small fry bounce off the walls.
+    if (e.kind === 'freighter') continue;
     if (e.x < 0) {
       e.x = 0;
       f.vx = Math.abs(f.vx);

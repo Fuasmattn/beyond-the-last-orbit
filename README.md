@@ -22,6 +22,7 @@ Credits, upgrades and settings stay in the browser; high scores are also shared 
 npm install
 npm run dev        # http://localhost:5173
 npm run dev:leaderboard  # http://localhost:5174 with a mock global leaderboard
+npm run dev:https  # https://<lan-ip>:5178, self-signed: needed for tilt steering on a phone (accept the certificate warning once)
 npm test           # unit tests (Vitest)
 npm run build      # typecheck + production build in dist/
 ```

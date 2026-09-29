@@ -11,6 +11,28 @@
       "port": 5173
     },
     {
+      "name": "dev-lan",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "--host",
+        "--port",
+        "5173",
+        "--strictPort"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "dev-https",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:https"
+      ],
+      "port": 5178,
+      "url": "https://localhost:5178"
+    },
+    {
       "name": "dev-leaderboard",
       "runtimeExecutable": "npm",
       "runtimeArgs": [

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:https": "vite --mode https --port 5178 --strictPort",
     "dev:leaderboard": "node scripts/mock-leaderboard.mjs & VITE_SUPABASE_URL=http://localhost:54321 VITE_SUPABASE_KEY=dev vite --port 5174; kill %1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
@@ -16,6 +17,7 @@
     "pixi.js": "^8.21.0"
   },
   "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.1",
     "vitest": "^5.0.1"

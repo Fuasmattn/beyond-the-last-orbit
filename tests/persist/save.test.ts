@@ -65,7 +65,7 @@ describe('v1 → v3 migration', () => {
     const v1 = { version: 1, credits: 50, highscores: [entry(10)], owned: [], equipped: {}, settings: {} };
     const r = parseSave(JSON.stringify(v1));
     expect(r.reset).toBe(false);
-    expect(r.data.version).toBe(4);
+    expect(r.data.version).toBe(5);
     expect(r.data.credits).toBe(50);
     expect(r.data).not.toHaveProperty('highscores');
     expect(r.data.rogueHighscores).toEqual([]);
@@ -75,13 +75,18 @@ describe('v1 → v3 migration', () => {
 
   it('v4 adds daily fields with safe defaults and keeps valid ones', () => {
     const r = parseSave(JSON.stringify({ version: 3, rogueHighscores: [] }));
-    expect(r.data.version).toBe(4);
+    expect(r.data.version).toBe(5);
     expect(r.data.dailyHighscores).toEqual([]);
     expect(r.data.dailyPlayed).toBeNull();
     const kept = parseSave(JSON.stringify({ version: 4, dailyHighscores: [entry(5)], dailyPlayed: '2026-09-28' }));
     expect(kept.data.dailyHighscores).toEqual([entry(5)]);
     expect(kept.data.dailyPlayed).toBe('2026-09-28');
     expect(parseSave(JSON.stringify({ version: 4, dailyPlayed: 'yesterday' })).data.dailyPlayed).toBeNull();
+  });
+
+  it('v5 adds tilt steering, off unless saved on', () => {
+    expect(parseSave(JSON.stringify({ version: 4 })).data.settings.tilt).toBe(false);
+    expect(parseSave(JSON.stringify({ version: 5, settings: { tilt: true } })).data.settings.tilt).toBe(true);
   });
 
   it('keeps v2 rogue scores and reads beatLock', () => {

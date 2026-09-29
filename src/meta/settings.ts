@@ -8,7 +8,8 @@ export type SettingKey =
   | 'shake'
   | 'visualOffsetMs'
   | 'guitarTone'
-  | 'beatLock';
+  | 'beatLock'
+  | 'tilt';
 export const VOLUME_STEP = 0.1;
 export const VISUAL_OFFSET_STEP_MS = 10;
 export const VISUAL_OFFSET_MAX_MS = 100;
@@ -25,6 +26,7 @@ export function adjustSetting(s: Settings, key: SettingKey, delta: number): Sett
     case 'bloom':
     case 'shake':
     case 'beatLock':
+    case 'tilt':
       return { ...s, [key]: !s[key] };
     case 'guitarTone':
       return { ...s, guitarTone: s.guitarTone === 'amp' ? 'retro' : 'amp' };

@@ -473,6 +473,9 @@ export const CALIBRATION = {
   maxOffsetMs: 300,
 } as const;
 
+/** Tilt steering: degrees from the neutral pose that are ignored, and where the axis reaches full deflection. */
+export const TILT = { deadZoneDeg: 2, fullDeg: 14 } as const;
+
 export const FX = {
   shake: { maxOffset: 6, decay: 1.6 },
   particles: { capacity: 480 },

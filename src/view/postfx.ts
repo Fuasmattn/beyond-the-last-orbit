@@ -19,7 +19,12 @@ export class PostFx {
   constructor(
     private readonly target: Container,
     resolution: number,
+    /** Touch screens: a wider, fainter vignette, so a portrait phone's HUD and beat track stay readable. */
+    soft = false,
   ) {
+    const vignette = soft
+      ? { vignetting: 0.05, vignettingAlpha: 0.4, vignettingBlur: 0.6 }
+      : { vignetting: 0.32, vignettingAlpha: 0.75, vignettingBlur: 0.35 };
     this.bloom = new AdvancedBloomFilter({ threshold: 0.45, bloomScale: 0.9, brightness: 1, blur: 5, quality: 5 });
     this.crt = new CRTFilter({
       curvature: 2,
@@ -27,9 +32,7 @@ export class PostFx {
       lineContrast: 0.18,
       noise: 0.05,
       noiseSize: 1,
-      vignetting: 0.32,
-      vignettingAlpha: 0.75,
-      vignettingBlur: 0.35,
+      ...vignette,
     });
     this.split = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } });
     for (const f of [this.bloom, this.crt, this.split]) f.resolution = resolution;

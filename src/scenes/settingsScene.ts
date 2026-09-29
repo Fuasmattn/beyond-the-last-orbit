@@ -19,7 +19,7 @@ const TRACKS = [0, 1, 2].flatMap((world) =>
 /** CC-BY 4.0 attribution for the recorded drums (full credits in audio/CREDITS.md); two lines on the narrow frame. */
 const DRUM_CREDIT = ['DRUMS: DRUMGIZMO', 'MULDJORDKIT, CC BY 4.0'] as const;
 
-const ROWS: readonly { key: Row; label: string }[] = [
+const ALL_ROWS: readonly { key: Row; label: string; touchOnly?: true }[] = [
   { key: 'musicVolume', label: 'MUSIC VOLUME' },
   { key: 'sfxVolume', label: 'SFX VOLUME' },
   { key: 'guitarTone', label: 'GUITAR TONE' },
@@ -28,6 +28,7 @@ const ROWS: readonly { key: Row; label: string }[] = [
   { key: 'bloom', label: 'BLOOM' },
   { key: 'shake', label: 'SCREEN SHAKE' },
   { key: 'beatLock', label: 'BEAT LOCK' },
+  { key: 'tilt', label: 'TILT STEERING', touchOnly: true },
   { key: 'calibrate', label: 'CALIBRATE TIMING' },
   { key: 'visualOffsetMs', label: 'VISUAL OFFSET' },
   { key: 'back', label: 'BACK' },
@@ -40,11 +41,13 @@ const isStepped = (k: Row): k is 'musicVolume' | 'sfxVolume' | 'visualOffsetMs' 
 export class SettingsScene implements Scene {
   readonly root = new Container();
   private readonly list: MenuList;
+  private readonly rows: readonly { key: Row; label: string }[];
   private t = 0;
   private track = 0;
   private playing = false;
 
   constructor(private readonly ctx: SceneContext) {
+    this.rows = ALL_ROWS.filter((r) => ctx.isTouch || !r.touchOnly);
     const g = ctx.textures.glyphs;
     const title = new PixelText(g, 'SETTINGS', 0xffe14a);
     title.scale.set(2);
@@ -67,7 +70,7 @@ export class SettingsScene implements Scene {
   update(input: FrameInput, dt: number): void {
     this.t += dt;
     for (const a of input.menu) {
-      const row = ROWS[this.list.selected]!.key;
+      const row = this.rows[this.list.selected]!.key;
       if (a === 'up' || a === 'down') {
         this.list.move(a === 'up' ? -1 : 1);
         this.ctx.audio?.sfx.menuMove();
@@ -84,7 +87,7 @@ export class SettingsScene implements Scene {
       const i = this.list.indexAt(tap);
       if (i === null) continue;
       this.list.selected = i;
-      const row = ROWS[i]!.key;
+      const row = this.rows[i]!.key;
       if (row === 'musicTest') {
         const mid = this.list.layout.x + this.list.layout.width / 2;
         this.cycleTrack(tap.x < mid ? -1 : 1);
@@ -102,7 +105,7 @@ export class SettingsScene implements Scene {
     const onOff = (v: boolean) => (v ? 'ON' : 'OFF');
     const offset = s.latencyOffsetMs;
     this.list.setRows(
-      ROWS.map(({ key, label }) => {
+      this.rows.map(({ key, label }) => {
         switch (key) {
           case 'musicVolume':
           case 'sfxVolume':
@@ -112,6 +115,8 @@ export class SettingsScene implements Scene {
           case 'shake':
           case 'beatLock':
             return { label, value: onOff(s[key]) };
+          case 'tilt':
+            return { label, value: this.tiltValue() };
           case 'musicTest':
             return { label, value: `${this.playing ? '> ' : ''}< ${TRACKS[this.track]!.label} >` };
           case 'guitarTone':
@@ -132,6 +137,19 @@ export class SettingsScene implements Scene {
 
   destroy(): void {
     this.root.destroy({ children: true });
+  }
+
+  private tiltValue(): string {
+    switch (this.ctx.tilt.status) {
+      case 'unsupported':
+        return 'NO SENSOR';
+      case 'denied':
+        return 'DENIED';
+      case 'off':
+        return 'OFF';
+      default:
+        return 'ON';
+    }
   }
 
   private change(key: SettingKey, delta: number): void {

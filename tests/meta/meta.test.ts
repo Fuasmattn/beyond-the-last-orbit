@@ -79,6 +79,7 @@ describe('settings', () => {
     const s = defaultSave().settings;
     expect(adjustSetting(s, 'crt', 1).crt).toBe(!s.crt);
     expect(adjustSetting(s, 'shake', -1).shake).toBe(!s.shake);
+    expect(adjustSetting(s, 'tilt', 1).tilt).toBe(true);
   });
 });
 

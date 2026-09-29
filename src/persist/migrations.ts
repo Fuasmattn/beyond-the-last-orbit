@@ -46,6 +46,7 @@ function sanitizeSettings(v: unknown): Settings {
     visualOffsetMs: num(v.visualOffsetMs, d.visualOffsetMs, -VISUAL_OFFSET_MAX_MS, VISUAL_OFFSET_MAX_MS),
     muted: bool(v.muted, d.muted),
     beatLock: bool(v.beatLock, d.beatLock),
+    tilt: bool(v.tilt, d.tilt),
   };
 }
 
@@ -70,7 +71,8 @@ function sanitizeUpgrades(v: unknown): Record<string, number> {
 
 /**
  * v1–v4 share a layout: v2 adds `rogueHighscores` and `upgrades` (empty when missing); v3 drops the beat run's
- * `highscores` table and adds `settings.beatLock`; v4 adds `dailyHighscores` and `dailyPlayed`.
+ * `highscores` table and adds `settings.beatLock`; v4 adds `dailyHighscores` and `dailyPlayed`; v5 adds
+ * `settings.tilt`.
  */
 function sanitize(o: Rec): SaveData {
   const d = defaultSave();
@@ -100,6 +102,7 @@ export function migrate(raw: unknown): SaveData {
     case 2:
     case 3:
     case 4:
+    case 5:
       return sanitize(raw);
     default:
       throw new Error(`unsupported save version ${String(raw.version)}`);

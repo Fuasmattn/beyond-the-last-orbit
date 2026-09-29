@@ -1,5 +1,5 @@
 export const SAVE_KEY = 'beyond-the-last-orbit:v1';
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 export const MAX_HIGHSCORES = 10;
 
 export interface HighscoreEntry {
@@ -27,6 +27,8 @@ export interface Settings {
   muted: boolean;
   /** Every stage of a run is a beat stage. */
   beatLock: boolean;
+  /** Steer by tilting the device (touch devices only). */
+  tilt: boolean;
 }
 
 export interface SaveData {
@@ -66,6 +68,7 @@ export function defaultSave(): SaveData {
       guitarTone: 'amp',
       muted: false,
       beatLock: false,
+      tilt: false,
     },
   };
 }

@@ -88,6 +88,7 @@ export class RunScene implements Scene {
     this.pauseShade.visible = false;
     // The shade dims the field but not the HUD (score, PAUSED banner) or the menu.
     this.root.addChild(this.renderer.root, this.pauseShade, this.hud, this.route, this.draft, this.event, this.pauseMenu);
+    ctx.tilt.recenter();
     ctx.audio?.sfx.start();
     ctx.audio?.startSong(ctx.songForWorld(this.state.world, this.state.loop));
     if (this.state.phase === 'draft') this.draft.open('draft');
@@ -298,6 +299,7 @@ export class RunScene implements Scene {
     if (this.paused === p) return;
     this.paused = p;
     this.ctx.audio?.setPaused(p);
+    if (!p) this.ctx.tilt.recenter();
   }
 
   private playEvents(events: readonly SimEvent[]): void {

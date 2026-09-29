@@ -2,6 +2,7 @@ import type { Container } from 'pixi.js';
 import type { AudioEngine } from '../audio/engine';
 import type { CompiledSong } from '../audio/song';
 import type { MenuAction, Tap } from '../input/inputFrame';
+import type { TiltStatus } from '../input/tilt';
 import type { Board, Leaderboard } from '../leaderboard/leaderboard';
 import type { SaveData } from '../persist/schema';
 import type { BeatRank, InputFrame } from '../sim/types';
@@ -61,6 +62,8 @@ export interface SceneContext {
   /** Shared global high scores; credits and upgrades stay in `save`. */
   readonly leaderboard: Leaderboard;
   readonly isTouch: boolean;
+  /** Tilt steering (touch devices): current state, and a recenter for the moment play (re)starts. */
+  readonly tilt: { readonly status: TiltStatus; recenter(): void };
   readonly scenes: SceneFactory;
   readonly metronome: CompiledSong;
   /** One-shot message for the title screen (e.g. save reset). */

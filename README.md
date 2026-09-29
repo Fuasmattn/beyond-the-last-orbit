@@ -47,9 +47,9 @@ For local builds, put the same two values in `.env.local`. Remove bad rows in th
 
 | Action | Keyboard | Touch |
 |---|---|---|
-| Move | Arrows / WASD (up/down limited to the bottom zone) | Drag anywhere |
-| Fire | Space | Fire button (bottom right, pulses on the beat) |
-| Pause (resume / end run) | P / Esc | Switch away from the tab |
+| Move | Arrows / WASD (up/down limited to the bottom zone) | Drag anywhere, or tilt the phone (**Settings → Tilt steering**) |
+| Fire | Space | Tap anywhere |
+| Pause (resume / end run) | P / Esc | Pause button (top left), or switch away from the tab |
 | Menus | Arrows + Space/Enter, Esc back | Tap |
 
 Calibrate your audio/input latency under **Settings → Calibrate timing** (important with Bluetooth headphones). If the beat markers look early or late against the music, adjust **Settings → Visual offset** (moves visuals only).

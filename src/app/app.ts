@@ -10,6 +10,7 @@ import { bpmFor, worldAt, type WorldId } from '../data/worlds';
 import { FrameMonitor } from '../fx/frameMonitor';
 import { mergeInputs, type Tap } from '../input/inputFrame';
 import { KeyboardInput } from '../input/keyboard';
+import { browserTilt } from '../input/tilt';
 import { TouchInput } from '../input/touch';
 import { Leaderboard, readLeaderboardConfig } from '../leaderboard/leaderboard';
 import { dailyBoard, dayKey } from '../meta/daily';
@@ -125,7 +126,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
   const soundToggle = new SoundToggle(textures.glyphs, isTouch ? 2 : 1);
   game.addChild(soundToggle);
   app.stage.addChild(game);
-  const postFx = new PostFx(game, window.devicePixelRatio || 1);
+  const postFx = new PostFx(game, window.devicePixelRatio || 1, isTouch);
   app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   // iOS: cancelling the touch's default action stops long-press selection, the magnifier and callouts,
   // which would otherwise cancel the pointer stream mid-drag. Pointer events still fire.
@@ -158,6 +159,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
   const keyboard = new KeyboardInput(window, judgeFire);
   // The run's pause button is a touch area: pressing it neither steers nor fires.
   const touch = new TouchInput(app.canvas, () => layout, judgeFire, (t) => scene instanceof RunScene && inPauseButton(t));
+  const tilt = browserTilt(app.canvas);
 
   let scene: Scene;
   const ctx: SceneContext = {
@@ -166,6 +168,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
     save,
     leaderboard,
     isTouch,
+    tilt,
     notice: reset ? 'SAVE DATA WAS RESET' : null,
     songForWorld,
     metronome: compileSong(METRONOME_SONG),
@@ -180,6 +183,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
       audio?.setVisualOffset(save.settings.visualOffsetMs);
       audio?.setGuitarTone(save.settings.guitarTone);
       postFx.configure(save.settings);
+      tilt.setEnabled(isTouch && save.settings.tilt);
     },
     setAberration: (a) => postFx.setAberration(a),
     persist: () => {
@@ -252,7 +256,7 @@ export async function startApp(host: HTMLElement): Promise<void> {
       console.info('Performance: reduced post-FX');
     }
     loop.advance(elapsed, () => {
-      const sim = mergeInputs([keyboard.poll(), touch.poll()]);
+      const sim = mergeInputs([keyboard.poll(), touch.poll(), tilt.poll()]);
       sim.beat = audio?.simBeat() ?? null;
       const input: FrameInput = {
         sim,

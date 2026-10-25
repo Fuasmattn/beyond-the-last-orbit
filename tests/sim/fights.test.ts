@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { CONVOY, FORMATION, SENTINEL, SIM_DT, SWARM } from '../../src/data/balance';
+import { CONVOY, FIELD_H, FORMATION, GAUNTLET, SENTINEL, SIM_DT, SWARM } from '../../src/data/balance';
+import { generateScript } from '../../src/sim/gauntlet';
 import { generateMap } from '../../src/sim/route';
 import { spawnFight } from '../../src/sim/fight';
 import { createInitialState } from '../../src/sim/state';
-import { chooseNode, startStage } from '../../src/sim/stageFlow';
+import { chooseNode, computeStageResult, finishStage, startStage } from '../../src/sim/stageFlow';
 import { resolveCollisions } from '../../src/sim/collision';
 import { step } from '../../src/sim/step';
 import { NO_INPUT, type Bullet, type FightKind, type SimEvent, type SimState } from '../../src/sim/types';
@@ -52,7 +53,7 @@ describe('route fight kinds', () => {
         }
       });
     }
-    expect([...kinds].sort()).toEqual(['convoy', 'formation', 'miniboss', 'swarm']);
+    expect([...kinds].sort()).toEqual(['convoy', 'formation', 'gauntlet', 'miniboss', 'swarm']);
   });
 
   it('holds the miniboss back from the first row of world 1', () => {
@@ -135,6 +136,84 @@ describe('convoy', () => {
     step(s, NO_INPUT);
     expect(s.rogue.scrap).toBe(scrap + 1 + CONVOY.scrap);
     expect(s.enemies).not.toContain(f);
+  });
+});
+
+describe('gauntlet', () => {
+  it('rolls a deterministic script that spans the stage length and gets denser with difficulty', () => {
+    const a = fight('gauntlet', 5);
+    const b = fight('gauntlet', 5);
+    expect(a.fight.script).toEqual(b.fight.script);
+    const script = a.fight.script!;
+    expect(script.length).toBeGreaterThan(5);
+    expect(script[0]!.at).toBeLessThan(1);
+    expect(script[script.length - 1]!.at).toBeLessThan(GAUNTLET.length);
+    for (let i = 1; i < script.length; i++) expect(script[i]!.at).toBeGreaterThan(script[i - 1]!.at);
+    for (const w of script) {
+      expect(w.x).toBeGreaterThan(0);
+      expect(w.x).toBeLessThan(a.fieldW);
+    }
+    const hard = createInitialState(5);
+    hard.rogue.fight = 'gauntlet';
+    hard.stage = 2;
+    hard.loop = 2;
+    startStage(hard, []);
+    expect(hard.fight.script!.length).toBeGreaterThan(script.length);
+    expect(hard.fight.script![0]!.speed).toBeGreaterThan(script[0]!.speed);
+  });
+
+  it('launches waves on the clock, fires gunner pass shots, counts escapes, and ends once the script is spent', () => {
+    const s = fight('gauntlet');
+    const budget = s.fight.budget;
+    expect(budget).toBe(s.fight.script!.reduce((n, w) => n + w.count, 0));
+    run(s, 1.5);
+    expect(s.enemies.length).toBeGreaterThanOrEqual(GAUNTLET.members[0]);
+    expect(s.enemies.every((e) => e.group === 0 && e.y < FIELD_H)).toBe(true);
+    const events = run(s, GAUNTLET.length);
+    expect(events.some((e) => e.type === 'enemyShot')).toBe(true);
+    expect(events.some((e) => e.type === 'escaped')).toBe(true);
+    run(s, 20);
+    expect(s.fight.budget).toBe(0);
+    expect(s.fight.cursor).toBe(s.fight.script!.length);
+    expect(s.enemies).toHaveLength(0);
+    expect(s.phase).toBe('stageClear');
+    // Nothing was shot, so everything got through and the stage is not perfect.
+    expect(s.stageStats.escaped).toBe(budget);
+    expect(s.result!.escaped).toBe(budget);
+    expect(s.result!.perfect).toBe(false);
+  });
+
+  it('charges the gauntlet escape penalty, not the convoy one', () => {
+    const s = fight('gauntlet');
+    s.stageStats = { shots: 10, hits: 10, onBeatShots: 0, hitsTaken: 0, grazes: 0, time: 10, escaped: 2 };
+    const t = s.stageStats.time;
+    finishStage(s, []);
+    const clean = computeStageResult({ ...s.stageStats, escaped: 0 }, false);
+    expect(s.result!.bonus).toBe(clean.bonus - 2 * GAUNTLET.escapePenalty);
+    expect(t).toBe(10);
+  });
+
+  it('pays a chain bonus when a whole wave dies', () => {
+    const s = fight('gauntlet');
+    run(s, 1.5);
+    const wave = s.enemies.filter((e) => e.group === 0);
+    expect(wave.length).toBeGreaterThan(0);
+    const events: SimEvent[] = [];
+    const before = s.score;
+    for (const e of wave) {
+      e.hp = 1;
+      s.bullets = [bullet({ x: e.x + 2, y: e.y + 1 })];
+      resolveCollisions(s, events);
+    }
+    expect(events.some((e) => e.type === 'groupCleared')).toBe(true);
+    expect(s.score - before).toBeGreaterThan(GAUNTLET.chainPoints * wave.length);
+  });
+
+  it('owes a basic draft like any plain battle', () => {
+    const s = fight('gauntlet');
+    run(s, 60);
+    expect(s.phase).toBe('stageClear');
+    expect(s.rogue.drafts).toEqual(['basic']);
   });
 });
 

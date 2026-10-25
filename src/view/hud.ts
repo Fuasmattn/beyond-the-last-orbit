@@ -248,8 +248,8 @@ export class Hud extends Container {
         banner = Math.floor(state.time * 6) % 2 === 0 ? 'WARNING' : '';
         sub = world.bossName;
       } else if (fight !== 'formation') {
-        banner = fight === 'swarm' ? 'SWARM' : 'CONVOY';
-        sub = fight === 'swarm' ? 'CHAIN WHOLE GROUPS' : 'STOP THE FREIGHTERS';
+        banner = fight === 'swarm' ? 'SWARM' : fight === 'gauntlet' ? 'GAUNTLET' : 'CONVOY';
+        sub = fight === 'swarm' ? 'CHAIN WHOLE GROUPS' : fight === 'gauntlet' ? 'NOTHING GETS THROUGH' : 'STOP THE FREIGHTERS';
         if (state.diff.elite) sub = `ELITE - ${sub}`;
       } else {
         banner = state.beatMode === 'master' ? 'BEAT STAGE' : `STAGE ${state.world + 1}-${state.stage}`;
@@ -277,7 +277,7 @@ export class Hud extends Container {
     const lines = r
       ? [
           `ACCURACY  ${pct(r.accuracy)}`,
-          state.rogue.fight === 'convoy'
+          state.rogue.fight === 'convoy' || state.rogue.fight === 'gauntlet'
             ? `LOST      ${r.escaped}`
             : state.beatMode === 'off'
               ? `GRAZES    ${state.stageStats.grazes}`

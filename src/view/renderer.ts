@@ -1,5 +1,5 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
-import { FIELD_H, PLAYER, WARP } from '../data/balance';
+import { FIELD_H, GAUNTLET, PLAYER, WARP } from '../data/balance';
 import type { LaserDef, SkinDef } from '../data/cosmetics';
 import { worldAt, type WorldId } from '../data/worlds';
 import { laserBox, laserZone } from '../sim/boss/warden';
@@ -186,7 +186,9 @@ export class GameRenderer {
     this.renderOutside(state.fieldW, camX, viewW);
     const pulseColor = state.beatMode === 'master' ? MASTER_BACKDROP : BACKDROP_PULSE;
     this.backdrop.tint = lerpColor(BACKDROP_BASE, pulseColor, pulse * 0.6);
-    this.starfield.update(dt, warp ? 1 + WARP_SPEED * Math.sin(Math.PI * warpProgress) : 1);
+    // Gauntlet stages scroll: the stars stream past while the waves fly through.
+    const gauntlet = !state.boss && state.rogue.fight === 'gauntlet' && (state.phase === 'playing' || state.phase === 'stageIntro');
+    this.starfield.update(dt, warp ? 1 + WARP_SPEED * Math.sin(Math.PI * warpProgress) : gauntlet ? GAUNTLET.scrollMul : 1);
     this.renderPlanet(state, dt, warp, pulse, Math.max(state.fieldW, viewW));
 
     const worldTint = lerpColor(

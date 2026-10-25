@@ -1,4 +1,4 @@
-import { BEAT_STAGE, CONVOY, PLAYER, SCRAP, SHOP, STAGE, WARP } from '../data/balance';
+import { BEAT_STAGE, CONVOY, GAUNTLET, PLAYER, SCRAP, SHOP, STAGE, WARP } from '../data/balance';
 import { WORLDS } from '../data/worlds';
 import { spawnBoss } from './boss';
 import { boonDef, buildPower, rollOffer, takeBoon } from './boons';
@@ -53,7 +53,12 @@ export function beatRankFor(stats: StageStats): BeatRank {
   return 'C';
 }
 
-export function computeStageResult(stats: StageStats, boss: boolean, beatMode: BeatMode = 'off'): StageResult {
+export function computeStageResult(
+  stats: StageStats,
+  boss: boolean,
+  beatMode: BeatMode = 'off',
+  escapePenalty: number = CONVOY.escapePenalty,
+): StageResult {
   const accuracy = stats.shots > 0 ? Math.min(1, stats.hits / stats.shots) : 0;
   const beatPct = stats.shots > 0 ? stats.onBeatShots / stats.shots : 0;
   const noHit = stats.hitsTaken === 0;
@@ -64,9 +69,9 @@ export function computeStageResult(stats: StageStats, boss: boolean, beatMode: B
   const skill = rogue ? accuracy * STAGE.rogueAccuracyBonus : accuracy * 1000 + beatPct * 1000;
   const beatRank = beatMode === 'master' ? beatRankFor(stats) : null;
   const rankMul = beatRank === 'S' ? BEAT_STAGE.sBonusMul : 1;
-  // Convoy stages: every freighter that got away costs part of the bonus.
-  const escapePenalty = stats.escaped * CONVOY.escapePenalty;
-  const bonus = Math.max(0, Math.round((skill + (noHit ? 2000 : 0) + timeBonus) * rankMul - escapePenalty));
+  // Convoy / gauntlet stages: everything that got away costs part of the bonus.
+  const escaped = stats.escaped * escapePenalty;
+  const bonus = Math.max(0, Math.round((skill + (noHit ? 2000 : 0) + timeBonus) * rankMul - escaped));
   return {
     accuracy,
     beatPct,
@@ -83,7 +88,8 @@ const RANK_ORDER: readonly BeatRank[] = ['C', 'B', 'A', 'S'];
 
 export function finishStage(state: SimState, events: SimEvent[]): void {
   cancelBullets(state, events);
-  const result = computeStageResult(state.stageStats, isBossStage(state.stage), state.beatMode);
+  const penalty = state.rogue.fight === 'gauntlet' ? GAUNTLET.escapePenalty : CONVOY.escapePenalty;
+  const result = computeStageResult(state.stageStats, isBossStage(state.stage), state.beatMode, penalty);
   state.result = result;
   state.score += result.bonus;
   if (result.beatRank) {

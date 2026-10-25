@@ -20,6 +20,7 @@ const FIGHT_INFO: Record<FightKind, { name: string; desc: string }> = {
   formation: { name: '', desc: '' },
   swarm: { name: 'SWARM', desc: 'CHAIN WHOLE GROUPS' },
   convoy: { name: 'CONVOY', desc: 'STOP THE FREIGHTERS' },
+  gauntlet: { name: 'GAUNTLET', desc: 'NOTHING GETS THROUGH' },
   miniboss: { name: 'MINIBOSS', desc: 'SENTINEL. BIG DRAFT' },
 };
 

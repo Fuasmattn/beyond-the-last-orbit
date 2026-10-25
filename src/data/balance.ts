@@ -104,7 +104,37 @@ export const THREAT = {
 
 /** M21 fight archetypes. Route weights for battle / elite nodes off the beat row. */
 export const FIGHT = {
-  weights: { swarm: 35, convoy: 30, miniboss: 20, formation: 15 },
+  weights: { gauntlet: 35, swarm: 25, convoy: 20, miniboss: 15, formation: 5 },
+} as const;
+
+/** GAUNTLET: the field scrolls and scripted waves fly straight through; the stage ends when the script runs out. */
+export const GAUNTLET = {
+  /** Seconds of scripted spawns. */
+  length: 24,
+  /** Seconds between waves at difficulty 0 and at the high end (eased by DIFFICULTY.k). */
+  waveGap: [2.6, 1.3],
+  eliteGapMul: 0.75,
+  /** Members per wave. */
+  members: [3, 5],
+  /** Launch gap between members (s); lines launch together. */
+  stagger: 0.22,
+  /** Descent speed (px/s) and its growth per difficulty point. */
+  speed: 62,
+  speedPerD: 2.5,
+  /** Horizontal spacing of line and vee members. */
+  spacing: 18,
+  /** Column x drift (px/s) so a column is not a free kill. */
+  columnDrift: 12,
+  /** Seconds for a weave to cross the field. */
+  weaveTime: 3.4,
+  /** Field y at which gunners take their aimed pass shot. */
+  fireY: 110,
+  /** Stage bonus lost per enemy that gets through. */
+  escapePenalty: 150,
+  /** Full-wave chain bonus per member. */
+  chainPoints: 30,
+  /** Starfield speed multiplier while the gauntlet is in play. */
+  scrollMul: 3,
 } as const;
 
 /** SWARM: groups fly Bézier paths through the field. */

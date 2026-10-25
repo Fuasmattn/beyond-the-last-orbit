@@ -10,8 +10,29 @@ export type BeatRank = 'S' | 'A' | 'B' | 'C';
 
 /** Route map node types. */
 export type NodeKind = 'battle' | 'elite' | 'cache' | 'repair' | 'shop' | 'signal';
-/** How a battle or elite node fights (M21): the classic grid, Galaga-style swarm paths, a freighter convoy, a miniboss. */
-export type FightKind = 'formation' | 'swarm' | 'convoy' | 'miniboss';
+/**
+ * How a battle or elite node fights (M21): the classic grid, Galaga-style swarm paths, a freighter convoy, a miniboss,
+ * or a gauntlet: a scrolling run of scripted waves that fly straight through (M23).
+ */
+export type FightKind = 'formation' | 'swarm' | 'convoy' | 'miniboss' | 'gauntlet';
+
+/** Gauntlet wave shapes: a vertical column, a horizontal line, a V, or an S-curve weave down the field. */
+export type WaveShape = 'column' | 'line' | 'vee' | 'weave';
+
+/** One scripted spawn of a gauntlet stage. */
+export interface Wave {
+  /** Seconds into the stage at which the first member launches. */
+  at: number;
+  kind: EnemyKind;
+  count: number;
+  shape: WaveShape;
+  /** Seconds between members. */
+  stagger: number;
+  /** Descent speed (px/s). */
+  speed: number;
+  /** Launch x of the lead member (field coordinates, member center). */
+  x: number;
+}
 
 export type EventId = 'distress' | 'derelict' | 'market' | 'ghost';
 
@@ -177,6 +198,8 @@ export interface Enemy extends Box {
   bombTimer?: number;
   /** Convoy freighters: escorts still to peel off (seconds until each). */
   escorts?: number[];
+  /** Gauntlet gunners: the pass shot has been fired. */
+  fired?: boolean;
 }
 
 export interface Bullet extends Box {
@@ -352,7 +375,7 @@ export interface StageStats {
   hitsTaken: number;
   grazes: number;
   time: number;
-  /** Convoy stages: freighters that crossed the field alive. */
+  /** Convoy / gauntlet stages: enemies that crossed the field alive. */
   escaped: number;
 }
 
@@ -364,8 +387,16 @@ export interface FightState {
   timer: number;
   /** Groups launched so far (swarm) or freighters launched (convoy); also the next group id. */
   launched: number;
-  /** Swarm: members alive or killed per group, for the chain bonus. */
+  /** Swarm / gauntlet: members alive or killed per group, for the chain bonus. */
   groups: Record<number, { size: number; killed: number }>;
+  /** Gauntlet: seconds into the stage. */
+  clock?: number;
+  /** Gauntlet: the stage's waves, sorted by `at`. */
+  script?: Wave[];
+  /** Gauntlet: index of the next wave to release. */
+  cursor?: number;
+  /** Gauntlet: released waves still launching members. */
+  pending?: { wave: Wave; group: number; left: number; next: number }[];
 }
 
 export interface StageResult {

@@ -1,4 +1,5 @@
 import { initConvoy, updateConvoy } from './convoy';
+import { initGauntlet, updateGauntlet } from './gauntlet';
 import { spawnFormation } from './formation';
 import { spawnSentinel } from './boss/sentinel';
 import { initSwarm, updateSwarm } from './swarm';
@@ -18,6 +19,9 @@ export function spawnFight(state: SimState): void {
     case 'convoy':
       state.fight = initConvoy(state);
       return;
+    case 'gauntlet':
+      state.fight = initGauntlet(state);
+      return;
     case 'miniboss':
       spawnSentinel(state);
       return;
@@ -35,6 +39,9 @@ export function updateFight(state: SimState, dt: number, events: SimEvent[]): vo
       return;
     case 'convoy':
       updateConvoy(state, dt, events);
+      return;
+    case 'gauntlet':
+      updateGauntlet(state, dt, events);
       return;
     default:
       return;

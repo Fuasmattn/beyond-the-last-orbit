@@ -1,4 +1,4 @@
-import { ENEMY, SWARM } from '../data/balance';
+import { ENEMY, GAUNTLET, SWARM } from '../data/balance';
 import { worldAt } from '../data/worlds';
 import { aimVelocity, spawnEnemyBullet } from './bullets';
 import { enemyHp } from './difficulty';
@@ -118,14 +118,15 @@ export function updateSwarm(state: SimState, dt: number, events: SimEvent[]): vo
   if (gone.length > 0) state.enemies = state.enemies.filter((e) => !gone.includes(e));
 }
 
-/** A path enemy died: count it toward its group; a full group pays the chain bonus. */
+/** A grouped enemy (swarm path or gauntlet wave) died: count it toward its group; a full group pays the chain bonus. */
 export function swarmKill(state: SimState, e: Enemy, cx: number, cy: number, events: SimEvent[]): void {
   if (e.group === undefined) return;
   const g = state.fight.groups[e.group];
   if (!g) return;
   g.killed++;
   if (g.killed !== g.size) return;
-  const points = Math.round(SWARM.chainPoints * g.size * state.rhythm.mult * state.ship.scoreMul);
+  const perMember = state.rogue.fight === 'gauntlet' ? GAUNTLET.chainPoints : SWARM.chainPoints;
+  const points = Math.round(perMember * g.size * state.rhythm.mult * state.ship.scoreMul);
   state.score += points;
   events.push({ type: 'groupCleared', x: cx, y: cy, points });
 }
